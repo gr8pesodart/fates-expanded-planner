@@ -12,6 +12,8 @@ grind gates. Plans should reflect what the expanded game actually allows, not va
 the run/roster/save flow works. Classes, skills, inheritance projection and route availability are
 next (see the roadmap in [docs/DESIGN.md](docs/DESIGN.md)).
 
+**Live:** <https://gr8pesodart.github.io/fates-expanded-planner/>
+
 ## Features today
 
 - **Runs with saves** — multiple plans, autosaved to `localStorage`, JSON export/import backup,
