@@ -1,0 +1,29 @@
+{
+  "name": "fates-expanded-planner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Mobile-first run planner for a modded Fire Emblem Fates build (UGF supports, free renown/accessories).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lz-string": "^1.5.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vite-plugin-pwa": "^1.3.0"
+  }
+}
