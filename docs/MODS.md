@@ -44,6 +44,9 @@ the companion workspace `../3ds-games/fe-fates/` (`inbox/mod-list.md`, `tools/mo
   as Ryoma×Rinkah or Xander×Charlotte stay romantic at normal speed.
 - `Modules.Characters` contains raw `Support Route` values (5/6/7 observed) — semantics still
   undecoded; route availability per pair is an open data question (docs/DATA.md).
+- **Same-sex children caveat**: UGF grants same-sex S supports; the planner lets any romantic
+  partner be a second parent. Whether UGF couples actually recruit children in-game should be
+  spot-checked once; if they don't, the candidate list needs narrowing (docs/DATA.md).
 
 ## Maintenance when the build changes
 

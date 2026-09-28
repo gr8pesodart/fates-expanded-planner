@@ -1,36 +1,41 @@
 # Fates Expanded Planner
 
-A mobile-first run planner for a **modded** Fire Emblem Fates playthrough.
+A mobile-first **army planner** for a modded Fire Emblem Fates playthrough.
 
-Most Fates planners assume vanilla rules. This one is built around the mods actually installed
-in the [fe-fates build](../3ds-games/fe-fates/AGENTS.md) — above all **Unofficial Gay Fates**,
-which expands the support graph to near-universal coverage (same-sex S supports, new conversation
-sets, sibling/child support additions) — plus the free-renown and free-accessory mods that remove
-grind gates. Plans should reflect what the expanded game actually allows, not vanilla limits.
-
-**Status:** early scaffold. The support graph is live and extracted from the installed UGF build;
-the run/roster/save flow works. Classes, skills, inheritance projection and route availability are
-next (see the roadmap in [docs/DESIGN.md](docs/DESIGN.md)).
+Plan the run: who's in the army, who marries whom, which classes everyone uses, the skills they
+equip, and — for second-gen units — who their parents are and what growths they end up with.
+Stats, growths, class sets and skills are read from the game's own data tables, so the numbers are
+real; supports come from the installed **Unofficial Gay Fates** build, so the pairing rules are the
+expanded ones, not vanilla's.
 
 **Live:** <https://gr8pesodart.github.io/fates-expanded-planner/>
 
-## Features today
+## What it does
 
-- **Runs with saves** — multiple plans, autosaved to `localStorage`, JSON export/import backup,
-  and shareable plan links (compressed into the URL hash).
-- **Build-aware** — every plan targets a game build profile (`UGF 2.5.2 installed` or `vanilla`);
-  mod flags (free renown, free accessories, expanded supports) come from the build.
-- **Corrin setup** — gender, boon/bane, name; talent/voice arrive with the class dataset.
-- **Roster planning** — add any of the 70 support-bearing characters from the extracted dataset.
-- **Support graph browser** — for any character, see every UGF support partner, whether it can
-  reach S, whether it is "fast", and the point thresholds per rank (C/B/A/S). Sibling and platonic
-  pairs cap at A.
-- **Installable PWA** — add to home screen on iOS/Android; works offline after first load.
+- **Runs** — multiple saves with an obvious run switcher, route (Birthright / Conquest /
+  Revelation) and a per-run **game build** dropdown (which mods are installed).
+- **Corrin** — gender, boon/bane (real growth & cap effects), and a talent branch that also feeds
+  into Kana's class pool.
+- **Roster** — build the army from the full 71-unit dataset with English names; every unit has a
+  detail page.
+- **Classes** — pick any class the unit can actually reclass into: own branches, parents' branches
+  (second gen), and Partner/Friendship Seal branches once supports are set.
+- **Stats** — live stats / growths / caps tables per unit and chosen class, with Corrin boons and
+  child-parent averaging applied (Fates formulas).
+- **Skills** — equip up to five from the pool the unit can genuinely learn (personal skill + every
+  class in their pool), each labelled with its source and level.
+- **Supports & children** — set S and A+ ranks from the UGF graph; the planner shows the children a
+  pair produces, and the Pairings tab tracks mutual pairs, one-sided mistakes and who's unpaired.
+- **Children** — pick the second parent and watch growths average and cap modifiers combine;
+  parent branches join the class pool automatically.
+- **Reference** — browse all 71 units, 129 classes and 229 skills with full stat tables.
+- **Saves that stick** — autosave to the device, JSON export/import backup, shareable links, and
+  installable PWA (add to home screen, works offline).
 
 ## Stack
 
 Vite 8 · React 19 · TypeScript · Zustand (persisted) · vite-plugin-pwa · lz-string · oxlint.
-No backend: all data is static, all state is local. Deployable to GitHub Pages out of the box.
+No backend, no accounts, no tracking — static hosting only.
 
 ## Development
 
@@ -39,48 +44,41 @@ npm install
 npm run dev       # dev server
 npm run lint      # oxlint
 npm run build     # typecheck + production build (PWA)
-npm run preview   # serve the production build
 ```
 
-Regenerate the support data pack after updating the mod or the extractor:
+Regenerate the data packs after a mod/build change (see [docs/DATA.md](docs/DATA.md)):
 
 ```bash
-python tools/extract/extract_ugf_supports.py
-python tools/icons/make_icons.py        # only needed if the sigil changes
+python tools/extract/extract_ugf_supports.py   # support graph (UGF Paragon export)
+python tools/extract/extract_game_data.py      # units/classes/skills (GameData tables)
 ```
 
 ## Repository layout
 
 ```
 src/
-  data/           types, build profiles, dataset loader, packs/
-    packs/        extracted JSON packs (see docs/DATA.md)
-  state/          plans store (zustand persist)
-  screens/        Plan / Supports / Reference / Saves
+  data/           types, build profiles, boons, dataset loader, packs/
+  logic/          class pools, stat/child projection, skill pools, family links
+  state/          plans store (zustand persist, schema v2)
+  screens/        Army (+ unit detail) / Supports / Reference / Saves
   lib/            ids, share-link codec
-  components/     icons and shared bits
 docs/
   DESIGN.md       product scope, screens, save model, roadmap
-  MODS.md         what the installed mod build changes (and why it matters)
-  DATA.md         data pipeline: extraction, formats, verification notes
+  MODS.md         what the installed mod build changes
+  DATA.md         data pipeline: extraction, verification notes
   REFERENCES.md   prior art and credits
 tools/
-  extract/        Python extraction scripts (stdlib only)
-  icons/          PWA icon generator (Pillow)
+  extract/        Python extraction scripts (stdlib + fe_tools)
+  icons/          PWA icon generator
 ```
 
-## Deploying
+## Data & credits
 
-Pushes to `main` deploy to GitHub Pages via `.github/workflows/deploy.yml`. The build uses a
-relative base, so it also works on any static host (Netlify, Cloudflare Pages, `npx serve dist`).
-
-## Notes on data
-
-The support pack is extracted from the Paragon export shipped inside the UGF download
-(`Paragon Imports/UGF.json`) — it is data about a mod for a game you own, not redistributed game
-content. Some edges still need verification against the installed `GameData.bin.lz`; see the trust
-notes in [docs/DATA.md](docs/DATA.md). No copyrighted artwork is bundled: there are no portraits
-or icons in this repo.
-
-Fan-made tool. Not affiliated with Nintendo or Intelligent Systems. Fire Emblem Fates and all
-associated artwork and text are trademarks of their respective owners.
+- Unit/class/skill tables are extracted from the vanilla `GameData.bin` using table layouts
+  documented by [RainThunder's fefates-tools](https://github.com/RainThunder/fefates-tools);
+  English names come from its enum lists. The installed build's UGF changes do not alter stats.
+- The support graph is extracted from UGF's own Paragon export.
+- Child-growth and class-inheritance rules follow Fates mechanics, cross-checked against
+  community calculators (see [docs/REFERENCES.md](docs/REFERENCES.md)).
+- No copyrighted art, audio or text is bundled. Fan-made; not affiliated with Nintendo or
+  Intelligent Systems.

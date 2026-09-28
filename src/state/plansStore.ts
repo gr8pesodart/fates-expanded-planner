@@ -6,23 +6,26 @@ import type { Route, StatKey } from '../data/types'
 export interface PlanUnit {
   id: string
   characterId: string
-  note?: string
+  /** Planned class (id from the class table). */
+  classId?: number
+  /** Equipped skills (ids, max 5 — see MAX_EQUIPPED_SKILLS). */
+  skills?: number[]
+  /** S-rank partner (character id from the support graph). */
+  sPartnerId?: string
+  /** A+ (friendship) partner. */
+  aPlusPartnerId?: string
+  /** Second-gen units only: the other parent (character id). */
+  variableParentId?: string
 }
 
 export interface CorrinConfig {
   name: string
   gender: 'male' | 'female'
+  talentClassId?: number
   boon?: StatKey
   bane?: StatKey
   /** Voice chosen through the Unit Select Voice mod. */
   voice?: string
-}
-
-export interface SealCounts {
-  master: number
-  heart: number
-  partner: number
-  friend: number
 }
 
 export interface Plan {
@@ -32,7 +35,6 @@ export interface Plan {
   buildProfileId: string
   corrin: CorrinConfig
   units: PlanUnit[]
-  seals: SealCounts
   notes: string
   createdAt: number
   updatedAt: number
@@ -40,7 +42,7 @@ export interface Plan {
 
 export interface PlansBundle {
   app: 'fates-expanded-planner'
-  schema: 1
+  schema: 2
   exportedAt: string
   plans: Plan[]
 }
@@ -54,10 +56,10 @@ interface PlansState {
   renamePlan: (id: string, name: string) => void
   updatePlan: (id: string, patch: Partial<Omit<Plan, 'id' | 'createdAt'>>) => void
   setActivePlan: (id: string) => void
-  addUnit: (planId: string, characterId: string) => void
+  addUnit: (planId: string, characterId: string) => string
   removeUnit: (planId: string, unitId: string) => void
+  updateUnit: (planId: string, unitId: string, patch: Partial<Omit<PlanUnit, 'id'>>) => void
   setCorrin: (planId: string, patch: Partial<CorrinConfig>) => void
-  bumpSeal: (planId: string, seal: keyof SealCounts, delta: number) => void
   exportBundle: () => PlansBundle
   importBundle: (json: string) => { imported: number } | { error: string }
   deleteAll: () => void
@@ -71,12 +73,38 @@ function freshPlan(name: string): Plan {
     route: 'revelation',
     buildProfileId: 'ugf-2.5.2',
     corrin: { name: 'Corrin', gender: 'female' },
-    units: [],
-    seals: { master: 0, heart: 0, partner: 0, friend: 0 },
+    units: [{ id: newId(), characterId: corrinPid('female') }],
     notes: '',
     createdAt: now,
     updatedAt: now,
   }
+}
+
+export function corrinPid(gender: 'male' | 'female'): string {
+  return gender === 'male' ? 'PID_プレイヤー男' : 'PID_プレイヤー女'
+}
+
+function isCorrinPid(id: string): boolean {
+  return id === 'PID_プレイヤー男' || id === 'PID_プレイヤー女'
+}
+
+/** Keep exactly one Corrin roster entry, matching the configured gender. */
+function normalizeCorrinUnits(units: PlanUnit[], gender: 'male' | 'female'): PlanUnit[] {
+  const target = corrinPid(gender)
+  let replaced = false
+  const out: PlanUnit[] = []
+  for (const unit of units) {
+    if (isCorrinPid(unit.characterId)) {
+      if (!replaced) {
+        out.push({ ...unit, characterId: target })
+        replaced = true
+      }
+      continue
+    }
+    out.push(unit)
+  }
+  if (!replaced) out.unshift({ id: newId(), characterId: target })
+  return out
 }
 
 const initialPlan = freshPlan('First run')
@@ -129,27 +157,34 @@ export const usePlansStore = create<PlansState>()(
 
         setActivePlan: (id) => set({ activePlanId: id }),
 
-        addUnit: (planId, characterId) =>
-          mutate(planId, (p) => ({
-            ...p,
-            units: [...p.units, { id: newId(), characterId }],
-          })),
+        addUnit: (planId, characterId) => {
+          const unit: PlanUnit = { id: newId(), characterId }
+          mutate(planId, (p) => ({ ...p, units: [...p.units, unit] }))
+          return unit.id
+        },
 
         removeUnit: (planId, unitId) =>
           mutate(planId, (p) => ({ ...p, units: p.units.filter((u) => u.id !== unitId) })),
 
-        setCorrin: (planId, patch) =>
-          mutate(planId, (p) => ({ ...p, corrin: { ...p.corrin, ...patch } })),
-
-        bumpSeal: (planId, seal, delta) =>
+        updateUnit: (planId, unitId, patch) =>
           mutate(planId, (p) => ({
             ...p,
-            seals: { ...p.seals, [seal]: Math.max(0, p.seals[seal] + delta) },
+            units: p.units.map((u) => (u.id === unitId ? { ...u, ...patch } : u)),
           })),
+
+        setCorrin: (planId, patch) =>
+          mutate(planId, (p) => {
+            const corrin = { ...p.corrin, ...patch }
+            return {
+              ...p,
+              corrin,
+              units: patch.gender ? normalizeCorrinUnits(p.units, patch.gender) : p.units,
+            }
+          }),
 
         exportBundle: () => ({
           app: 'fates-expanded-planner',
-          schema: 1,
+          schema: 2,
           exportedAt: new Date().toISOString(),
           plans: get().plans,
         }),
@@ -185,7 +220,39 @@ export const usePlansStore = create<PlansState>()(
     },
     {
       name: 'fates-expanded-planner/v1',
-      version: 1,
+      version: 2,
+      merge: (persisted, current) => {
+        const state = persisted as Partial<PlansState> | undefined
+        if (!state?.plans) return current
+        return {
+          ...current,
+          ...state,
+          plans: (state.plans as Plan[]).map((plan) => ({
+            ...plan,
+            units: normalizeCorrinUnits(plan.units ?? [], plan.corrin?.gender ?? 'female'),
+          })),
+        }
+      },
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<PlansState> | undefined
+        if (!state?.plans) return persisted as PlansState
+        if (version < 2) {
+          // v1 tracked seal counters; v2 drops them, adds unit build fields and
+          // guarantees a Corrin roster entry.
+          state.plans = state.plans.map((plan) => {
+            const { seals: _seals, ...rest } = plan as Plan & { seals?: unknown }
+            const legacy = rest as Plan
+            return {
+              ...legacy,
+              units: normalizeCorrinUnits(
+                (legacy.units ?? []).map((u) => ({ ...u })),
+                legacy.corrin?.gender ?? 'female',
+              ),
+            } as Plan
+          })
+        }
+        return state as PlansState
+      },
     },
   ),
 )

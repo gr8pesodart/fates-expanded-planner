@@ -1,4 +1,13 @@
-import type { CharacterDef, Dataset, DatasetEdge, DatasetMeta, RawSupportTuple } from './types'
+import type {
+  CharacterDef,
+  ClassDef,
+  Dataset,
+  DatasetEdge,
+  DatasetMeta,
+  RawSupportTuple,
+  SkillDef,
+  UnitDef,
+} from './types'
 import { decodeSupportType } from './types'
 
 /**
@@ -29,15 +38,22 @@ function indexEdges(edges: DatasetEdge[]): Map<string, DatasetEdge[]> {
 }
 
 async function loadUgfPack(): Promise<Dataset> {
-  const [metaModule, charactersModule, supportsModule] = await Promise.all([
-    import('./packs/ugf-2.5.2/meta.json'),
-    import('./packs/ugf-2.5.2/characters.json'),
-    import('./packs/ugf-2.5.2/supports.json'),
-  ])
+  const [metaModule, charactersModule, supportsModule, unitsModule, classesModule, skillsModule] =
+    await Promise.all([
+      import('./packs/ugf-2.5.2/meta.json'),
+      import('./packs/ugf-2.5.2/characters.json'),
+      import('./packs/ugf-2.5.2/supports.json'),
+      import('./packs/ugf-2.5.2/units.json'),
+      import('./packs/ugf-2.5.2/classes.json'),
+      import('./packs/ugf-2.5.2/skills.json'),
+    ])
 
   const meta = metaModule.default as unknown as DatasetMeta
   const characters = charactersModule.default as unknown as CharacterDef[]
   const tuples = (supportsModule.default as unknown as { edges: RawSupportTuple[] }).edges
+  const units = (unitsModule.default as unknown as { units: UnitDef[] }).units
+  const classes = (classesModule.default as unknown as { classes: ClassDef[] }).classes
+  const skills = (skillsModule.default as unknown as { skills: SkillDef[] }).skills
 
   const edges: DatasetEdge[] = tuples.map(([a, b, raw]) => ({
     a: characters[a].id,
@@ -46,7 +62,17 @@ async function loadUgfPack(): Promise<Dataset> {
     info: decodeSupportType(raw),
   }))
 
-  return { meta, characters, edges, edgesByCharacter: indexEdges(edges) }
+  return {
+    meta,
+    characters,
+    edges,
+    edgesByCharacter: indexEdges(edges),
+    units,
+    unitsById: new Map(units.map((u) => [u.id, u])),
+    classes,
+    classesById: new Map(classes.map((c) => [c.id, c])),
+    skillsById: new Map(skills.map((s) => [s.id, s])),
+  }
 }
 
 function pendingPack(packId: string): Dataset {
@@ -55,28 +81,34 @@ function pendingPack(packId: string): Dataset {
       id: packId,
       label: 'Vanilla dataset — extraction pending',
       status: 'pending',
-      notes: [
-        'Run Paragon on the clean GameData (or extend tools/extract) to produce this pack.',
-        'See docs/DATA.md for the extraction pipeline.',
-      ],
+      notes: ['See docs/DATA.md for the extraction pipeline.'],
     },
     characters: [],
     edges: [],
     edgesByCharacter: new Map(),
+    units: [],
+    unitsById: new Map(),
+    classes: [],
+    classesById: new Map(),
+    skillsById: new Map(),
   }
 }
 
-/** Kana-aware sort for the mostly-Japanese character names. */
-const collator = new Intl.Collator('ja')
+/** Kana-aware sort for the character names. */
+const collator = new Intl.Collator('en')
 
 export function sortCharacters(characters: CharacterDef[]): CharacterDef[] {
   return [...characters].sort((x, y) => collator.compare(x.name, y.name))
 }
 
-export function findCharacter(dataset: Dataset, id: string): CharacterDef | undefined {
-  return dataset.characters.find((c) => c.id === id)
+export function sortUnits(units: UnitDef[]): UnitDef[] {
+  return [...units].sort((x, y) => collator.compare(x.name, y.name))
 }
 
-export function edgePartner(edge: DatasetEdge, id: string): string {
-  return edge.a === id ? edge.b : edge.a
+export function sortClasses(classes: ClassDef[]): ClassDef[] {
+  return [...classes].sort((x, y) => collator.compare(x.name, y.name))
+}
+
+export function sortSkills(skills: SkillDef[]): SkillDef[] {
+  return [...skills].sort((x, y) => collator.compare(x.name, y.name))
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { Sigil, IconPlan, IconSupports, IconReference, IconSettings } from './components/icons'
-import { PlanScreen } from './screens/PlanScreen'
+import { ArmyScreen } from './screens/ArmyScreen'
 import { SupportsScreen } from './screens/SupportsScreen'
 import { ReferenceScreen } from './screens/ReferenceScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
@@ -9,21 +9,21 @@ import { getBuildProfile } from './data/modProfiles'
 import { ROUTES } from './data/types'
 import { clearShareHash, readSharedPlan } from './lib/share'
 
-type TabId = 'plan' | 'supports' | 'reference' | 'settings'
+type TabId = 'army' | 'supports' | 'reference' | 'settings'
 
 const TABS: ReadonlyArray<{
   id: TabId
   label: string
   icon: (p: { className?: string }) => ReactElement
 }> = [
-  { id: 'plan', label: 'Plan', icon: IconPlan },
+  { id: 'army', label: 'Army', icon: IconPlan },
   { id: 'supports', label: 'Supports', icon: IconSupports },
   { id: 'reference', label: 'Reference', icon: IconReference },
   { id: 'settings', label: 'Saves', icon: IconSettings },
 ]
 
 export default function App() {
-  const [tab, setTab] = useState<TabId>('plan')
+  const [tab, setTab] = useState<TabId>('army')
   const plan = useActivePlan()
   const importBundle = usePlansStore((s) => s.importBundle)
   const [notice, setNotice] = useState<string | null>(null)
@@ -78,7 +78,7 @@ export default function App() {
         )}
 
         <div className="screen" key={tab}>
-          {tab === 'plan' && <PlanScreen />}
+          {tab === 'army' && <ArmyScreen />}
           {tab === 'supports' && <SupportsScreen />}
           {tab === 'reference' && <ReferenceScreen />}
           {tab === 'settings' && <SettingsScreen />}

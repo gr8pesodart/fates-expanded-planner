@@ -28,3 +28,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Extractor source caches (enum lists fetched from the fe-fates tooling repos)
+tools/extract/sources/

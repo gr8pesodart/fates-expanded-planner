@@ -1,30 +1,18 @@
 /**
  * Core game-data types for the planner.
  *
- * The planner is dataset-driven: a pack is a JSON bundle keyed by the game's
- * internal person IDs (PIDs). The `ugf-2.5.2` pack is extracted from the
- * installed Unofficial Gay Fates build (see tools/extract + docs/DATA.md),
- * so the support graph matches the modded game exactly.
+ * Everything is dataset-driven from the extracted UGF build pack:
+ *  - characters.json / supports.json: the mod's support graph
+ *  - units.json / classes.json / skills.json: stats, growths, class sets
+ *    and class skills read from the game's own GameData table (docs/DATA.md)
  */
 
 export type Route = 'birthright' | 'conquest' | 'revelation'
 
 export const ROUTES: ReadonlyArray<{ id: Route; label: string; blurb: string }> = [
-  {
-    id: 'birthright',
-    label: 'Birthright',
-    blurb: 'Hoshido — dawn crimson. Birthright-exclusive units and supports apply.',
-  },
-  {
-    id: 'conquest',
-    label: 'Conquest',
-    blurb: 'Nohr — dusk violet. Conquest-exclusive units and supports apply.',
-  },
-  {
-    id: 'revelation',
-    label: 'Revelation',
-    blurb: 'Valla — deep teal. Both kingdoms join; Revelation-only supports apply.',
-  },
+  { id: 'birthright', label: 'Birthright', blurb: 'Hoshido — dawn crimson.' },
+  { id: 'conquest', label: 'Conquest', blurb: 'Nohr — dusk violet.' },
+  { id: 'revelation', label: 'Revelation', blurb: 'Valla — deep teal.' },
 ]
 
 export type StatKey = 'hp' | 'str' | 'mag' | 'skl' | 'spd' | 'lck' | 'def' | 'res'
@@ -32,6 +20,17 @@ export type StatKey = 'hp' | 'str' | 'mag' | 'skl' | 'spd' | 'lck' | 'def' | 're
 export const STAT_KEYS: readonly StatKey[] = ['hp', 'str', 'mag', 'skl', 'spd', 'lck', 'def', 'res']
 
 export const STAT_LABELS: Record<StatKey, string> = {
+  hp: 'HP',
+  str: 'Str',
+  mag: 'Mag',
+  skl: 'Skl',
+  spd: 'Spd',
+  lck: 'Lck',
+  def: 'Def',
+  res: 'Res',
+}
+
+export const STAT_LABELS_LONG: Record<StatKey, string> = {
   hp: 'HP',
   str: 'Strength',
   mag: 'Magic',
@@ -44,33 +43,20 @@ export const STAT_LABELS: Record<StatKey, string> = {
 
 /** One character row from a dataset pack. */
 export interface CharacterDef {
-  /** Internal person id, e.g. `PID_リョウマ`. Stable key across the dataset. */
   id: string
-  /** Display name — falls back to the raw PID suffix until an English map lands. */
   name: string
-  /** Raw `Support Route` value from the UGF Paragon export, when present. */
   supportRoute?: number | null
-  /** True for `PID_プレイヤー男` / `PID_プレイヤー女` (Corrin). */
   isCorrin?: boolean
 }
 
-/** Raw support row: character indices + raw u32 support type. */
 export type RawSupportTuple = [number, number, number]
 
 export type SupportKind = 'romantic' | 'platonic'
 
-/**
- * Decoded support type. The raw u32 packs four point thresholds, high byte
- * first: `S<<24 | A<<16 | B<<8 | C`. `0xFF` in a byte means that rank is
- * unreachable. Examples:
- *   0x140E0904 romantic (S needs 20 points), 0x120C0703 fast romantic,
- *   0xFF0E0904 platonic (no S).
- */
+/** Decoded support type (see docs/DATA.md for the byte layout). */
 export interface SupportInfo {
   kind: SupportKind
-  /** Faster-than-normal support growth (lower point thresholds). */
   fast: boolean
-  /** Point threshold per rank, or null when that rank is unreachable. */
   ranks: { c: number | null; b: number | null; a: number | null; s: number | null }
 }
 
@@ -98,6 +84,58 @@ export interface DatasetEdge {
   info: SupportInfo
 }
 
+// ------------------------------- units -------------------------------------
+
+export interface UnitDef {
+  id: string
+  name: string
+  slot: number
+  gender: 'male' | 'female'
+  supportRoute: number
+  levelCap: number | null
+  baseStats: number[]
+  growths: number[]
+  capMods: number[]
+  /** Primary class pair (base + promoted, order as stored). */
+  classes: number[]
+  /** Secondary base classes (reclass options). */
+  reclasses: number[]
+  weaponRanks: number[]
+  personalSkills: { birthright: number | null; conquest: number | null; revelation: number | null }
+  /** PID of the fixed parent for second-gen units. */
+  fixedParent: string | null
+  isCorrin: boolean
+}
+
+// ------------------------------ classes ------------------------------------
+
+export type ClassTier = 'base' | 'promoted' | 'special'
+
+export interface ClassDef {
+  id: number
+  /** English name including a " (M)"/" (F)" suffix for gendered classes. */
+  name: string
+  ja: string
+  tier: ClassTier
+  baseStats: number[]
+  growths: number[]
+  caps: number[]
+  pairUp: number[]
+  weaponRanks: number[]
+  /** Skills learned in this class, in learning order. */
+  skills: number[]
+  promotesTo: number[]
+  promotesFrom: number[]
+  movement: number
+}
+
+export interface SkillDef {
+  id: number
+  name: string
+}
+
+// ------------------------------ dataset ------------------------------------
+
 export interface DatasetMeta {
   id: string
   label: string
@@ -112,12 +150,59 @@ export interface Dataset {
   meta: DatasetMeta
   characters: CharacterDef[]
   edges: DatasetEdge[]
-  /** Character id -> edges touching it. */
   edgesByCharacter: Map<string, DatasetEdge[]>
+  units: UnitDef[]
+  unitsById: Map<string, UnitDef>
+  classes: ClassDef[]
+  classesById: Map<number, ClassDef>
+  skillsById: Map<number, SkillDef>
 }
 
-export function findsupportsFor(dataset: Dataset, characterId: string): DatasetEdge[] {
-  return dataset.edgesByCharacter.get(characterId) ?? []
+// ------------------------------ helpers ------------------------------------
+
+export function findCharacter(dataset: Dataset, id: string): CharacterDef | undefined {
+  return dataset.characters.find((c) => c.id === id)
+}
+
+export function findUnit(dataset: Dataset, id: string): UnitDef | undefined {
+  return dataset.unitsById.get(id)
+}
+
+export function findClass(dataset: Dataset, id: number): ClassDef | undefined {
+  return dataset.classesById.get(id)
+}
+
+export function skillName(dataset: Dataset, id: number): string {
+  return dataset.skillsById.get(id)?.name ?? `Skill ${id}`
+}
+
+export function className(dataset: Dataset, id: number): string {
+  return dataset.classesById.get(id)?.name ?? `Class ${id}`
+}
+
+export function unitName(dataset: Dataset | null, id: string): string {
+  return (
+    dataset?.unitsById.get(id)?.name ??
+    dataset?.characters.find((c) => c.id === id)?.name ??
+    id.replace(/^PID_/, '')
+  )
+}
+
+export function edgePartner(edge: DatasetEdge, id: string): string {
+  return edge.a === id ? edge.b : edge.a
+}
+
+/** Support partners of `id` filtered by what the edge allows. */
+export function supportPartners(
+  dataset: Dataset,
+  id: string,
+  kind: 'romantic' | 'platonic' | 'a-rank' | 'all',
+): DatasetEdge[] {
+  const edges = dataset.edgesByCharacter.get(id) ?? []
+  if (kind === 'all') return edges
+  if (kind === 'romantic') return edges.filter((e) => e.info.kind === 'romantic')
+  if (kind === 'platonic') return edges.filter((e) => e.info.kind === 'platonic')
+  return edges.filter((e) => e.info.ranks.a !== null)
 }
 
 export function datasetStats(dataset: Dataset) {
@@ -127,5 +212,8 @@ export function datasetStats(dataset: Dataset) {
     edges: dataset.edges.length,
     romantic,
     platonic: dataset.edges.length - romantic,
+    units: dataset.units.length,
+    classes: dataset.classes.length,
+    skills: dataset.skillsById.size,
   }
 }

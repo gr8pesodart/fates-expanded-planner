@@ -13,10 +13,22 @@ and architecture reference. Game data is extracted from the owner's own game/mod
   file** — do not copy code or data; feature parity target and structural inspiration only.
 - **Marigold — Fire Emblem Team Planners** — <https://marigoldfe.com/>. Closed source; the best
   vanilla Fates UX reference (Planner / Inheritance / Units / Classes / Skills / Items tabs, share
-  team, seal counters, per-route pages). We borrow interaction ideas, not assets or code.
+  team, per-route pages). We borrow interaction ideas, not assets or code.
+- **soapy4159 — Fates Calculator (ferevpairings)** — <https://soapy4159.github.io/ferevpairings/>
+  (source: <https://github.com/soapy4159/ferevpairings>, **no license**). Pairing/child calculator:
+  bases, growths, cap mods, pair-up, class inheritance. Used as a mechanics cross-check (child
+  growth averaging, cap-mod combination, class-set duplicate fallbacks) — values were verified
+  against it, nothing was copied.
+- **hiushi — FE14 Stuff** — <https://hiushi.github.io/FE14Stuff/> (repo has no content). “Build
+  planner + charts” UX inspiration for the unit/class/skill surfaces.
 
 ## Tooling & formats
 
+- **RainThunder — fefates-tools** — <https://github.com/RainThunder/fefates-tools>. Nightmare
+  modules for FE Fates. **Actively used**: its table documentation (character/class field layouts)
+  and ID→name enum lists let `tools/extract/extract_game_data.py` read the user's own GameData
+  file. The lists are fetched at extraction time into a gitignored cache; generated packs record
+  provenance. This is the project's only significant third-party data dependency.
 - **Paragon** (thane98) — <https://github.com/thane98/paragon>. FE data editor. Used here for its
   FE14 table schemas (`Data/FE14/Types/*.yml`) and as the authoring format of the UGF export that
   feeds our support pack. Local copy: `fe-fates/tools/_dl/paragon-src`.
