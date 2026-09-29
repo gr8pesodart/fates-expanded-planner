@@ -1,0 +1,1030 @@
+{
+  "PID_プレイヤー男": {
+    "name": "Corrin (M)",
+    "file": "FEF_Avatar_Male.png",
+    "url": "https://cdn.fireemblemwiki.org/2/2d/FEF_Avatar_Male.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Avatar_Male.png",
+    "originalSize": [
+      3336,
+      3746
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Avatar_Male_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_プレイヤー女": {
+    "name": "Corrin (F)",
+    "file": "FEF_Avatar_Female.png",
+    "url": "https://cdn.fireemblemwiki.org/5/5e/FEF_Avatar_Female.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Avatar_Female.png",
+    "originalSize": [
+      2970,
+      4208
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Avatar_Female_01.png",
+      "FEF_Avatar_Female_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ギュンター": {
+    "name": "Gunter",
+    "file": "FEF_Gunter_03.png",
+    "url": "https://cdn.fireemblemwiki.org/8/83/FEF_Gunter_03.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Gunter_03.png",
+    "originalSize": [
+      2632,
+      3028
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Gunter_01.png",
+      "FEF_Gunter_02.png",
+      "FEF_Gunter_04.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_フェリシア": {
+    "name": "Felicia",
+    "file": "FEF_Felicia_03.png",
+    "url": "https://cdn.fireemblemwiki.org/2/20/FEF_Felicia_03.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Felicia_03.png",
+    "originalSize": [
+      3026,
+      4130
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Felicia_01.png",
+      "FEF_Felicia_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ジョーカー": {
+    "name": "Jakob",
+    "file": "FEF_Jakob_03.png",
+    "url": "https://cdn.fireemblemwiki.org/9/9f/FEF_Jakob_03.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Jakob_03.png",
+    "originalSize": [
+      729,
+      1711
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Jakob_01.png",
+      "FEF_Jakob_02.png",
+      "FEF_Jakob_04.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_リンカ": {
+    "name": "Rinkah",
+    "file": "FEF_Rinkah_02.png",
+    "url": "https://cdn.fireemblemwiki.org/2/2d/FEF_Rinkah_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Rinkah_02.png",
+    "originalSize": [
+      1760,
+      3254
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Rinkah.png",
+      "FEF_Rinkah_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_スズカゼ": {
+    "name": "Kaze",
+    "file": "FEF_Kaze.png",
+    "url": "https://cdn.fireemblemwiki.org/3/3c/FEF_Kaze.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Kaze.png",
+    "originalSize": [
+      1484,
+      2594
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Kaze_01.png",
+      "FEF_Kaze_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_サクラ": {
+    "name": "Sakura",
+    "file": "FEF_Sakura_01.png",
+    "url": "https://cdn.fireemblemwiki.org/7/7b/FEF_Sakura_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Sakura_01.png",
+    "originalSize": [
+      3535,
+      3535
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Sakura_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_アクア": {
+    "name": "Azura",
+    "file": "FEF_Azura.png",
+    "url": "https://cdn.fireemblemwiki.org/a/a1/FEF_Azura.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Azura.png",
+    "originalSize": [
+      3387,
+      3689
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Azura_01.png",
+      "FEF_Azura_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_カザハナ": {
+    "name": "Hana",
+    "file": "FEF_Hana_02.png",
+    "url": "https://cdn.fireemblemwiki.org/8/86/FEF_Hana_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Hana_02.png",
+    "originalSize": [
+      1013,
+      1680
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Hana_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ツバキ": {
+    "name": "Subaki",
+    "file": "FEF_Subaki_02.png",
+    "url": "https://cdn.fireemblemwiki.org/6/68/FEF_Subaki_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Subaki_02.png",
+    "originalSize": [
+      1618,
+      3426
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Subaki_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_サイラス": {
+    "name": "Silas",
+    "file": "FEF_Silas.png",
+    "url": "https://cdn.fireemblemwiki.org/b/b7/FEF_Silas.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Silas.png",
+    "originalSize": [
+      1194,
+      1564
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Silas_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_サイゾウ": {
+    "name": "Saizo",
+    "file": "FEF_Saizo.png",
+    "url": "https://cdn.fireemblemwiki.org/0/09/FEF_Saizo.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Saizo.png",
+    "originalSize": [
+      1644,
+      2941
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Saizo_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_オロチ": {
+    "name": "Orochi",
+    "file": "FEF_Orochi.png",
+    "url": "https://cdn.fireemblemwiki.org/d/d5/FEF_Orochi.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Orochi.png",
+    "originalSize": [
+      713,
+      1736
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Orochi_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ヒノカ": {
+    "name": "Hinoka",
+    "file": "FEF_Hinoka_01.png",
+    "url": "https://cdn.fireemblemwiki.org/e/e3/FEF_Hinoka_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Hinoka_01.png",
+    "originalSize": [
+      3435,
+      3637
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Hinoka_02.png",
+      "FEF_Hinoka_03.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_アサマ": {
+    "name": "Azama",
+    "file": "FEF_Azama_02.png",
+    "url": "https://cdn.fireemblemwiki.org/3/3c/FEF_Azama_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Azama_02.png",
+    "originalSize": [
+      800,
+      1701
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Azama_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_セツナ": {
+    "name": "Setsuna",
+    "file": "FEF_Setsuna.png",
+    "url": "https://cdn.fireemblemwiki.org/4/4b/FEF_Setsuna.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Setsuna.png",
+    "originalSize": [
+      1098,
+      1796
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Setsuna_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ツクヨミ": {
+    "name": "Hayato",
+    "file": "FEF_Hayato_01.png",
+    "url": "https://cdn.fireemblemwiki.org/0/02/FEF_Hayato_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Hayato_01.png",
+    "originalSize": [
+      927,
+      1279
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_オボロ": {
+    "name": "Oboro",
+    "file": "FEF_Oboro_01.png",
+    "url": "https://cdn.fireemblemwiki.org/f/fb/FEF_Oboro_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Oboro_01.png",
+    "originalSize": [
+      2179,
+      3299
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Oboro_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ヒナタ": {
+    "name": "Hinata",
+    "file": "FEF_Hinata.png",
+    "url": "https://cdn.fireemblemwiki.org/2/2f/FEF_Hinata.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Hinata.png",
+    "originalSize": [
+      2269,
+      3005
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Hinata_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_タクミ": {
+    "name": "Takumi",
+    "file": "FEF_Takumi_02.png",
+    "url": "https://cdn.fireemblemwiki.org/d/d1/FEF_Takumi_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Takumi_02.png",
+    "originalSize": [
+      3589,
+      3482
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Takumi_01.png",
+      "FEF_Takumi_03.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_カゲロウ": {
+    "name": "Kagero",
+    "file": "FEF_Kagero_02.png",
+    "url": "https://cdn.fireemblemwiki.org/4/4d/FEF_Kagero_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Kagero_02.png",
+    "originalSize": [
+      1443,
+      3266
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Kagero.png",
+      "FEF_Kagero_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ユウギリ": {
+    "name": "Reina",
+    "file": "FEF_Reina.png",
+    "url": "https://cdn.fireemblemwiki.org/2/2a/FEF_Reina.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Reina.png",
+    "originalSize": [
+      2278,
+      2997
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Reina_01.png",
+      "FEF_Reina_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ニシキ": {
+    "name": "Kaden",
+    "file": "FEF_Kaden.png",
+    "url": "https://cdn.fireemblemwiki.org/1/12/FEF_Kaden.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Kaden.png",
+    "originalSize": [
+      805,
+      1696
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Kaden_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_リョウマ": {
+    "name": "Ryoma",
+    "file": "FEF_Ryoma_01.png",
+    "url": "https://cdn.fireemblemwiki.org/8/86/FEF_Ryoma_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Ryoma_01.png",
+    "originalSize": [
+      3913,
+      3194
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Ryoma_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_クリムゾン": {
+    "name": "Scarlet",
+    "file": "FEF_Scarlet_01.png",
+    "url": "https://cdn.fireemblemwiki.org/f/fc/FEF_Scarlet_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Scarlet_01.png",
+    "originalSize": [
+      1163,
+      1704
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_アシュラ": {
+    "name": "Shura",
+    "file": "FEF_Shura_01.png",
+    "url": "https://cdn.fireemblemwiki.org/5/52/FEF_Shura_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Shura_01.png",
+    "originalSize": [
+      909,
+      1745
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_エリーゼ": {
+    "name": "Elise",
+    "file": "FEF_Elise_02.png",
+    "url": "https://cdn.fireemblemwiki.org/d/d3/FEF_Elise_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Elise_02.png",
+    "originalSize": [
+      3491,
+      3580
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Elise_01.png",
+      "FEF_Elise_03.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ハロルド": {
+    "name": "Arthur",
+    "file": "FEF_Arthur_02.png",
+    "url": "https://cdn.fireemblemwiki.org/f/f0/FEF_Arthur_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Arthur_02.png",
+    "originalSize": [
+      875,
+      1513
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Arthur_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_エルフィ": {
+    "name": "Effie",
+    "file": "FEF_Effie.png",
+    "url": "https://cdn.fireemblemwiki.org/3/38/FEF_Effie.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Effie.png",
+    "originalSize": [
+      772,
+      1813
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Effie_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_オーディン": {
+    "name": "Odin",
+    "file": "FEF_Odin.png",
+    "url": "https://cdn.fireemblemwiki.org/e/ed/FEF_Odin.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Odin.png",
+    "originalSize": [
+      2343,
+      2816
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Odin_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ゼロ": {
+    "name": "Niles",
+    "file": "FEF_Niles_02.png",
+    "url": "https://cdn.fireemblemwiki.org/0/06/FEF_Niles_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Niles_02.png",
+    "originalSize": [
+      1405,
+      3305
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Niles.png",
+      "FEF_Niles_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ニュクス": {
+    "name": "Nyx",
+    "file": "FEF_Nyx_02.png",
+    "url": "https://cdn.fireemblemwiki.org/a/a0/FEF_Nyx_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Nyx_02.png",
+    "originalSize": [
+      985,
+      1630
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Nyx_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_カミラ": {
+    "name": "Camilla",
+    "file": "FEF_Camilla_01.png",
+    "url": "https://cdn.fireemblemwiki.org/0/02/FEF_Camilla_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Camilla_01.png",
+    "originalSize": [
+      2536,
+      4465
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Camilla_02.png",
+      "FEF_Camilla_03.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ルーナ": {
+    "name": "Selena",
+    "file": "FEF_Selena.png",
+    "url": "https://cdn.fireemblemwiki.org/7/75/FEF_Selena.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Selena.png",
+    "originalSize": [
+      1066,
+      1292
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ベルカ": {
+    "name": "Beruka",
+    "file": "FEF_Beruka_02.png",
+    "url": "https://cdn.fireemblemwiki.org/b/bb/FEF_Beruka_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Beruka_02.png",
+    "originalSize": [
+      758,
+      1699
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Beruka_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ラズワルド": {
+    "name": "Laslow",
+    "file": "FEF_Laslow_01.png",
+    "url": "https://cdn.fireemblemwiki.org/9/9c/FEF_Laslow_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Laslow_01.png",
+    "originalSize": [
+      416,
+      1350
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ピエリ": {
+    "name": "Peri",
+    "file": "FEF_Peri_02.png",
+    "url": "https://cdn.fireemblemwiki.org/4/4a/FEF_Peri_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Peri_02.png",
+    "originalSize": [
+      1886,
+      3630
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Peri_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ブノワ": {
+    "name": "Benny",
+    "file": "FEF_Benny_02.png",
+    "url": "https://cdn.fireemblemwiki.org/7/79/FEF_Benny_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Benny_02.png",
+    "originalSize": [
+      801,
+      1322
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Benny_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_シャーロッテ": {
+    "name": "Charlotte",
+    "file": "FEF_Charlotte_02.png",
+    "url": "https://cdn.fireemblemwiki.org/b/b7/FEF_Charlotte_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Charlotte_02.png",
+    "originalSize": [
+      676,
+      1732
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Charlotte_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_レオン": {
+    "name": "Leo",
+    "file": "FEF_Leo_01.png",
+    "url": "https://cdn.fireemblemwiki.org/5/5d/FEF_Leo_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Leo_01.png",
+    "originalSize": [
+      3012,
+      4149
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Leo_02.png",
+      "FEF_Leo_03.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_フランネル": {
+    "name": "Keaton",
+    "file": "FEF_Keaton_02.png",
+    "url": "https://cdn.fireemblemwiki.org/8/80/FEF_Keaton_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Keaton_02.png",
+    "originalSize": [
+      1530,
+      3339
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Keaton_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_マークス": {
+    "name": "Xander",
+    "file": "FEF_Xander_01.png",
+    "url": "https://cdn.fireemblemwiki.org/2/28/FEF_Xander_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Xander_01.png",
+    "originalSize": [
+      2432,
+      4792
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Xander_02.png",
+      "FEF_Xander_03.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_イザナ": {
+    "name": "Izana",
+    "file": "FEF_Izana_02.png",
+    "url": "https://cdn.fireemblemwiki.org/f/f1/FEF_Izana_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Izana_02.png",
+    "originalSize": [
+      749,
+      1299
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Izana_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_フウガ": {
+    "name": "Fuga",
+    "file": "FEF_Fuga_01.png",
+    "url": "https://cdn.fireemblemwiki.org/1/11/FEF_Fuga_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Fuga_01.png",
+    "originalSize": [
+      1330,
+      1511
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ユキムラ": {
+    "name": "Yukimura",
+    "file": "FEF_Yukimura_02.png",
+    "url": "https://cdn.fireemblemwiki.org/d/d4/FEF_Yukimura_02.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Yukimura_02.png",
+    "originalSize": [
+      1094,
+      1513
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Yukimura_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_フローラ": {
+    "name": "Flora",
+    "file": "FEF_Flora_03.png",
+    "url": "https://cdn.fireemblemwiki.org/4/45/FEF_Flora_03.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Flora_03.png",
+    "originalSize": [
+      1904,
+      3165
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Flora_01.png",
+      "FEF_Flora_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_モズメ": {
+    "name": "Mozu",
+    "file": "FEF_Mozu_01.png",
+    "url": "https://cdn.fireemblemwiki.org/d/d4/FEF_Mozu_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Mozu_01.png",
+    "originalSize": [
+      1076,
+      2065
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Mozu_02.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_カンナ男": {
+    "name": "Kana (M)",
+    "file": "FEF_Kana_Male.png",
+    "url": "https://cdn.fireemblemwiki.org/e/e2/FEF_Kana_Male.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Kana_Male.png",
+    "originalSize": [
+      304,
+      454
+    ],
+    "kind": "portrait (no full artwork on the wiki)",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_カンナ女": {
+    "name": "Kana (F)",
+    "file": "FEF_Kana_Female.png",
+    "url": "https://cdn.fireemblemwiki.org/9/97/FEF_Kana_Female.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Kana_Female.png",
+    "originalSize": [
+      294,
+      446
+    ],
+    "kind": "portrait (no full artwork on the wiki)",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_シグレ": {
+    "name": "Shigure",
+    "file": "FEF_Shigure_01.png",
+    "url": "https://cdn.fireemblemwiki.org/b/b7/FEF_Shigure_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Shigure_01.png",
+    "originalSize": [
+      776,
+      1801
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ディーア": {
+    "name": "Dwyer",
+    "file": "FEF_Dwyer_01.png",
+    "url": "https://cdn.fireemblemwiki.org/0/06/FEF_Dwyer_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Dwyer_01.png",
+    "originalSize": [
+      813,
+      1726
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ゾフィー": {
+    "name": "Sophie",
+    "file": "FEF_Sophie_01.png",
+    "url": "https://cdn.fireemblemwiki.org/f/f8/FEF_Sophie_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Sophie_01.png",
+    "originalSize": [
+      700,
+      1408
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ミドリコ": {
+    "name": "Midori",
+    "file": "FEF_Midori_01.png",
+    "url": "https://cdn.fireemblemwiki.org/d/d2/FEF_Midori_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Midori_01.png",
+    "originalSize": [
+      629,
+      1645
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_シノノメ": {
+    "name": "Shiro",
+    "file": "FEF_Shiro_01.png",
+    "url": "https://cdn.fireemblemwiki.org/5/56/FEF_Shiro_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Shiro_01.png",
+    "originalSize": [
+      1280,
+      1609
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_キサラギ": {
+    "name": "Kiragi",
+    "file": "FEF_Kiragi_01.png",
+    "url": "https://cdn.fireemblemwiki.org/1/1e/FEF_Kiragi_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Kiragi_01.png",
+    "originalSize": [
+      1032,
+      1650
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_グレイ": {
+    "name": "Asugi",
+    "file": "FEF_Asugi_01.png",
+    "url": "https://cdn.fireemblemwiki.org/b/b7/FEF_Asugi_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Asugi_01.png",
+    "originalSize": [
+      1108,
+      1691
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_キヌ": {
+    "name": "Selkie",
+    "file": "FEF_Selkie.png",
+    "url": "https://cdn.fireemblemwiki.org/2/29/FEF_Selkie.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Selkie.png",
+    "originalSize": [
+      1542,
+      3242
+    ],
+    "kind": "full artwork",
+    "alternatives": [
+      "FEF_Selkie_01.png"
+    ],
+    "focalMethod": "pinned"
+  },
+  "PID_ヒサメ": {
+    "name": "Hisame",
+    "file": "FEF_Hisame_01.png",
+    "url": "https://cdn.fireemblemwiki.org/8/88/FEF_Hisame_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Hisame_01.png",
+    "originalSize": [
+      907,
+      1680
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ミタマ": {
+    "name": "Mitama",
+    "file": "FEF_Mitama_01.png",
+    "url": "https://cdn.fireemblemwiki.org/a/a3/FEF_Mitama_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Mitama_01.png",
+    "originalSize": [
+      678,
+      1734
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_マトイ": {
+    "name": "Caeldori",
+    "file": "FEF_Caeldori_01.png",
+    "url": "https://cdn.fireemblemwiki.org/d/de/FEF_Caeldori_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Caeldori_01.png",
+    "originalSize": [
+      1352,
+      3460
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_シャラ": {
+    "name": "Rhajat",
+    "file": "FEF_Rhajat_01.png",
+    "url": "https://cdn.fireemblemwiki.org/e/e5/FEF_Rhajat_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Rhajat_01.png",
+    "originalSize": [
+      724,
+      1733
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ジークベルト": {
+    "name": "Siegbert",
+    "file": "FEF_Siegbert_01.png",
+    "url": "https://cdn.fireemblemwiki.org/a/aa/FEF_Siegbert_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Siegbert_01.png",
+    "originalSize": [
+      1004,
+      1781
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_フォレオ": {
+    "name": "Forrest",
+    "file": "FEF_Forrest_01.png",
+    "url": "https://cdn.fireemblemwiki.org/3/3b/FEF_Forrest_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Forrest_01.png",
+    "originalSize": [
+      693,
+      1731
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_イグニス": {
+    "name": "Ignatius",
+    "file": "FEF_Ignatius_01.png",
+    "url": "https://cdn.fireemblemwiki.org/8/8b/FEF_Ignatius_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Ignatius_01.png",
+    "originalSize": [
+      1062,
+      1540
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ベロア": {
+    "name": "Velouria",
+    "file": "FEF_Velouria_01.png",
+    "url": "https://cdn.fireemblemwiki.org/0/07/FEF_Velouria_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Velouria_01.png",
+    "originalSize": [
+      636,
+      1740
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ルッツ": {
+    "name": "Percy",
+    "file": "FEF_Percy_01.png",
+    "url": "https://cdn.fireemblemwiki.org/8/88/FEF_Percy_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Percy_01.png",
+    "originalSize": [
+      938,
+      1784
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_オフェリア": {
+    "name": "Ophelia",
+    "file": "FEF_Ophelia_01.png",
+    "url": "https://cdn.fireemblemwiki.org/f/f2/FEF_Ophelia_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Ophelia_01.png",
+    "originalSize": [
+      1026,
+      1557
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_ソレイユ": {
+    "name": "Soleil",
+    "file": "FEF_Soleil_01.png",
+    "url": "https://cdn.fireemblemwiki.org/8/82/FEF_Soleil_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Soleil_01.png",
+    "originalSize": [
+      750,
+      1310
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_エポニーヌ": {
+    "name": "Nina",
+    "file": "FEF_Nina_01.png",
+    "url": "https://cdn.fireemblemwiki.org/8/8c/FEF_Nina_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Nina_01.png",
+    "originalSize": [
+      938,
+      1617
+    ],
+    "kind": "full artwork",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  },
+  "PID_アンナ": {
+    "name": "Anna",
+    "file": "FEF_Anna_01.png",
+    "url": "https://cdn.fireemblemwiki.org/1/1b/FEF_Anna_01.png",
+    "page": "https://fireemblemwiki.org/wiki/File:FEF_Anna_01.png",
+    "originalSize": [
+      750,
+      1000
+    ],
+    "kind": "portrait (no full artwork on the wiki)",
+    "alternatives": [],
+    "focalMethod": "pinned"
+  }
+}

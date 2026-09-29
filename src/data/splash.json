@@ -1,0 +1,720 @@
+{
+  "generatedAt": "2026-09-29T19:56:00+00:00",
+  "source": "Official Fire Emblem Fates artwork via Fire Emblem Wiki (tools/assets/splash_sources.json)",
+  "coverage": {
+    "resolved": 71,
+    "total": 71
+  },
+  "units": {
+    "PID_プレイヤー男": {
+      "file": "assets/splash/1.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Avatar_Male.png"
+    },
+    "PID_プレイヤー女": {
+      "file": "assets/splash/2.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Avatar_Female.png"
+    },
+    "PID_ギュンター": {
+      "file": "assets/splash/3.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Gunter_03.png"
+    },
+    "PID_フェリシア": {
+      "file": "assets/splash/4.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Felicia_03.png"
+    },
+    "PID_ジョーカー": {
+      "file": "assets/splash/5.webp",
+      "w": 634,
+      "h": 513,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Jakob_03.png"
+    },
+    "PID_リンカ": {
+      "file": "assets/splash/6.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Rinkah_02.png"
+    },
+    "PID_スズカゼ": {
+      "file": "assets/splash/7.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Kaze.png"
+    },
+    "PID_サクラ": {
+      "file": "assets/splash/8.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Sakura_01.png"
+    },
+    "PID_アクア": {
+      "file": "assets/splash/9.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Azura.png"
+    },
+    "PID_カザハナ": {
+      "file": "assets/splash/10.webp",
+      "w": 726,
+      "h": 588,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Hana_02.png"
+    },
+    "PID_ツバキ": {
+      "file": "assets/splash/11.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Subaki_02.png"
+    },
+    "PID_サイラス": {
+      "file": "assets/splash/12.webp",
+      "w": 676,
+      "h": 547,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Silas.png"
+    },
+    "PID_サイゾウ": {
+      "file": "assets/splash/13.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Saizo.png"
+    },
+    "PID_オロチ": {
+      "file": "assets/splash/14.webp",
+      "w": 643,
+      "h": 521,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Orochi.png"
+    },
+    "PID_ヒノカ": {
+      "file": "assets/splash/15.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Hinoka_01.png"
+    },
+    "PID_アサマ": {
+      "file": "assets/splash/16.webp",
+      "w": 735,
+      "h": 595,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Azama_02.png"
+    },
+    "PID_セツナ": {
+      "file": "assets/splash/17.webp",
+      "w": 665,
+      "h": 539,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Setsuna.png"
+    },
+    "PID_ツクヨミ": {
+      "file": "assets/splash/18.webp",
+      "w": 552,
+      "h": 448,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Hayato_01.png"
+    },
+    "PID_オボロ": {
+      "file": "assets/splash/19.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Oboro_01.png"
+    },
+    "PID_ヒナタ": {
+      "file": "assets/splash/20.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Hinata.png"
+    },
+    "PID_タクミ": {
+      "file": "assets/splash/21.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Takumi_02.png"
+    },
+    "PID_カゲロウ": {
+      "file": "assets/splash/22.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Kagero_02.png"
+    },
+    "PID_ユウギリ": {
+      "file": "assets/splash/23.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Reina.png"
+    },
+    "PID_ニシキ": {
+      "file": "assets/splash/24.webp",
+      "w": 733,
+      "h": 594,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Kaden.png"
+    },
+    "PID_リョウマ": {
+      "file": "assets/splash/25.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Ryoma_01.png"
+    },
+    "PID_クリムゾン": {
+      "file": "assets/splash/26.webp",
+      "w": 631,
+      "h": 511,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Scarlet_01.png"
+    },
+    "PID_アシュラ": {
+      "file": "assets/splash/27.webp",
+      "w": 646,
+      "h": 524,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Shura_01.png"
+    },
+    "PID_エリーゼ": {
+      "file": "assets/splash/28.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Elise_02.png"
+    },
+    "PID_ハロルド": {
+      "file": "assets/splash/29.webp",
+      "w": 654,
+      "h": 530,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Arthur_02.png"
+    },
+    "PID_エルフィ": {
+      "file": "assets/splash/30.webp",
+      "w": 671,
+      "h": 544,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Effie.png"
+    },
+    "PID_オーディン": {
+      "file": "assets/splash/31.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Odin.png"
+    },
+    "PID_ゼロ": {
+      "file": "assets/splash/32.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Niles_02.png"
+    },
+    "PID_ニュクス": {
+      "file": "assets/splash/33.webp",
+      "w": 604,
+      "h": 489,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Nyx_02.png"
+    },
+    "PID_カミラ": {
+      "file": "assets/splash/34.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Camilla_01.png"
+    },
+    "PID_ルーナ": {
+      "file": "assets/splash/35.webp",
+      "w": 478,
+      "h": 388,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Selena.png"
+    },
+    "PID_ベルカ": {
+      "file": "assets/splash/36.webp",
+      "w": 629,
+      "h": 510,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Beruka_02.png"
+    },
+    "PID_ラズワルド": {
+      "file": "assets/splash/37.webp",
+      "w": 583,
+      "h": 473,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Laslow_01.png"
+    },
+    "PID_ピエリ": {
+      "file": "assets/splash/38.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Peri_02.png"
+    },
+    "PID_ブノワ": {
+      "file": "assets/splash/39.webp",
+      "w": 571,
+      "h": 463,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Benny_02.png"
+    },
+    "PID_シャーロッテ": {
+      "file": "assets/splash/40.webp",
+      "w": 748,
+      "h": 606,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Charlotte_02.png"
+    },
+    "PID_レオン": {
+      "file": "assets/splash/41.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Leo_01.png"
+    },
+    "PID_フランネル": {
+      "file": "assets/splash/42.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Keaton_02.png"
+    },
+    "PID_マークス": {
+      "file": "assets/splash/43.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Xander_01.png"
+    },
+    "PID_イザナ": {
+      "file": "assets/splash/44.webp",
+      "w": 481,
+      "h": 390,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Izana_02.png"
+    },
+    "PID_フウガ": {
+      "file": "assets/splash/45.webp",
+      "w": 746,
+      "h": 604,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Fuga_01.png"
+    },
+    "PID_ユキムラ": {
+      "file": "assets/splash/46.webp",
+      "w": 654,
+      "h": 530,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Yukimura_02.png"
+    },
+    "PID_フローラ": {
+      "file": "assets/splash/47.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Flora_03.png"
+    },
+    "PID_モズメ": {
+      "file": "assets/splash/48.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Mozu_01.png"
+    },
+    "PID_カンナ男": {
+      "file": "assets/splash/49.webp",
+      "w": 560,
+      "h": 454,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Kana_Male.png"
+    },
+    "PID_カンナ女": {
+      "file": "assets/splash/50.webp",
+      "w": 550,
+      "h": 446,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Kana_Female.png"
+    },
+    "PID_シグレ": {
+      "file": "assets/splash/51.webp",
+      "w": 667,
+      "h": 540,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Shigure_01.png"
+    },
+    "PID_ディーア": {
+      "file": "assets/splash/52.webp",
+      "w": 639,
+      "h": 518,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Dwyer_01.png"
+    },
+    "PID_ゾフィー": {
+      "file": "assets/splash/53.webp",
+      "w": 521,
+      "h": 422,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Sophie_01.png"
+    },
+    "PID_ミドリコ": {
+      "file": "assets/splash/54.webp",
+      "w": 711,
+      "h": 576,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Midori_01.png"
+    },
+    "PID_シノノメ": {
+      "file": "assets/splash/55.webp",
+      "w": 596,
+      "h": 483,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Shiro_01.png"
+    },
+    "PID_キサラギ": {
+      "file": "assets/splash/56.webp",
+      "w": 611,
+      "h": 495,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Kiragi_01.png"
+    },
+    "PID_グレイ": {
+      "file": "assets/splash/57.webp",
+      "w": 730,
+      "h": 592,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Asugi_01.png"
+    },
+    "PID_キヌ": {
+      "file": "assets/splash/58.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Selkie.png"
+    },
+    "PID_ヒサメ": {
+      "file": "assets/splash/59.webp",
+      "w": 622,
+      "h": 504,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Hisame_01.png"
+    },
+    "PID_ミタマ": {
+      "file": "assets/splash/60.webp",
+      "w": 749,
+      "h": 607,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Mitama_01.png"
+    },
+    "PID_マトイ": {
+      "file": "assets/splash/61.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Caeldori_01.png"
+    },
+    "PID_シャラ": {
+      "file": "assets/splash/62.webp",
+      "w": 749,
+      "h": 607,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Rhajat_01.png"
+    },
+    "PID_ジークベルト": {
+      "file": "assets/splash/63.webp",
+      "w": 659,
+      "h": 534,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Siegbert_01.png"
+    },
+    "PID_フォレオ": {
+      "file": "assets/splash/64.webp",
+      "w": 748,
+      "h": 606,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Forrest_01.png"
+    },
+    "PID_イグニス": {
+      "file": "assets/splash/65.webp",
+      "w": 665,
+      "h": 539,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Ignatius_01.png"
+    },
+    "PID_ベロア": {
+      "file": "assets/splash/66.webp",
+      "w": 752,
+      "h": 609,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Velouria_01.png"
+    },
+    "PID_ルッツ": {
+      "file": "assets/splash/67.webp",
+      "w": 661,
+      "h": 535,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Percy_01.png"
+    },
+    "PID_オフェリア": {
+      "file": "assets/splash/68.webp",
+      "w": 576,
+      "h": 467,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Ophelia_01.png"
+    },
+    "PID_ソレイユ": {
+      "file": "assets/splash/69.webp",
+      "w": 566,
+      "h": 458,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Soleil_01.png"
+    },
+    "PID_エポニーヌ": {
+      "file": "assets/splash/70.webp",
+      "w": 599,
+      "h": 485,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Nina_01.png"
+    },
+    "PID_アンナ": {
+      "file": "assets/splash/71.webp",
+      "w": 780,
+      "h": 632,
+      "focal": {
+        "x": 0.5,
+        "y": 0.35
+      },
+      "source": "https://fireemblemwiki.org/wiki/File:FEF_Anna_01.png"
+    }
+  }
+}

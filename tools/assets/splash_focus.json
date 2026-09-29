@@ -1,0 +1,429 @@
+{
+  "_about": "Hand-placed face centre and face height per unit, as fractions of the artwork's trimmed (alpha) bounding box. Preferred over the face detector.",
+  "PID_プレイヤー男": {
+    "name": "Corrin (M)",
+    "x": 0.22,
+    "y": 0.06,
+    "face": 0.05
+  },
+  "PID_プレイヤー女": {
+    "name": "Corrin (F)",
+    "x": 0.52,
+    "y": 0.17,
+    "face": 0.05
+  },
+  "PID_ギュンター": {
+    "name": "Gunter",
+    "x": 0.34,
+    "y": 0.07,
+    "face": 0.06
+  },
+  "PID_フェリシア": {
+    "name": "Felicia",
+    "x": 0.2,
+    "y": 0.145,
+    "face": 0.05
+  },
+  "PID_ジョーカー": {
+    "name": "Jakob",
+    "x": 0.22,
+    "y": 0.1,
+    "face": 0.06
+  },
+  "PID_リンカ": {
+    "name": "Rinkah",
+    "x": 0.27,
+    "y": 0.13,
+    "face": 0.06
+  },
+  "PID_スズカゼ": {
+    "name": "Kaze",
+    "x": 0.52,
+    "y": 0.07,
+    "face": 0.055
+  },
+  "PID_サクラ": {
+    "name": "Sakura",
+    "x": 0.67,
+    "y": 0.22,
+    "face": 0.05
+  },
+  "PID_アクア": {
+    "name": "Azura",
+    "x": 0.42,
+    "y": 0.19,
+    "face": 0.05
+  },
+  "PID_カザハナ": {
+    "name": "Hana",
+    "x": 0.41,
+    "y": 0.13,
+    "face": 0.07
+  },
+  "PID_ツバキ": {
+    "name": "Subaki",
+    "x": 0.63,
+    "y": 0.07,
+    "face": 0.06
+  },
+  "PID_サイラス": {
+    "name": "Silas",
+    "x": 0.58,
+    "y": 0.11,
+    "face": 0.07
+  },
+  "PID_サイゾウ": {
+    "name": "Saizo",
+    "x": 0.57,
+    "y": 0.11,
+    "face": 0.08
+  },
+  "PID_オロチ": {
+    "name": "Orochi",
+    "x": 0.49,
+    "y": 0.155,
+    "face": 0.06
+  },
+  "PID_ヒノカ": {
+    "name": "Hinoka",
+    "x": 0.77,
+    "y": 0.23,
+    "face": 0.045
+  },
+  "PID_アサマ": {
+    "name": "Azama",
+    "x": 0.61,
+    "y": 0.065,
+    "face": 0.07
+  },
+  "PID_セツナ": {
+    "name": "Setsuna",
+    "x": 0.31,
+    "y": 0.22,
+    "face": 0.06
+  },
+  "PID_ツクヨミ": {
+    "name": "Hayato",
+    "x": 0.66,
+    "y": 0.075,
+    "face": 0.07
+  },
+  "PID_オボロ": {
+    "name": "Oboro",
+    "x": 0.36,
+    "y": 0.27,
+    "face": 0.045
+  },
+  "PID_ヒナタ": {
+    "name": "Hinata",
+    "x": 0.39,
+    "y": 0.085,
+    "face": 0.07
+  },
+  "PID_タクミ": {
+    "name": "Takumi",
+    "x": 0.56,
+    "y": 0.12,
+    "face": 0.06
+  },
+  "PID_カゲロウ": {
+    "name": "Kagero",
+    "x": 0.4,
+    "y": 0.06,
+    "face": 0.06
+  },
+  "PID_ユウギリ": {
+    "name": "Reina",
+    "x": 0.49,
+    "y": 0.25,
+    "face": 0.06
+  },
+  "PID_ニシキ": {
+    "name": "Kaden",
+    "x": 0.26,
+    "y": 0.1,
+    "face": 0.07
+  },
+  "PID_リョウマ": {
+    "name": "Ryoma",
+    "x": 0.54,
+    "y": 0.12,
+    "face": 0.05
+  },
+  "PID_クリムゾン": {
+    "name": "Scarlet",
+    "x": 0.61,
+    "y": 0.145,
+    "face": 0.06
+  },
+  "PID_アシュラ": {
+    "name": "Shura",
+    "x": 0.5,
+    "y": 0.085,
+    "face": 0.06
+  },
+  "PID_エリーゼ": {
+    "name": "Elise",
+    "x": 0.43,
+    "y": 0.11,
+    "face": 0.05
+  },
+  "PID_ハロルド": {
+    "name": "Arthur",
+    "x": 0.45,
+    "y": 0.12,
+    "face": 0.07
+  },
+  "PID_エルフィ": {
+    "name": "Effie",
+    "x": 0.47,
+    "y": 0.18,
+    "face": 0.06
+  },
+  "PID_オーディン": {
+    "name": "Odin",
+    "x": 0.45,
+    "y": 0.5,
+    "face": 0.07
+  },
+  "PID_ゼロ": {
+    "name": "Niles",
+    "x": 0.33,
+    "y": 0.085,
+    "face": 0.06
+  },
+  "PID_ニュクス": {
+    "name": "Nyx",
+    "x": 0.63,
+    "y": 0.06,
+    "face": 0.06
+  },
+  "PID_カミラ": {
+    "name": "Camilla",
+    "x": 0.54,
+    "y": 0.1,
+    "face": 0.05
+  },
+  "PID_ルーナ": {
+    "name": "Selena",
+    "x": 0.59,
+    "y": 0.11,
+    "face": 0.06
+  },
+  "PID_ベルカ": {
+    "name": "Beruka",
+    "x": 0.51,
+    "y": 0.075,
+    "face": 0.06
+  },
+  "PID_ラズワルド": {
+    "name": "Laslow",
+    "x": 0.33,
+    "y": 0.085,
+    "face": 0.07
+  },
+  "PID_ピエリ": {
+    "name": "Peri",
+    "x": 0.41,
+    "y": 0.19,
+    "face": 0.05
+  },
+  "PID_ブノワ": {
+    "name": "Benny",
+    "x": 0.67,
+    "y": 0.12,
+    "face": 0.07
+  },
+  "PID_シャーロッテ": {
+    "name": "Charlotte",
+    "x": 0.21,
+    "y": 0.075,
+    "face": 0.07
+  },
+  "PID_レオン": {
+    "name": "Leo",
+    "x": 0.33,
+    "y": 0.075,
+    "face": 0.06
+  },
+  "PID_フランネル": {
+    "name": "Keaton",
+    "x": 0.36,
+    "y": 0.075,
+    "face": 0.06
+  },
+  "PID_マークス": {
+    "name": "Xander",
+    "x": 0.59,
+    "y": 0.05,
+    "face": 0.05
+  },
+  "PID_イザナ": {
+    "name": "Izana",
+    "x": 0.48,
+    "y": 0.06,
+    "face": 0.06
+  },
+  "PID_フウガ": {
+    "name": "Fuga",
+    "x": 0.72,
+    "y": 0.085,
+    "face": 0.08
+  },
+  "PID_ユキムラ": {
+    "name": "Yukimura",
+    "x": 0.46,
+    "y": 0.1,
+    "face": 0.07
+  },
+  "PID_フローラ": {
+    "name": "Flora",
+    "x": 0.74,
+    "y": 0.145,
+    "face": 0.06
+  },
+  "PID_モズメ": {
+    "name": "Mozu",
+    "x": 0.39,
+    "y": 0.205,
+    "face": 0.17
+  },
+  "PID_カンナ男": {
+    "name": "Kana (M)",
+    "x": 0.39,
+    "y": 0.35,
+    "face": 0.3
+  },
+  "PID_カンナ女": {
+    "name": "Kana (F)",
+    "x": 0.36,
+    "y": 0.35,
+    "face": 0.3
+  },
+  "PID_シグレ": {
+    "name": "Shigure",
+    "x": 0.69,
+    "y": 0.17,
+    "face": 0.06
+  },
+  "PID_ディーア": {
+    "name": "Dwyer",
+    "x": 0.58,
+    "y": 0.1,
+    "face": 0.06
+  },
+  "PID_ゾフィー": {
+    "name": "Sophie",
+    "x": 0.24,
+    "y": 0.2,
+    "face": 0.06
+  },
+  "PID_ミドリコ": {
+    "name": "Midori",
+    "x": 0.37,
+    "y": 0.12,
+    "face": 0.07
+  },
+  "PID_シノノメ": {
+    "name": "Shiro",
+    "x": 0.63,
+    "y": 0.085,
+    "face": 0.06
+  },
+  "PID_キサラギ": {
+    "name": "Kiragi",
+    "x": 0.72,
+    "y": 0.12,
+    "face": 0.06
+  },
+  "PID_グレイ": {
+    "name": "Asugi",
+    "x": 0.64,
+    "y": 0.075,
+    "face": 0.07
+  },
+  "PID_キヌ": {
+    "name": "Selkie",
+    "x": 0.52,
+    "y": 0.11,
+    "face": 0.07
+  },
+  "PID_ヒサメ": {
+    "name": "Hisame",
+    "x": 0.75,
+    "y": 0.06,
+    "face": 0.06
+  },
+  "PID_ミタマ": {
+    "name": "Mitama",
+    "x": 0.46,
+    "y": 0.1,
+    "face": 0.07
+  },
+  "PID_マトイ": {
+    "name": "Caeldori",
+    "x": 0.37,
+    "y": 0.11,
+    "face": 0.07
+  },
+  "PID_シャラ": {
+    "name": "Rhajat",
+    "x": 0.43,
+    "y": 0.1,
+    "face": 0.07
+  },
+  "PID_ジークベルト": {
+    "name": "Siegbert",
+    "x": 0.49,
+    "y": 0.145,
+    "face": 0.06
+  },
+  "PID_フォレオ": {
+    "name": "Forrest",
+    "x": 0.21,
+    "y": 0.13,
+    "face": 0.07
+  },
+  "PID_イグニス": {
+    "name": "Ignatius",
+    "x": 0.52,
+    "y": 0.19,
+    "face": 0.07
+  },
+  "PID_ベロア": {
+    "name": "Velouria",
+    "x": 0.42,
+    "y": 0.1,
+    "face": 0.07
+  },
+  "PID_ルッツ": {
+    "name": "Percy",
+    "x": 0.38,
+    "y": 0.25,
+    "face": 0.06
+  },
+  "PID_オフェリア": {
+    "name": "Ophelia",
+    "x": 0.54,
+    "y": 0.145,
+    "face": 0.06
+  },
+  "PID_ソレイユ": {
+    "name": "Soleil",
+    "x": 0.54,
+    "y": 0.085,
+    "face": 0.07
+  },
+  "PID_エポニーヌ": {
+    "name": "Nina",
+    "x": 0.47,
+    "y": 0.1,
+    "face": 0.06
+  },
+  "PID_アンナ": {
+    "name": "Anna",
+    "x": 0.52,
+    "y": 0.3,
+    "face": 0.2
+  }
+}

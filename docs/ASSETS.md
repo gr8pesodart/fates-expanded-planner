@@ -151,3 +151,27 @@ python tools/assets/extract_portraits.py --help     # --romfs, --fe-tools, --pac
 The script also renders `docs/screenshots/v3/portraits.png`: every unit's face crop at 64px and
 bust crop at 115px with names, so the crops can be eyeballed in one image. `src/data/portraits.test.ts`
 pins coverage ≥ 90%, file existence under `public/`, and square in-bounds boxes.
+
+## Splash art (v3, online)
+
+The character-page header uses **official Fire Emblem Fates artwork**, the one set not taken from
+the romfs dump (owner-approved exception, 2026-09-30: "whichever is higher res base artwork").
+
+- **Source:** Fire Emblem Wiki's `FEF_*` files. Per unit, the largest *full* artwork is chosen: the
+  wiki's 1000px-tall files are portrait busts and anything under 700px is a thumbnail, so both are
+  skipped unless nothing else exists (Anna and Kana only have bust/small art). Serenes Forest has
+  larger JPGs (5000px) for Corrin and the royals, but the wiki's versions of those are 2.4–4.8k px
+  transparent PNGs — both far exceed the crop we ship, and transparency keeps every header on the
+  route-coloured wash, so the wiki is used throughout.
+- **Pinned selection:** `tools/assets/splash_sources.json` (file, source page, original size,
+  alternatives). `--refresh-sources` re-selects.
+- **Crop:** faces are hand-placed in `tools/assets/splash_focus.json` (fractions of the trimmed
+  artwork; the anime-face detector missed most of Kozaki's three-quarter faces). The script bakes a
+  390:316 header crop about five face-heights tall with the face at 35% height, stored at 2×
+  (780×632 WebP q82). Coverage 71/71, ≈3.2 MB total (≈46 KB each, lazy-loaded per character).
+- **Review:** `docs/screenshots/v3/splash.png` shows every header crop.
+- **Regenerate:** `python tools/assets/fetch_splash.py` (originals cached in the gitignored
+  `tools/assets/.cache/splash/`; needs Pillow, numpy, opencv-python).
+
+Licence: official artwork © Nintendo / Intelligent Systems, used as fan reference like the rest of
+the asset folder; removable with `VITE_ASSETS=off` or by deleting `public/assets/splash/`.

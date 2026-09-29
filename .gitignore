@@ -31,3 +31,6 @@ venv/
 
 # Extractor source caches (enum lists fetched from the fe-fates tooling repos)
 tools/extract/sources/
+
+# Downloaded source art (splash originals); regenerate with tools/assets/fetch_splash.py
+tools/assets/.cache/
