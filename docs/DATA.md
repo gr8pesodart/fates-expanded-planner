@@ -82,6 +82,61 @@ Notes:
 Regenerate: `python tools/extract/extract_game_data.py` (needs the fe-fates workspace; override
 paths with `--gamedata`, `--fe-tools`, `--sources`, `--messages`).
 
+## Recruitment (v3) — `tools/extract/curated/recruitment.source.json` → `recruitment.json`
+
+Per route, the recruit order, join chapter, join level and join class for every available unit
+(the roster's default sort and the progression screen's start point). The hand-curated source
+lives in `tools/extract/curated/recruitment.source.json` (every entry cites its source page);
+`build_recruitment.py` validates it against the pack's `units.json`/`classes.json`, sorts each
+route and writes `src/data/packs/ugf-2.5.2/recruitment.json`. Regenerate:
+
+    python tools/extract/build_recruitment.py
+
+Sources: Serenes Forest [Hoshidan](https://serenesforest.net/fire-emblem-fates/hoshidan-characters/recruitment/) /
+[Nohrian](https://serenesforest.net/fire-emblem-fates/nohrian-characters/recruitment/) /
+[Revelation](https://serenesforest.net/fire-emblem-fates/revelation/character-recruitment/) /
+[Other/DLC](https://serenesforest.net/fire-emblem-fates/other-characters/recruitment/) recruitment
+tables (chapter, order, exclusivity) and the matching base-stats pages (join level/class);
+the [DLC list](https://serenesforest.net/fire-emblem-fates/miscellaneous/downloadable-content/)
+(Dragon's Gate opens after Chapter 6, so Anna's "Anna on the Run" xenologue sits at 6.5);
+[Fire Emblem Wiki › Paralogue](https://fireemblemwiki.org/wiki/Paralogue) and
+[Dragon Blood](https://fireemblemwiki.org/wiki/Dragon_Blood) (all child paralogues unlock after
+Chapter 7 + the fixed parent's marriage; Birthright's Paralogue 6 also needs Chapter 15 and Kaze's
+A support); [Fire Emblem Wiki](https://fireemblemwiki.org) character pages for route confirmation.
+
+Rules:
+
+- `chapterSortKey` = chapter number; recruits whose unlock follows a chapter sit at `chapter + 0.5`
+  (Mozu 7.5, Anna 6.5) or at their My Castle chapter (Izana/Flora 19 or 23 by route, Fuga 19,
+  Yukimura 23). Same-key units keep source order (stable sort) = in-game join order.
+- Children share 7.5 (Chapter 7 + marriage) and keep paralogue order (P2–P22); the app additionally
+  lists all second-gen after first-gen (`src/logic/rosterSort.ts`). Child join level is 10 (it
+  scales with story progress in-game).
+- `optional` = must be actively obtained: Mozu, Anna, the My Castle recruits (Izana/Fuga/Yukimura/
+  Flora), Shura (spare him) and all children. Route counts: 44 Birthright / 43 Conquest / 69
+  Revelation.
+- The builder resolves the source's English class name through the unit's gender variant
+  ("Swordmaster" → "Swordmaster (M/F)"), fails on unknown units/classes, wrong `promotedAtJoin`
+  tier flags or duplicates, and warns when a curated route disagrees with `units.json` routes.
+
+Discrepancies found while curating (units.json/extractor left untouched):
+
+- **`units.json` routes vs sources: no mismatches.** Every curated unit appears on exactly the
+  routes the source pages list (builder warnings = 0; pinned by `src/data/recruitment.test.ts`).
+- **Scarlet (Revelation)**: recruited in Chapter 16, but permanently leaves the army at the end of
+  Chapter 18 ([FE Wiki](https://fireemblemwiki.org/wiki/Scarlet)); the pack lists her as a normal
+  Chapter 16 recruit and only the note carries the caveat.
+- **Mitama's join class**: Serenes' Revelation base-stats table says Priestess (promoted); the
+  Birthright table and the extracted class pool say Shrine Maiden (base). The pack uses Shrine
+  Maiden.
+- **Mozu's paralogue**: FE Wiki says it unlocks after Chapter 7; some third-party guides say
+  Chapter 8. Used 7.5.
+- **Felicia/Jakob**: only the servant matching Corrin's gender joins in Chapter 6; the other joins
+  after Chapter 15 at level 13. Both are placed at Chapter 6 (earliest permanent join) with the
+  condition in the note. **Kaze (Birthright)** is at Chapter 4 but leaves after Chapter 15 without
+  Corrin's A support (noted).
+- **Yukimura's chapter**: Serenes and FE Wiki say Chapter 23 or later, Fandom says 22. Used 23.
+
 ## Pair-up mechanics (sourced)
 
 The planner composes a pair-up bonus as:
