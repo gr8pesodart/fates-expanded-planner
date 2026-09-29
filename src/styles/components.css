@@ -636,8 +636,8 @@
   padding: var(--s3) var(--s4);
 }
 .warntext { font-size: 13px; flex: 1; min-width: 160px; }
-.empty { display: grid; gap: var(--s2); justify-items: start; min-height: 200px; align-content: center; }
-.empty h3 { font-size: 22px; }
+.emptystate { display: grid; gap: var(--s2); justify-items: start; min-height: 200px; align-content: center; }
+.emptystate h3 { font-size: 22px; }
 .conflictlist { display: grid; gap: var(--s2); }
 .conflict {
   display: flex;

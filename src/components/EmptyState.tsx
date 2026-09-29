@@ -8,7 +8,7 @@ export interface EmptyStateProps {
 
 export function EmptyState({ kicker, title, body, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <section className="card empty">
+    <section className="card emptystate">
       <span className="kicker">{kicker}</span>
       <h3>{title}</h3>
       <p className="muted">{body}</p>
