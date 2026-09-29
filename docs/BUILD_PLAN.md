@@ -1,0 +1,141 @@
+# Build plan — v2
+
+Branch: **`v2`** (off `main`; v1 is tagged `v1-final`). Merge to `main` only when every milestone's
+definition of done holds and the owner signs off.
+
+Read first: [VISION.md](VISION.md) (what & why), [design/reference.html](design/reference.html)
+(how it looks — open it in a browser at 390px and at 1280px), [DATA.md](DATA.md), [MODS.md](MODS.md).
+
+## Roles
+
+| Role | Who | Scope |
+|---|---|---|
+| Owner / reviewer | Opus 5.5 (top-level) + the user | Direction, final review, merge |
+| **Setup agent** | DeepSeek V4.1 Flash | Milestone 0 only: scaffold (M0a), data port + asset pipeline (M0b) |
+| **Prototype agent** | DeepSeek V4.1 Flash | Milestone P: non-functional prototype of every page/layout, in a worktree (`v2-prototype`) |
+| **Build orchestrator** | DeepSeek V4.1 Flash | Milestones 1–6: plans work, fans out to builders, reviews diffs, integrates, verifies |
+| Builders (spawned by orchestrator) | DeepSeek V4.1 Flash / GLM-5.3 Flash | One well-scoped task each, disjoint files |
+| Escalation | GPT Sol, then Opus 5.5 | Only when a cheap builder fails twice on the same task — attach the failed attempt |
+
+Orchestrator rules: builders get **disjoint file ownership** per task; the orchestrator owns
+`src/state/`, routing and `index.css` tokens, and merges. Every task ends with lint + build + tests
+green. Commit per milestone with clear messages (small commits within a milestone are fine).
+
+## Milestone 0 — Setup (setup agent)
+
+Two commits: **M0a** (steps 1 + 4: scaffold, tokens, shell — commit message starts with `M0a:`, committed
+early because the prototype agent branches from it) then **M0b** (steps 2, 3, 5: data + assets + docs).
+
+1. Fresh app scaffold on `v2`: Vite + React + TypeScript strict (`verbatimModuleSyntax`,
+   `erasableSyntaxOnly`), Zustand, a tiny hash router, vite-plugin-pwa, oxlint, **Vitest**. No CSS
+   framework — plain CSS with design tokens transcribed from `docs/design/reference.html`.
+   Remove v1 `src/screens`, `src/components`, `src/index.css`, `src/App.tsx`; keep `src/data/packs`,
+   the extractors, and port `src/logic` + `src/data/types.ts` (review, don't trust blindly — add
+   tests pinning the AGENTS.md spot-check values).
+2. **Data additions** (extend extractors, never hand-edit packs): skill descriptions and learn
+   data, DLC flags on classes/skills/units, route availability (curated JSON with sources if not in
+   the tables), class pair-up bonuses (already present — expose), support-rank pair-up table.
+3. **Assets pipeline** `tools/assets/`: extract class sprites, skill icons and character face icons
+   from the owner's romfs dump (`../3ds-games/fe-fates/work/cia-extract/romfs/`: `icon/*.bch.lz`,
+   `face/`, `unit/`) → optimised WebP/PNG in `public/assets/{classes,skills,units}/` + a generated
+   `src/data/assets.json` manifest (game id → path). Use existing tools where possible (fe-fates
+   `tools/fe_tools` LZ13/BinArchive; BCH/CTPK texture decoders — document what you used). Fallback
+   sources only per VISION.md › Assets, logged in `docs/ASSETS.md`. Placeholder monogram when an
+   asset is missing or `VITE_ASSETS=off`.
+4. An `AssetImage` / `Sprite` component, the token CSS, the app shell (header, lens switcher,
+   empty routes) rendering at 390px — no feature screens yet.
+5. Update `README.md`, `AGENTS.md` commands, `docs/DATA.md`, new `docs/ASSETS.md`.
+
+**Done when:** `npm run lint && npm run build && npm test` clean; shell renders; ≥ 90 % of units,
+classes and skills resolve to a real asset (report coverage numbers); spot-check tests pass.
+
+## Milestone P — Non-functional prototype (prototype agent, parallel with M0b)
+
+Starts as soon as the **M0a** scaffold commit lands; works in its own worktree on branch
+`v2-prototype` (branched from `v2`) so it never collides with the data/asset work. The build
+orchestrator merges it into `v2` before M1.
+
+Goal: every page and layout exists, looks finished, is clickable between pages — and computes
+nothing. It is the skeleton the orchestrator wires up, so structure matters more than polish:
+
+- **View-model seam.** Screens never import fixtures directly. Each screen reads from a hook in
+  `src/viewmodels/` (`useSetupVM`, `usePairingsVM`, `useUnitVM(unitId)`, `useClassRouteVM(unitId)`,
+  `usePreviewVM`, `useRunsVM`) that returns a typed view model built from `src/prototype/fixtures.ts`
+  and no-op action callbacks (`onSetPartner`, `onAddStop`, …). Wiring = replacing hook bodies with
+  store selectors/actions; screens and components should need no changes.
+- **Presentational components** in `src/components/` (Sprite, SkillGem, Hanko, Chip, GrowthSpark,
+  CapPips, StatBars, ClassCard, RouteTimeline, DuoCard, CompareTray, BottomSheet, LensSwitcher,
+  RunPill, …) — props in, markup out, no store access.
+- **Pages & states** (all at 390×844 *and* ≥1024px two-pane): first-run Setup flow (modpack, DLC,
+  route, name) and Runs manager (switch, duplicate, delete, export/import, share); Pairings lens
+  (grid, filters/sort, compare tray, partner-picker sheet with graph badges, Corrin card, child rows,
+  conflict chips, empty/filtered-empty); Individual lens (header + relationship strip, class options
+  with 2-up compare, stats panel with pair-up delta, skill slots + skill-picker sheet, inheritance
+  panel for a child, combat partner/role); Class route (timeline, add-stop sheet, validation
+  warnings); Preview lens (duos, solos, unassigned; read-only); DLC-off and missing-asset states.
+- Fixtures use real names and the sample numbers from `docs/design/reference.html`; shapes must
+  match `src/data/types.ts` domain types where they exist.
+- Screenshots of every page at both sizes in `docs/screenshots/prototype/`.
+
+**Done when:** lint/build clean; every page reachable via the lens switcher / links; screenshots
+committed; `docs/PROTOTYPE.md` lists each screen → its view-model hook → the fields/actions to wire.
+
+## Milestone 1 — State, persistence & Setup flow
+
+First: merge `v2-prototype` into `v2` and make sure it builds. Then wire each prototype screen by
+replacing view-model hook bodies — keep the seam.
+
+Plan model (new, `schema: 3`, fresh localStorage key — no v1 migration needed):
+
+```ts
+Run { id, name, modpackId, dlc: boolean, route, corrin: { gender, boon, bane, talentClassId },
+      units: Record<unitId, UnitPlan>, createdAt, updatedAt }
+UnitPlan { unitId, inArmy, sPartner?, aPlusPartner?, variableParent?,   // relationships
+           classRoute: ClassStop[], skills: skillId[5], inheritSkill?,    // build
+           combatPartner?, combatRole?: 'front'|'back', notes? }
+ClassStop { classId, fromLevel, toLevel, via: 'start'|'promotion'|'heart'|'partner'|'friendship'|'master'|'eternal'|'offspring'|'dlc' }
+```
+
+Selectors derive everything else (child growths, pools, pair-up) — nothing derived is stored.
+Setup screen: modpack, DLC toggle, route, run name; run switcher; export/import/share.
+
+## Milestone 2 — Pairings lens
+
+Unit grid with sprite, personal skill, class chips, growth sparkline, cap pips; filters/sort;
+compare tray (2–4 units); relationship editor with graph-aware partner picker; children inline;
+Corrin card; conflict chips. Must stay smooth with 70+ units (virtualise if needed).
+
+## Milestone 3 — Individual lens: stats, classes, skills
+
+Relationship strip (editable), class options grouped by source with growth/cap cards and 2-up
+compare, stat panel (bases / growths / caps / projected averages at level N), pair-up delta layer,
+five-slot skill planner with source + learn-level tags, inheritance panel for children.
+
+## Milestone 4 — Class route planner
+
+Timeline editor for `classRoute`, rule validation (levels, seals, promotion resets, Eternal Seals,
+DLC gating), skills-acquired-per-stop, "add stop to reach this skill" from the skill planner,
+projected stats along the route.
+
+## Milestone 5 — Combat pair-up & Preview lens
+
+Combat partner + role in Individual; Preview lens: read-only, grouped by front/back duos then solo
+and unassigned, permanent decisions emphasised, planned class/skills de-emphasised, share link
+opens straight into Preview, print stylesheet.
+
+## Milestone 6 — Polish & ship
+
+Desktop two-pane layouts (≥1024px), motion per the reference (respect `prefers-reduced-motion`),
+empty states, a11y pass (focus, labels, contrast, 44px targets), Lighthouse targets from
+VISION.md, PWA offline incl. lazily cached assets, docs refresh, deploy workflow still green.
+
+## Verification (every milestone)
+
+1. `npm run lint && npm run build && npm test` — clean.
+2. Browser at **390×844** and **1280×800** (Paseo browser tools or Playwright screenshots saved to
+   `docs/screenshots/m<N>/`), compared against `docs/design/reference.html`.
+3. Data spot-checks (AGENTS.md › Verification) as automated tests, plus per-milestone journeys:
+   - M2: marry Ryoma × Camilla → Shiro appears with growths = floor((Shiro + Camilla) / 2).
+   - M3: Corrin boon Spd/bane Lck changes growths; Shiro's pool includes Camilla's branch.
+   - M4: a route Samurai 1→10 → Swordmaster acquires the right skills; an illegal jump is flagged.
+   - M5: two duos + one solo render correctly in Preview; share link round-trips.

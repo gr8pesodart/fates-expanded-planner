@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en" data-route="revelation">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fates Planner v2 — visual reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+/* ───────────────────────── TOKENS ─────────────────────────
+   The app transcribes this block into src/styles/tokens.css.
+   Everything else on this page is illustration.             */
+:root {
+  --paper: #f5f0e6;         /* page */
+  --paper-2: #ece5d6;       /* sunken wells, track backgrounds */
+  --card: #fffdf8;          /* raised surfaces */
+  --ink: #1f1b24;           /* text, strong lines */
+  --ink-2: #5d5566;         /* secondary text */
+  --ink-3: #9a91a3;         /* tertiary, disabled */
+  --line: #ddd3c2;          /* hairlines */
+
+  --hoshido: #d4432c;       /* Birthright vermilion */
+  --nohr: #6a4bc4;          /* Conquest amethyst */
+  --valla: #178f86;         /* Revelation jade */
+  --gold: #c99a2e;          /* S-rank / highlights */
+  --good: #3f8f4e;          /* positive cap mod, gains */
+  --bad: #c2473a;           /* negative cap mod, conflicts */
+
+  --accent: var(--valla);
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, var(--card));
+  --accent-ink: color-mix(in oklab, var(--accent) 70%, var(--ink));
+
+  --f-display: "Shippori Mincho B1", "Hiragino Mincho ProN", Georgia, serif;
+  --f-ui: "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, monospace;
+
+  --r-sm: 8px; --r-md: 14px; --r-lg: 22px; --r-pill: 999px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --shadow: 0 1px 0 rgb(31 27 36 / .06), 0 6px 18px -8px rgb(31 27 36 / .22);
+  --press: cubic-bezier(.3, 1.5, .6, 1);
+  --tap: 44px;
+}
+[data-route="birthright"] { --accent: var(--hoshido); }
+[data-route="conquest"]   { --accent: var(--nohr); }
+[data-theme="night"] {
+  --paper: #16131c; --paper-2: #211c2a; --card: #1d1925; --ink: #f1ebf7;
+  --ink-2: #b4aac0; --ink-3: #6f6680; --line: #342d40;
+  --shadow: 0 1px 0 rgb(0 0 0 / .4), 0 10px 24px -10px rgb(0 0 0 / .7);
+}
+
+/* ───────────────────────── BASE ───────────────────────── */
+* { box-sizing: border-box; }
+html { background: var(--paper); color: var(--ink); font: 15px/1.45 var(--f-ui); }
+body { margin: 0; min-height: 100vh;
+  background-image: radial-gradient(color-mix(in oklab, var(--ink) 5%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 800; letter-spacing: .01em; margin: 0; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-2); }
+button { font: inherit; color: inherit; }
+
+/* page chrome (the board, not the app) */
+.board { max-width: 1320px; margin: 0 auto; padding: var(--s6) var(--s4) 80px; }
+.intro { display: grid; gap: var(--s3); margin-bottom: var(--s6); }
+.intro h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.05; }
+.intro h1 em { font-style: normal; color: var(--accent); }
+.intro p { max-width: 70ch; margin: 0; color: var(--ink-2); }
+.controls { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.section { margin-top: 56px; }
+.section > header { display: flex; align-items: baseline; gap: var(--s3); margin-bottom: var(--s4); flex-wrap: wrap; }
+.section > header h2 { font-size: 26px; }
+.section > header .tag { font: 700 11px var(--f-num); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
+.note { font-size: 13px; color: var(--ink-2); max-width: 62ch; }
+.row { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }
+
+/* phone frame */
+.phone { width: 390px; max-width: 100%; min-height: 780px; background: var(--paper); border-radius: 38px;
+  border: 1px solid var(--line); box-shadow: 0 30px 60px -30px rgb(31 27 36 / .45); overflow: hidden;
+  display: flex; flex-direction: column; position: relative; }
+.phone-cap { font: 700 11px var(--f-num); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin: var(--s2) 0 0 var(--s3); }
+
+/* ───────────────────────── COMPONENTS ───────────────────────── */
+
+/* App header: run pill + lens switcher */
+.appbar { padding: 18px var(--s4) var(--s3); display: grid; gap: var(--s3);
+  background: linear-gradient(var(--paper), color-mix(in oklab, var(--paper) 85%, transparent)); position: sticky; top: 0; z-index: 2; }
+.runpill { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 0 var(--s3) 0 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-pill); box-shadow: var(--shadow); }
+.runpill .crest { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: grid; place-items: center;
+  color: var(--card); font: 800 15px var(--f-display); }
+.runpill b { font-family: var(--f-display); font-size: 16px; }
+.runpill .meta { margin-left: auto; display: flex; gap: 6px; }
+.lens { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--paper-2); border-radius: var(--r-pill); padding: 4px; position: relative; }
+.lens button { position: relative; z-index: 1; border: 0; background: none; min-height: 38px; border-radius: var(--r-pill);
+  font-weight: 700; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.lens button[aria-pressed="true"] { color: var(--card); }
+.lens .thumb { position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 8px) / 3); border-radius: var(--r-pill);
+  background: var(--ink); transition: transform .35s var(--press); }
+
+/* chips & badges */
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border-radius: var(--r-pill);
+  background: var(--paper-2); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.chip.accent { background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
+.chip.warn { background: color-mix(in oklab, var(--bad) 14%, var(--card)); color: var(--bad); font-weight: 700; }
+.btn { min-height: var(--tap); padding: 0 18px; border-radius: var(--r-pill); border: 0; font-weight: 700; cursor: pointer;
+  background: var(--ink); color: var(--card); transition: transform .2s var(--press); }
+.btn:active { transform: scale(.95); }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.btn.accent { background: var(--accent); }
+.toggle { display: inline-flex; align-items: center; gap: var(--s2); cursor: pointer; font-weight: 500; }
+.toggle i { width: 44px; height: 26px; border-radius: 13px; background: var(--paper-2); position: relative; transition: background .2s; box-shadow: inset 0 0 0 1px var(--line); }
+.toggle i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--card);
+  box-shadow: var(--shadow); transition: transform .3s var(--press); }
+.toggle input { display: none; }
+.toggle input:checked + i { background: var(--accent); }
+.toggle input:checked + i::after { transform: translateX(18px); }
+
+/* hanko stamps for support ranks — the one bit of flourish */
+.hanko { width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  font: 800 14px var(--f-display); color: var(--hoshido); box-shadow: inset 0 0 0 2px var(--hoshido); transform: rotate(-8deg); }
+.hanko.aplus { border-radius: 7px; color: var(--nohr); box-shadow: inset 0 0 0 2px var(--nohr); font-size: 12px; transform: rotate(5deg); }
+.hanko.gold { color: var(--gold); box-shadow: inset 0 0 0 2px var(--gold); }
+
+/* sprites: real assets drop in here; placeholder = monogram */
+.sprite { width: 48px; height: 48px; flex: none; border-radius: var(--r-md); display: grid; place-items: center; position: relative;
+  background: linear-gradient(135deg, var(--sp, var(--accent-soft)), color-mix(in oklab, var(--sp, var(--accent)) 30%, var(--card)));
+  font: 800 18px var(--f-display); color: var(--ink); image-rendering: pixelated; }
+.sprite.sm { width: 36px; height: 36px; font-size: 14px; border-radius: 10px; }
+.sprite.lg { width: 76px; height: 76px; font-size: 30px; border-radius: var(--r-lg); }
+.sprite[data-h] { --sp: color-mix(in oklab, var(--hoshido) 30%, var(--card)); }
+.sprite[data-n] { --sp: color-mix(in oklab, var(--nohr) 30%, var(--card)); }
+.skill { width: 34px; height: 34px; flex: none; transform: rotate(45deg); border-radius: 8px; display: grid; place-items: center;
+  background: var(--card); box-shadow: inset 0 0 0 1.5px var(--line); }
+.skill span { transform: rotate(-45deg); font: 700 11px var(--f-num); }
+.skill.on { background: var(--accent); box-shadow: none; color: var(--card); }
+.skill.empty { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); border: 0; }
+.skill.empty span { color: var(--ink-3); }
+
+/* growth sparkline: 8 bars, HP→Res */
+.spark { display: grid; grid-template-columns: repeat(8, 6px); gap: 3px; align-items: end; height: 30px; }
+.spark i { display: block; background: var(--ink); border-radius: 2px; height: calc(var(--v) * 1%); min-height: 2px; opacity: .85; }
+.spark i.hi { background: var(--accent); opacity: 1; }
+.pips { display: flex; gap: 3px; }
+.pips i { width: 7px; height: 7px; border-radius: 50%; background: var(--paper-2); }
+.pips i.p { background: var(--good); } .pips i.m { background: var(--bad); }
+
+/* cards & lists */
+.card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: var(--s4); }
+.body { padding: 0 var(--s4) var(--s5); display: grid; gap: var(--s3); flex: 1; align-content: start; }
+.unit { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s3); align-items: center; padding: var(--s3);
+  background: var(--card); border-radius: var(--r-md); box-shadow: var(--shadow); cursor: pointer; transition: transform .2s var(--press); }
+.unit:active { transform: scale(.98); }
+.unit h3 { font-size: 17px; }
+.unit .sub { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+.unit .right { display: grid; justify-items: end; gap: 6px; }
+.unit.pinned { box-shadow: inset 0 0 0 2px var(--accent), var(--shadow); }
+.searchbar { display: flex; gap: var(--s2); }
+.searchbar input { flex: 1; min-height: var(--tap); border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--card);
+  padding: 0 var(--s4); font: inherit; color: var(--ink); }
+.scroller { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+
+/* pair (marriage) row */
+.pair { display: grid; gap: var(--s3); }
+.pair .couple { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--s2); }
+.pair .who { display: flex; align-items: center; gap: var(--s2); font-weight: 700; }
+.pair .who:last-child { flex-direction: row-reverse; text-align: right; }
+.child { display: grid; grid-template-columns: auto 1fr; gap: var(--s3); align-items: center; padding: var(--s3); border-radius: var(--r-md);
+  background: var(--paper-2); position: relative; }
+.child::before { content: ""; position: absolute; left: 50%; top: -12px; height: 12px; border-left: 2px dashed var(--line); }
+
+/* compare tray — bottom sheet */
+.tray { margin-top: auto; background: var(--ink); color: var(--card); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: var(--s3) var(--s4) var(--s4); display: grid; gap: var(--s3); }
+.tray .grab { width: 40px; height: 4px; border-radius: 2px; background: color-mix(in oklab, var(--card) 30%, transparent); margin: 0 auto; }
+.cmp { display: grid; grid-template-columns: 44px repeat(3, 1fr); gap: 4px 8px; font-size: 12px; align-items: center; }
+.cmp .h { font-weight: 700; font-size: 13px; }
+.cmp .k { color: color-mix(in oklab, var(--card) 55%, transparent); font: 700 11px var(--f-num); }
+.cmp .best { color: var(--gold); font-weight: 700; }
+
+/* stat table with split growth bars + pair-up delta */
+.stats { display: grid; gap: 7px; }
+.stat { display: grid; grid-template-columns: 34px 58px 1fr 32px; gap: var(--s2); align-items: center; }
+.stat .k { font: 700 12px var(--f-num); color: var(--ink-2); }
+.stat .v { font: 700 15px var(--f-num); text-align: right; white-space: nowrap; }
+.stat .bar { height: 12px; border-radius: 6px; background: var(--paper-2); display: flex; overflow: hidden; }
+.stat .bar b { background: var(--ink); } .stat .bar u { background: var(--accent); }
+.stat .cap { font: 500 12px var(--f-num); color: var(--ink-3); text-align: right; }
+.delta { font: 700 11px var(--f-num); color: var(--accent-ink); background: var(--accent-soft); border-radius: 6px; padding: 1px 5px; margin-left: 4px; }
+.legend { display: flex; gap: var(--s3); font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+
+/* class route timeline */
+.route { display: grid; gap: 0; }
+.stop { display: grid; grid-template-columns: 26px 1fr; gap: var(--s3); }
+.stop .rail { display: flex; flex-direction: column; align-items: center; }
+.stop .dot { width: 16px; height: 16px; border-radius: 50%; background: var(--card); box-shadow: inset 0 0 0 3px var(--accent); margin-top: 14px; }
+.stop.done .dot { background: var(--accent); }
+.stop .rail::after { content: ""; flex: 1; width: 2px; background: var(--line); }
+.stop:last-child .rail::after { display: none; }
+.stop .box { padding: var(--s2) 0 var(--s4); }
+.stop .top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); }
+.stop .top b { font-family: var(--f-display); font-size: 16px; }
+.seal { font: 700 11px var(--f-num); letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); }
+.learn { display: flex; gap: 10px; margin-top: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.learn .skill { width: 24px; height: 24px; border-radius: 6px; }
+.learn .skill span { font-size: 9px; }
+
+/* preview: duo formations */
+.preview { --gap: 10px; }
+.group-h { font: 700 11px var(--f-num); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin: var(--s2) 0 0; }
+.duo { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; }
+.duo .slot { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s3); align-items: center; padding: var(--s3) var(--s4); }
+.duo .slot + .slot { border-top: 1px dashed var(--line); background: color-mix(in oklab, var(--paper-2) 50%, var(--card)); }
+.duo .role { font: 700 10px var(--f-num); letter-spacing: .12em; text-transform: uppercase; writing-mode: vertical-rl; transform: rotate(180deg); color: var(--ink-3); }
+.duo .slot:first-child .role { color: var(--accent-ink); }
+.duo .facts { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-2); margin-top: 3px; }
+.duo .facts strong { color: var(--ink); font-weight: 700; }
+.duo .soft { opacity: .55; }
+
+/* desktop two-pane illustration */
+.desk { width: 100%; max-width: 1180px; min-height: 520px; border-radius: 20px; border: 1px solid var(--line); background: var(--paper);
+  display: grid; grid-template-columns: 360px 1fr; overflow: hidden; box-shadow: 0 30px 60px -30px rgb(31 27 36 / .45); }
+.desk .side { border-right: 1px solid var(--line); padding: var(--s4); display: grid; gap: var(--s3); align-content: start; background: color-mix(in oklab, var(--paper-2) 40%, var(--paper)); }
+.desk .main { padding: var(--s5); display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); align-content: start; }
+
+/* token swatches */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--s3); }
+.sw { border-radius: var(--r-md); overflow: hidden; background: var(--card); box-shadow: var(--shadow); font-size: 12px; }
+.sw div { height: 54px; }
+.sw p { margin: 0; padding: 6px 10px; } .sw p code { color: var(--ink-3); font: 11px var(--f-num); }
+.type { display: grid; gap: var(--s2); }
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s3); }
+.rules .card h3 { font-size: 16px; margin-bottom: 6px; }
+.rules .card p { margin: 0; font-size: 13px; color: var(--ink-2); }
+
+@media (max-width: 900px) { .desk { grid-template-columns: 1fr; } .desk .main { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<main class="board">
+
+  <!-- ═════════ INTRO ═════════ -->
+  <section class="intro">
+    <span class="chip accent" style="justify-self:start">Design reference · v2</span>
+    <h1>Paper, ink, and <em>one bright thread</em>.</h1>
+    <p>The planner should feel like a well-kept campaign notebook: warm paper, confident ink, and a single accent
+      colour that follows your route — vermilion for Birthright, amethyst for Conquest, jade for Revelation.
+      Density comes from careful typography and tiny charts, not from boxes and borders. The fun lives in small things:
+      hanko-stamp support ranks, springy presses, growth bars that split personal vs class, and duos that literally
+      stack front-over-back.</p>
+    <p class="note">Sprites below are monogram placeholders — real class/skill/unit assets drop into the same slots.
+      Numbers are sample data (Ryoma/Camilla/Shiro personal growths are real; class figures illustrative).</p>
+    <div class="controls" role="group" aria-label="Preview theme">
+      <button class="btn ghost" data-r="birthright">Birthright</button>
+      <button class="btn ghost" data-r="conquest">Conquest</button>
+      <button class="btn" data-r="revelation">Revelation</button>
+      <label class="toggle" style="margin-left:8px"><input type="checkbox" id="night" /><i></i> Night</label>
+    </div>
+  </section>
+
+  <!-- ═════════ TOKENS ═════════ -->
+  <section class="section">
+    <header><span class="tag">00</span><h2>Foundations</h2><span class="note">Tokens are the contract — copy the <code>:root</code> block verbatim.</span></header>
+    <div class="swatches">
+      <div class="sw"><div style="background:var(--paper)"></div><p>Paper <code>--paper</code></p></div>
+      <div class="sw"><div style="background:var(--card)"></div><p>Card <code>--card</code></p></div>
+      <div class="sw"><div style="background:var(--ink)"></div><p>Ink <code>--ink</code></p></div>
+      <div class="sw"><div style="background:var(--hoshido)"></div><p>Hoshido <code>--hoshido</code></p></div>
+      <div class="sw"><div style="background:var(--nohr)"></div><p>Nohr <code>--nohr</code></p></div>
+      <div class="sw"><div style="background:var(--valla)"></div><p>Valla <code>--valla</code></p></div>
+      <div class="sw"><div style="background:var(--gold)"></div><p>Gold <code>--gold</code></p></div>
+      <div class="sw"><div style="background:linear-gradient(90deg,var(--good) 50%,var(--bad) 50%)"></div><p>± <code>--good/--bad</code></p></div>
+    </div>
+    <div class="row" style="margin-top:24px">
+      <div class="type card" style="flex:1;min-width:280px">
+        <h1 style="font-size:34px">Shiro</h1>
+        <span class="muted">Display — Shippori Mincho B1 800. Names, section titles, class names.</span>
+        <p style="margin:0">UI — Zen Kaku Gothic New. Body 15/1.45, labels 12–13 medium, buttons 14 bold.</p>
+        <p class="num" style="margin:0;font-size:20px">45 · 50 · 12 · 45 <span class="muted" style="font-size:13px">— JetBrains Mono, tabular. Every number.</span></p>
+      </div>
+      <div class="card" style="flex:1;min-width:280px;display:grid;gap:12px">
+        <div style="display:flex;gap:10px;align-items:center"><span class="hanko">S</span><span class="hanko aplus">A+</span><span class="hanko gold">♥</span><span class="muted">Support ranks are stamps, slightly askew.</span></div>
+        <div style="display:flex;gap:10px;align-items:center"><div class="skill on"><span>Sw</span></div><div class="skill"><span>Pb</span></div><div class="skill empty"><span>+</span></div><span class="muted">Skills are diamonds; empty slots dashed.</span></div>
+        <div style="display:flex;gap:10px;align-items:center"><div class="spark" style="--x:0"><i style="--v:50"></i><i style="--v:45"></i><i style="--v:2"></i><i class="hi" style="--v:50"></i><i style="--v:45"></i><i style="--v:40"></i><i style="--v:35"></i><i style="--v:25"></i></div><span class="muted">Growth sparkline, HP→Res; best stat lit.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ SCREENS ═════════ -->
+  <section class="section">
+    <header><span class="tag">01</span><h2>Roster — Pairings</h2><span class="note">Dense but calm. Every row answers “who is this and what do they bring a partner?”</span></header>
+    <div class="row">
+      <div>
+        <div class="phone">
+          <div class="appbar">
+            <div class="runpill"><span class="crest">R</span><b>Rainbow run</b><span class="meta"><span class="chip">UGF 2.5.2</span><span class="chip accent">DLC</span></span></div>
+            <div class="lens" data-lens><span class="thumb"></span><button aria-pressed="true">Pairings</button><button aria-pressed="false">Individual</button><button aria-pressed="false">Preview</button></div>
+          </div>
+          <div class="body">
+            <div class="searchbar"><input placeholder="Search units, classes, skills" /><button class="btn ghost" aria-label="Sort">Spd ↓</button></div>
+            <div class="scroller"><span class="chip accent">All 71</span><span class="chip">Unpaired 12</span><span class="chip">Children</span><span class="chip">Magic</span><span class="chip warn">2 conflicts</span></div>
+
+            <div class="unit pinned">
+              <div class="sprite" data-h>Ry</div>
+              <div><h3>Ryoma</h3><div class="sub"><span class="chip">Samurai</span><span class="chip">Sky Knight</span></div></div>
+              <div class="right"><div class="spark"><i style="--v:50"></i><i style="--v:45"></i><i style="--v:2"></i><i class="hi" style="--v:50"></i><i style="--v:45"></i><i style="--v:40"></i><i style="--v:35"></i><i style="--v:25"></i></div>
+                <div class="pips"><i></i><i class="p"></i><i></i><i class="p"></i><i class="p"></i><i class="p"></i><i class="m"></i><i class="m"></i></div></div>
+            </div>
+            <div class="unit pinned">
+              <div class="sprite" data-n>Ca</div>
+              <div><h3>Camilla</h3><div class="sub"><span class="chip">Wyvern Rider</span><span class="chip">Dark Mage</span></div></div>
+              <div class="right"><div class="spark"><i style="--v:40"></i><i style="--v:50"></i><i style="--v:25"></i><i style="--v:50"></i><i class="hi" style="--v:55"></i><i style="--v:25"></i><i style="--v:35"></i><i style="--v:45"></i></div>
+                <div class="pips"><i></i><i class="p"></i><i class="m"></i><i class="p"></i><i class="p"></i><i class="m"></i><i class="p"></i><i></i></div></div>
+            </div>
+
+            <div class="card pair">
+              <div class="couple">
+                <div class="who"><div class="sprite sm" data-h>Ry</div>Ryoma</div>
+                <span class="hanko">S</span>
+                <div class="who"><div class="sprite sm" data-n>Ca</div>Camilla</div>
+              </div>
+              <div class="child">
+                <div class="sprite sm">Sh</div>
+                <div><b>Shiro</b> <span class="muted" style="font-size:12px">· inherits Wyvern Rider</span>
+                  <div class="num" style="font-size:12px;margin-top:2px">45 50 12 45 45 30 40 37</div></div>
+              </div>
+            </div>
+            <div class="unit">
+              <div class="sprite" data-h>Ka</div>
+              <div><h3>Kaze</h3><div class="sub"><span class="chip">Ninja</span><span class="hanko aplus" style="width:24px;height:24px;font-size:10px">A+</span><span class="chip">Saizo</span></div></div>
+              <div class="right"><div class="spark"><i style="--v:55"></i><i style="--v:40"></i><i style="--v:2"></i><i style="--v:45"></i><i class="hi" style="--v:65"></i><i style="--v:20"></i><i style="--v:20"></i><i style="--v:35"></i></div>
+                <div class="pips"><i></i><i class="m"></i><i></i><i class="p"></i><i class="p"></i><i class="m"></i><i class="m"></i><i class="p"></i></div></div>
+            </div>
+          </div>
+          <div class="tray">
+            <div class="grab"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-family:var(--f-display)">Compare · 2 pinned</b><span class="chip accent" style="background:var(--accent);color:var(--card)">Pair them</span></div>
+            <div class="cmp">
+              <span></span><span class="h">Ryoma</span><span class="h">Camilla</span><span class="h">→ Shiro</span>
+              <span class="k">STR</span><span>45</span><span class="best">50</span><span>50</span>
+              <span class="k">SPD</span><span>45</span><span class="best">55</span><span>45</span>
+              <span class="k">OFFER</span><span>Sky Knight</span><span>Wyvern Rider</span><span>—</span>
+              <span class="k">SKILL</span><span>Bushido</span><span>Rose's Thorns</span><span>Competitive</span>
+            </div>
+          </div>
+        </div>
+        <p class="phone-cap">390 × 844 · pairings + compare tray</p>
+      </div>
+
+      <div class="rules" style="flex:1;min-width:280px;max-width:520px">
+        <div class="card"><h3>Glance first</h3><p>One row = sprite, name, class chips, sparkline, cap pips. No tables at this level; the tray is where numbers line up.</p></div>
+        <div class="card"><h3>Pin to compare</h3><p>Tap-hold (or the pin affordance) adds a unit to the tray. 2–4 pinned. The tray previews the child of any two pinned units that can S-support.</p></div>
+        <div class="card"><h3>Stamps mean commitment</h3><p>A hanko appears only once a relationship is set. Conflicts use <span class="chip warn">warn</span> chips, never modals.</p></div>
+        <div class="card"><h3>Children hang from parents</h3><p>A dashed thread connects a pair to its child card; averaged growths appear instantly in mono type.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <header><span class="tag">02</span><h2>Roster — Individual</h2><span class="note">One unit, fully reactive. Relationships stay editable at the top.</span></header>
+    <div class="row">
+      <div>
+        <div class="phone">
+          <div class="appbar">
+            <div class="runpill"><span class="crest">R</span><b>Rainbow run</b><span class="meta"><span class="chip">UGF 2.5.2</span><span class="chip accent">DLC</span></span></div>
+            <div class="lens" data-lens><span class="thumb" style="transform:translateX(100%)"></span><button aria-pressed="false">Pairings</button><button aria-pressed="true">Individual</button><button aria-pressed="false">Preview</button></div>
+          </div>
+          <div class="body">
+            <div class="card" style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center">
+              <div class="sprite lg">Sh</div>
+              <div><h2 style="font-size:28px">Shiro</h2><div class="muted">Malig Knight · Lv 15 → 20</div></div>
+              <div class="scroller" style="grid-column:1/-1">
+                <span class="chip">Ryoma <small class="muted">fixed</small></span>
+                <span class="chip accent">Camilla ▾</span>
+                <span class="chip"><span class="hanko" style="width:18px;height:18px;font-size:9px;box-shadow:inset 0 0 0 1.5px var(--hoshido)">S</span> Selena ▾</span>
+                <span class="chip">Front · w/ Kiragi ▾</span>
+              </div>
+            </div>
+
+            <div class="card" style="display:grid;gap:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="font-size:17px">Growths &amp; caps</h3><span class="chip">Lv 20 avg ▾</span></div>
+              <div class="stats">
+                <div class="stat"><span class="k">HP</span><span class="v">60</span><span class="bar"><b style="width:45%"></b><u style="width:0%"></u></span><span class="cap">60</span></div>
+                <div class="stat"><span class="k">STR</span><span class="v">31<span class="delta">+2</span></span><span class="bar"><b style="width:50%"></b><u style="width:15%"></u></span><span class="cap">34</span></div>
+                <div class="stat"><span class="k">MAG</span><span class="v">14</span><span class="bar"><b style="width:12%"></b><u style="width:15%"></u></span><span class="cap">28</span></div>
+                <div class="stat"><span class="k">SKL</span><span class="v">26</span><span class="bar"><b style="width:45%"></b><u style="width:10%"></u></span><span class="cap">31</span></div>
+                <div class="stat"><span class="k">SPD</span><span class="v">24<span class="delta">+1</span></span><span class="bar"><b style="width:45%"></b><u style="width:5%"></u></span><span class="cap">28</span></div>
+                <div class="stat"><span class="k">LCK</span><span class="v">17</span><span class="bar"><b style="width:30%"></b><u style="width:0%"></u></span><span class="cap">27</span></div>
+                <div class="stat"><span class="k">DEF</span><span class="v">30</span><span class="bar"><b style="width:40%"></b><u style="width:5%"></u></span><span class="cap">33</span></div>
+                <div class="stat"><span class="k">RES</span><span class="v">19</span><span class="bar"><b style="width:37%"></b><u style="width:5%"></u></span><span class="cap">28</span></div>
+              </div>
+              <div class="legend"><span><i style="background:var(--ink)"></i>personal growth</span><span><i style="background:var(--accent)"></i>class growth</span><span><span class="delta" style="margin:0">+2</span> pair-up from partner</span></div>
+            </div>
+
+            <div class="card" style="display:grid;gap:12px">
+              <h3 style="font-size:17px">Skills <span class="muted" style="font:500 13px var(--f-ui)">· 4 / 5</span></h3>
+              <div style="display:flex;gap:16px;padding:6px 4px">
+                <div class="skill on"><span>Sw</span></div><div class="skill on"><span>Pb</span></div><div class="skill on"><span>Sb</span></div><div class="skill on"><span>Tr</span></div><div class="skill empty"><span>+</span></div>
+              </div>
+              <div class="muted" style="font-size:12px">Personal: <b style="color:var(--ink)">Competitive</b> · tap an empty slot to browse the pool with learn-level tags.</div>
+            </div>
+          </div>
+        </div>
+        <p class="phone-cap">390 × 844 · individual — stats &amp; skills</p>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="appbar">
+            <div style="display:flex;align-items:center;gap:10px"><button class="btn ghost" style="min-width:44px;padding:0">←</button><h2 style="font-size:22px">Shiro · Class route</h2></div>
+          </div>
+          <div class="body">
+            <div class="route card">
+              <div class="stop done"><div class="rail"><span class="dot"></span></div><div class="box">
+                <div class="top"><b>Spear Fighter</b><span class="num muted">Lv 1 → 10</span></div><span class="seal">start</span>
+                <div class="learn"><div class="skill on"><span>Sd</span></div>Seal Defense · 1<div class="skill on"><span>Sw</span></div>Swap · 10</div></div></div>
+              <div class="stop done"><div class="rail"><span class="dot"></span></div><div class="box">
+                <div class="top"><b>Spear Master</b><span class="num muted">Lv 1 → 15</span></div><span class="seal">Master Seal</span>
+                <div class="learn"><div class="skill on"><span>Sr</span></div>Seal Resistance · 5<div class="skill on"><span>Pb</span></div>Point Blank · 15</div></div></div>
+              <div class="stop"><div class="rail"><span class="dot"></span></div><div class="box">
+                <div class="top"><b>Malig Knight</b><span class="num muted">Lv 15 → 20</span></div><span class="seal">Heart Seal · via Camilla</span>
+                <div class="learn"><div class="skill on"><span>Sb</span></div>Savage Blow · on arrival<div class="skill on"><span>Tr</span></div>Trample · on arrival</div></div></div>
+              <div class="stop"><div class="rail"><span class="dot" style="box-shadow:inset 0 0 0 3px var(--ink-3)"></span></div><div class="box">
+                <button class="btn ghost" style="width:100%">+ Add class stop</button></div></div>
+            </div>
+            <div class="card" style="display:flex;gap:10px;align-items:center;background:color-mix(in oklab,var(--bad) 8%,var(--card))">
+              <span class="chip warn">!</span><span style="font-size:13px"><b>Lunge</b> is wanted but no stop reaches <b>Wyvern Rider 10</b>. <u style="color:var(--accent-ink)">Add stop</u></span>
+            </div>
+          </div>
+        </div>
+        <p class="phone-cap">390 × 844 · class route timeline</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <header><span class="tag">03</span><h2>Roster — Preview</h2><span class="note">Read-only, stripped to permanent decisions, grouped by combat duo. Planned-but-changeable info is faded.</span></header>
+    <div class="row">
+      <div>
+        <div class="phone preview">
+          <div class="appbar">
+            <div class="runpill"><span class="crest">R</span><b>Rainbow run</b><span class="meta"><span class="chip">Read-only</span></span></div>
+            <div class="lens" data-lens><span class="thumb" style="transform:translateX(200%)"></span><button aria-pressed="false">Pairings</button><button aria-pressed="false">Individual</button><button aria-pressed="true">Preview</button></div>
+          </div>
+          <div class="body">
+            <p class="group-h">Duos · 2</p>
+            <div class="duo">
+              <div class="slot"><span class="role">Front</span><div style="display:flex;gap:10px;align-items:center"><div class="sprite sm">Sh</div><div><b>Shiro</b>
+                <div class="facts"><span><strong>S</strong> Selena</span><span><strong>Mum</strong> Camilla</span><span><strong>Inherits</strong> Savage Blow</span><span class="soft">Malig Knight</span></div></div></div><span class="hanko" style="width:24px;height:24px;font-size:11px">S</span></div>
+              <div class="slot"><span class="role">Back</span><div style="display:flex;gap:10px;align-items:center"><div class="sprite sm">Ki</div><div><b>Kiragi</b>
+                <div class="facts"><span><strong>A+</strong> Shiro</span><span><strong>Dad</strong> Takumi</span><span class="soft">Sniper</span></div></div></div><span class="hanko aplus" style="width:24px;height:24px;font-size:10px">A+</span></div>
+            </div>
+            <div class="duo">
+              <div class="slot"><span class="role">Front</span><div style="display:flex;gap:10px;align-items:center"><div class="sprite sm" data-h>Ry</div><div><b>Ryoma</b>
+                <div class="facts"><span><strong>S</strong> Camilla</span><span><strong>A+</strong> Xander</span><span class="soft">Swordmaster</span></div></div></div><span></span></div>
+              <div class="slot"><span class="role">Back</span><div style="display:flex;gap:10px;align-items:center"><div class="sprite sm" data-n>Ca</div><div><b>Camilla</b>
+                <div class="facts"><span><strong>S</strong> Ryoma</span><span><strong>Child</strong> Shiro</span><span class="soft">Malig Knight</span></div></div></div><span></span></div>
+            </div>
+            <p class="group-h">Solo · 1</p>
+            <div class="duo"><div class="slot"><span class="role">Solo</span><div style="display:flex;gap:10px;align-items:center"><div class="sprite sm" data-h>Co</div><div><b>Corrin</b>
+              <div class="facts"><span><strong>Boon</strong> Spd</span><span><strong>Bane</strong> Lck</span><span><strong>Talent</strong> Ninja</span><span><strong>S</strong> Niles</span></div></div></div><span></span></div></div>
+            <p class="group-h">Unassigned · 18</p>
+          </div>
+        </div>
+        <p class="phone-cap">390 × 844 · preview (read-only)</p>
+      </div>
+      <div class="rules" style="flex:1;min-width:280px;max-width:520px">
+        <div class="card"><h3>Front on top</h3><p>A duo is one card: lead above, support below on a slightly sunken band. The role label runs vertically so names stay aligned.</p></div>
+        <div class="card"><h3>Permanent = ink, planned = faded</h3><p>Marriages, A+, parents, Corrin choices and inherited skills are full-strength. Class and equipped skills render at 55% opacity.</p></div>
+        <div class="card"><h3>No controls</h3><p>No chevrons, no ▾, no buttons. It should print and screenshot cleanly and open straight from a share link.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <header><span class="tag">04</span><h2>Desktop ≥ 1024px</h2><span class="note">List pane + detail pane. Never a stretched phone.</span></header>
+    <div class="desk">
+      <div class="side">
+        <div class="runpill"><span class="crest">R</span><b>Rainbow run</b><span class="meta"><span class="chip">UGF</span><span class="chip accent">DLC</span></span></div>
+        <div class="lens" data-lens><span class="thumb" style="transform:translateX(100%)"></span><button aria-pressed="false">Pairings</button><button aria-pressed="true">Individual</button><button aria-pressed="false">Preview</button></div>
+        <div class="unit"><div class="sprite sm" data-h>Ry</div><div><b>Ryoma</b></div><span class="hanko" style="width:22px;height:22px;font-size:10px">S</span></div>
+        <div class="unit pinned"><div class="sprite sm">Sh</div><div><b>Shiro</b></div><span class="hanko" style="width:22px;height:22px;font-size:10px">S</span></div>
+        <div class="unit"><div class="sprite sm" data-n>Ca</div><div><b>Camilla</b></div><span class="hanko" style="width:22px;height:22px;font-size:10px">S</span></div>
+        <div class="unit"><div class="sprite sm" data-h>Ka</div><div><b>Kaze</b></div><span class="hanko aplus" style="width:22px;height:22px;font-size:9px">A+</span></div>
+      </div>
+      <div class="main">
+        <div class="card" style="grid-column:1/-1;display:flex;gap:16px;align-items:center"><div class="sprite lg">Sh</div><div><h2 style="font-size:32px">Shiro</h2><span class="muted">Malig Knight · compare with <span class="chip">Wyvern Lord ▾</span></span></div></div>
+        <div class="card"><h3 style="font-size:17px;margin-bottom:10px">Growths &amp; caps</h3><div class="stats">
+          <div class="stat"><span class="k">STR</span><span class="v">31</span><span class="bar"><b style="width:50%"></b><u style="width:15%"></u></span><span class="cap">34</span></div>
+          <div class="stat"><span class="k">SPD</span><span class="v">24</span><span class="bar"><b style="width:45%"></b><u style="width:5%"></u></span><span class="cap">28</span></div>
+          <div class="stat"><span class="k">DEF</span><span class="v">30</span><span class="bar"><b style="width:40%"></b><u style="width:5%"></u></span><span class="cap">33</span></div></div></div>
+        <div class="card"><h3 style="font-size:17px;margin-bottom:10px">Route</h3><div class="muted" style="font-size:13px">Spear Fighter 1–10 → Spear Master 1–15 → Malig Knight 15–20</div>
+          <div style="display:flex;gap:14px;margin-top:14px"><div class="skill on"><span>Sw</span></div><div class="skill on"><span>Pb</span></div><div class="skill on"><span>Sb</span></div><div class="skill on"><span>Tr</span></div><div class="skill empty"><span>+</span></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <header><span class="tag">05</span><h2>Motion &amp; feel</h2></header>
+    <div class="rules">
+      <div class="card"><h3>Springy, short</h3><p>Presses scale to .95–.98 with <code>--press</code> overshoot; 200–350ms. The lens thumb slides. Nothing fades slower than 250ms.</p></div>
+      <div class="card"><h3>Numbers tick</h3><p>When a pairing changes, affected numbers count to their new value (≤300ms) and the delta flashes accent once.</p></div>
+      <div class="card"><h3>Stamps land</h3><p>Setting S/A+ drops the hanko in with a tiny scale-down + rotate settle, like it was pressed onto paper.</p></div>
+      <div class="card"><h3>Sprites are crisp</h3><p><code>image-rendering: pixelated</code> for small sprites; never blur-scale. Respect <code>prefers-reduced-motion</code>.</p></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const root = document.documentElement;
+  document.querySelectorAll('[data-r]').forEach(b => b.addEventListener('click', () => {
+    root.dataset.route = b.dataset.r;
+    document.querySelectorAll('[data-r]').forEach(x => x.classList.toggle('ghost', x !== b));
+  }));
+  document.getElementById('night').addEventListener('change', e => { root.dataset.theme = e.target.checked ? 'night' : ''; });
+  document.querySelectorAll('[data-lens]').forEach(lens => {
+    const btns = [...lens.querySelectorAll('button')], thumb = lens.querySelector('.thumb');
+    btns.forEach((b, i) => b.addEventListener('click', () => {
+      btns.forEach(x => x.setAttribute('aria-pressed', x === b));
+      thumb.style.transform = `translateX(${i * 100}%)`;
+    }));
+  });
+</script>
+</body>
+</html>

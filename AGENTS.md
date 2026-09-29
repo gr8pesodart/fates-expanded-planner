@@ -1,9 +1,14 @@
 # AGENTS.md — working notes for this repo
 
 Mobile-first **army planner** for a modded FE Fates build: roster, supports/pairings, classes,
-skills, and second-gen parent/growth planning. Read [README.md](README.md) first,
-[docs/DATA.md](docs/DATA.md) before touching data, and [docs/MODS.md](docs/MODS.md) before
-changing mod assumptions.
+skills, class routes, pair-up and second-gen parent/growth planning.
+
+**v2 rebuild in progress on branch `v2`.** Read, in order: [docs/VISION.md](docs/VISION.md)
+(product direction), [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) (milestones, roles, done-criteria),
+[docs/design/reference.html](docs/design/reference.html) (visual source of truth — open it in a
+browser), then [docs/DATA.md](docs/DATA.md) before touching data and [docs/MODS.md](docs/MODS.md)
+before changing mod assumptions. The v1 UI (tag `v1-final`, `docs/legacy/`) is **not** a design
+reference — reuse only its data pipeline and `src/logic/` after review.
 
 ## Commands
 
@@ -24,11 +29,16 @@ python tools/extract/extract_ugf_supports.py    # support graph from UGF's Parag
   surface is the per-run **game build** dropdown.
 - **Mod-aware by default.** Support rules come from the installed build's graph. Feature flags
   live in `src/data/modProfiles.ts`.
-- **No copyrighted assets.** No portraits/textures/audio, ever. Data packs hold factual game data
-  with provenance in `meta.json`.
+- **Official sprites, sourced properly.** Class sprites, skill icons and unit face icons come from
+  the owner's own romfs dump via `tools/assets/` (fallback sources logged in `docs/ASSETS.md`).
+  Never take assets from the reference planners. No audio, no full textures/models. Everything
+  must still render with `VITE_ASSETS=off` (monogram placeholders). Data packs hold factual game
+  data with provenance in `meta.json`.
 - **Do not copy from other planners.** Marigold (closed), Athnir / soapy4159 / hiushi (no
   license) are references only — see docs/REFERENCES.md. Game mechanics are facts; implement them
   independently.
+- **Design comes from `docs/design/reference.html`.** Transcribe its `:root` tokens verbatim; match
+  its components (hanko stamps, skill gems, sparklines, split growth bars, duo cards).
 - Backend-free and static-host friendly: `localStorage` + JSON export + URL-hash share only.
 
 ## Critical context — the companion build
