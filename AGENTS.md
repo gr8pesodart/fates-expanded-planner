@@ -97,7 +97,8 @@ the extractor and rerun. The asset manifest (`src/data/assets.json`) is generate
 Before calling anything done:
 
 1. `npm run lint && npm run build && npm test` — all clean.
-2. Browser at 390×844: shell renders with real sprites (unit faces, skill icons, class sprites);
+2. `npm run shots` (dev server on :5173) captures every screen at 390×844 and 1280×800 into
+   `docs/screenshots/v3/`; compare against the Figma frames listed in `docs/design/SPEC.md`.
    `VITE_ASSETS=off` renders monograms.
 3. Spot-check data against known values: Ryoma growths `50/45/0/50/45/40/35/25`, Gunter
    `15/5/0/5/0/15/5/5`, Shiro `50/50/0/40/35/35/45/30`, sibling pairs platonic (Ryoma × Hinoka),

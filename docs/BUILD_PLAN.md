@@ -13,6 +13,15 @@ Branch **`v3`** off `v2` (tag `v2-final` first). Keep: data packs and extractors
 hooks and never import stores or fixtures). Replace: tokens, `base.css`/`components.css`,
 `src/components/`, `src/screens/`, `src/viewmodels/`, `src/prototype/`, the router table.
 
+### Progress (2026-09-30)
+
+- Done on `v3`: spec + tokens; B1 recruitment (DS lane, merged), B2 lenses, B3 progression engine,
+  B4 sort; C schema 4 store with symmetric relationships; D1–D6 all screens incl. Runs/new-run and
+  desktop; A1 talk portraits (DS lane, merged); `npm run shots` → `docs/screenshots/v3/`.
+- In flight (DS lanes): A2 stitched sprites (gate pending owner sign-off), A3 splash art.
+- Until A2/A3 merge, the app falls back to body-only class sprites and a route-hue splash with the
+  talk portrait — `src/data/art.ts` picks up `sprites.json` / `splash.json` automatically.
+
 ### A — Assets (gated; do first, in parallel with B)
 
 1. **Talk portraits.** Extend `tools/assets/extract_assets.py` to decode `face/face/<name>_st.arc`
@@ -247,7 +256,7 @@ VISION.md, PWA offline incl. lazily cached assets, docs refresh, deploy workflow
 
 ## Completion record
 
-- M0, P and M1–M5 implementation is present on `v2`; see [PROTOTYPE.md](PROTOTYPE.md) for the
+- M0, P and M1–M5 implementation is present on `v2`; see `docs/PROTOTYPE.md` at tag `v2-final` for the
   production screen/hook map and [DATA.md](DATA.md) for mechanics caveats.
 - P's screenshots in `docs/screenshots/prototype/` document the original fixture-backed layouts.
 - M6 and the final merge to `main` remain open until its checks and owner review are complete.

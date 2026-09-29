@@ -21,7 +21,12 @@ export interface SpriteImage {
 }
 
 export interface SpriteBody extends SpriteImage {
-  head: { x: number; y: number; behind?: boolean } | null
+  /** Mounted (and some other) classes draw the unit's 16×16 "small" head cell instead of the 32×32 one. */
+  head: { x: number; y: number; behind?: boolean; variant?: 'small' | 'large' } | null
+}
+
+interface SpriteHead extends SpriteImage {
+  small?: SpriteImage
 }
 
 export interface SplashEntry {
@@ -34,8 +39,8 @@ export interface SplashEntry {
 interface PortraitManifest { units: Record<string, PortraitEntry> }
 interface SpriteManifest {
   bodies: Record<string, SpriteBody>
-  heads: Record<string, SpriteImage>
-  genericHeads?: Record<string, SpriteImage>
+  heads: Record<string, SpriteHead>
+  genericHeads?: Record<string, SpriteHead>
   unique?: Record<string, Record<string, SpriteImage>>
 }
 interface SplashManifest { units: Record<string, SplashEntry> }
@@ -82,7 +87,8 @@ export function spriteLayers(unitId: string | null, classId: number): SpriteLaye
     if (unique) return { kind: 'single', image: withUrl(unique) }
     const body = SPRITES.bodies[String(classId)]
     if (body) {
-      const head = (unitId ? SPRITES.heads[unitId] : undefined) ?? SPRITES.genericHeads?.[String(classId)]
+      const heads = (unitId ? SPRITES.heads[unitId] : undefined) ?? SPRITES.genericHeads?.[String(classId)]
+      const head = body.head?.variant === 'small' ? heads?.small : heads
       return { kind: 'stitched', body: withUrl(body), head: head && body.head ? withUrl(head) : null, offset: body.head }
     }
   }

@@ -175,6 +175,38 @@ The current planner therefore does not include inherited support rows in child p
 - `family.ts` — children of a pair: units whose fixed parent is either partner (Corrin couples
   produce Kana plus the spouse's child).
 
+### v3 planner rules (`army.ts`, `lenses.ts`, `progression.ts`, `relationships.ts`)
+
+- **Roster** — units on the run's route (plus DLC Anna when DLC is on), only the Corrin matching the
+  chosen gender and that Corrin's Kana. Children are always listed.
+- **Relationships** are exclusive and mutual (S, A+, pair-up). A child's second parent is never
+  stored: it *is* the fixed parent's S partner, so the roster/profile "Parent B" slot writes
+  through to that S bond. Switching Corrin's gender moves Corrin's and Kana's plans (and every
+  reference, favourite and gendered class id) onto the other variant.
+- **Candidates** — S / Parent B: romantic edges of the subject in the build's graph. A+: platonic
+  edges that reach A. Pair-up: anyone on the roster (rank only changes the bonus).
+- **Pair-up rank** — S between spouses, otherwise the highest non-S rank the edge allows (A+ pairs
+  fight at A); no edge → class bonus only.
+- **Lenses** — "Stat Modifiers" = personal cap mods (+ boon/bane, child rule); pair-up lenses and
+  modifiers have no HP value (rendered `-`, unsortable).
+- **Progression** — join class/level from `recruitment.json` (falls back to the primary base class
+  at Lv 1). Each level-up adds `(personal + class growth) / 100` to the personal part of every stat;
+  the displayed stat is personal + class base, with the personal part clamped so the displayed stat
+  never exceeds the current class's cap (overflow is lost, as in-game). Reclasses: base↔base and
+  promoted↔promoted keep the level; Master Seal (Lv ≥ 10) promotes to Lv 1 and starts an "Advanced"
+  segment; DLC classes are on the 40-level special track (base Lv ≥ 10 keeps its level, promoted
+  maps to level + 20); special → base (Lv ≤ 20) / promoted (Lv > 20, level − 20). A class change
+  teaches the new class's skills at or below the new level immediately. Eternal Seals add +5 to the
+  final promoted/special segment. Later reclasses made illegal by an earlier edit are dropped.
+- **DLC gender locks (vanilla)** — Dread Fighter, Ballistician, Lodestar, Vanguard, Grandmaster:
+  male; Dark Falcon, Witch, Great Lord: female. The class table carries both variants for some.
+- **Talent** — any base class except Nohr Prince(ss); Monk/Wolfskin male-only, Shrine
+  Maiden/Kitsune female-only (vanilla avatar rules).
+- **Inherited skill** — chosen from the variable parent's learnable pool (*verify*: Fates passes
+  the variable parent's last-equipped skill).
+- **Children's bases** use their table offsets from the join point; paralogue scaling by chapter is
+  not modelled.
+
 ## Verification & open questions
 
 Cross-checks already performed:
@@ -197,16 +229,15 @@ Open questions (see also docs/REFERENCES.md):
 2. **Same-sex children.** UGF grants same-sex S supports; the planner allows any romantic partner
    as a second parent. Verify in-game whether same-sex couples recruit children, and narrow the
    candidate list if not.
-3. **A+ partners.** Exact per-character A+ lists are not in the extracted data; the UI approximates
-   with same-gender A-rank partners.
+3. **A+ partners.** Exact per-character A+ lists are not in the extracted data; v3 offers platonic
+   edges that reach rank A.
 4. **Child pair-up bonuses.** Children have empty support-bonus rows in the table; the documented
    inheritance rule (father C / mother B / father A / mother S) still needs a mechanics decision.
 5. **Personal-skill slots.** The three personal-skill fields (+116/118/120) are difficulty variants
    (normal/hard/lunatic) in the table; they are identical for every playable unit on this build, so
    the route-keyed shape in the packs is harmless but semantically loose.
 6. **Current support rank.** A plan stores final S/A+ choices, not the active C/B/A support rank.
-   Pair-up projections infer S/A+ from final relationship choices and otherwise use C; B rank cannot
-   currently be selected.
+   v3 pair-up projections use S for spouses and otherwise the pair's highest non-S rank.
 
 ## Pack format (v1)
 

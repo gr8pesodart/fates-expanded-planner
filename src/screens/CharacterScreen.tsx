@@ -3,7 +3,7 @@ import { usePlanner } from '../app/plannerContext'
 import { Portrait } from '../components/art'
 import { StarButton } from '../components/controls'
 import { Icon } from '../components/icons'
-import { splashArt } from '../data/art'
+import { portraitArt, splashArt } from '../data/art'
 import { displayName, unitContext } from '../logic/army'
 import { toggleFavourite } from '../logic/relationships'
 import type { CharacterTab } from '../lib/router'
@@ -81,7 +81,7 @@ export function Splash({ unitId, name }: { unitId: string; name: string }) {
   }
   return (
     <div className="splash fallback">
-      <Portrait unitId={unitId} name={name} crop="bust" className="splash-portrait" />
+      {portraitArt(unitId, 'bust') ? <Portrait unitId={unitId} name={name} crop="bust" className="splash-portrait" /> : null}
     </div>
   )
 }
