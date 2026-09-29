@@ -1,67 +1,15 @@
-import { FIRST_UNIT, lensOf, navigate, routeToHash, useRoute } from './lib/router'
-import type { AppRoute } from './lib/router'
+import { useEffect, useState } from 'react'
+import { LensSwitcher } from './components/LensSwitcher'
+import { RunPill } from './components/RunPill'
+import { UnitListPane } from './components/UnitListPane'
+import { lensOf, navigate, useRoute } from './lib/router'
+import type { AppRoute, Lens } from './lib/router'
 import { PairingsScreen } from './screens/PairingsScreen'
 import { PreviewScreen } from './screens/PreviewScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { UnitRouteScreen } from './screens/UnitRouteScreen'
 import { UnitScreen } from './screens/UnitScreen'
-
-const LENS_ORDER = ['pairings', 'individual', 'preview'] as const
-const LENS_LABELS: Record<(typeof LENS_ORDER)[number], string> = {
-  pairings: 'Pairings',
-  individual: 'Individual',
-  preview: 'Preview',
-}
-
-function lensTarget(lens: (typeof LENS_ORDER)[number], route: AppRoute): AppRoute {
-  if (lens === 'pairings') return { name: 'pairings' }
-  if (lens === 'preview') return { name: 'preview' }
-  const unitId = route.name === 'unit' || route.name === 'unit-route' ? route.unitId : FIRST_UNIT
-  return { name: 'unit', unitId }
-}
-
-function RunPill({ route }: { route: AppRoute }) {
-  const runName = 'New run'
-  return (
-    <div className="row">
-      <div className="runpill">
-        <span className="crest">{runName[0]}</span>
-        <b>{runName}</b>
-        <span className="meta">
-          <span className="chip">UGF 2.5.2</span>
-          <span className="chip accent">DLC</span>
-        </span>
-      </div>
-      <a
-        className="setup-link"
-        href={routeToHash({ name: 'setup' })}
-        aria-current={route.name === 'setup' ? 'page' : undefined}
-      >
-        Setup
-      </a>
-    </div>
-  )
-}
-
-function LensSwitcher({ route }: { route: AppRoute }) {
-  const active = lensOf(route)
-  const index = LENS_ORDER.indexOf(active)
-  return (
-    <nav className="lens" aria-label="Roster lens">
-      <span className="thumb" style={{ transform: `translateX(${index * 100}%)` }} aria-hidden="true" />
-      {LENS_ORDER.map((lens) => (
-        <button
-          key={lens}
-          type="button"
-          aria-pressed={active === lens}
-          onClick={() => navigate(lensTarget(lens, route))}
-        >
-          {LENS_LABELS[lens]}
-        </button>
-      ))}
-    </nav>
-  )
-}
+import { usePairingsVM } from './viewmodels/usePairingsVM'
 
 function Screen({ route }: { route: AppRoute }) {
   switch (route.name) {
@@ -80,12 +28,59 @@ function Screen({ route }: { route: AppRoute }) {
 
 export default function App() {
   const route = useRoute()
+  const shell = usePairingsVM()
+  const [theme, setTheme] = useState<'paper' | 'night'>('paper')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme === 'night' ? 'night' : 'paper'
+  }, [theme])
+
+  const themeAttr = theme === 'night' ? 'night' : undefined
+
+  if (route.name === 'setup') {
+    return (
+      <div className="app setupapp" data-route={shell.runPill.route} data-theme={themeAttr}>
+        <main className="appbody wide">
+          <SetupScreen />
+        </main>
+      </div>
+    )
+  }
+
+  const activeUnitId = route.name === 'unit' || route.name === 'unit-route' ? route.unitId : undefined
+  const lens = lensOf(route)
+  const onSelectLens = (next: Lens): void => {
+    if (next === 'pairings') navigate({ name: 'pairings' })
+    else if (next === 'preview') navigate({ name: 'preview' })
+    else navigate({ name: 'unit', unitId: activeUnitId ?? shell.units[0]?.id ?? '' })
+  }
+
   return (
-    <div className="app" data-route="revelation">
+    <div className="app" data-route={shell.runPill.route} data-theme={themeAttr}>
       <header className="appbar">
-        <RunPill route={route} />
-        <LensSwitcher route={route} />
+        <RunPill vm={shell.runPill} />
+        <div className="appbarrow">
+          <LensSwitcher active={lens} onSelect={onSelectLens} />
+          <button
+            type="button"
+            className="themebtn"
+            aria-label={theme === 'night' ? 'Switch to paper theme' : 'Switch to night theme'}
+            aria-pressed={theme === 'night'}
+            onClick={() => setTheme((current) => (current === 'night' ? 'paper' : 'night'))}
+          >
+            {theme === 'night' ? '☀' : '☾'}
+          </button>
+        </div>
       </header>
+      <aside className="sidepane">
+        <UnitListPane
+          query={shell.query}
+          onSearch={shell.onSearch}
+          filters={shell.filters}
+          units={shell.units}
+          activeId={activeUnitId}
+        />
+      </aside>
       <main className="appbody">
         <Screen route={route} />
       </main>
