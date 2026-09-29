@@ -16,8 +16,6 @@
   --nohr: #6a4bc4;
   --valla: #178f86;
   --accent: var(--valla);
-  --accent-strong: color-mix(in oklab, var(--accent) 55%, #1b1b1b);
-  --accent-soft: color-mix(in oklab, var(--accent) 12%, #ffffff);
 
   --rel-s: #c57373;
   --rel-a: #6981d0;
@@ -55,6 +53,13 @@
   --shadow-float: 0 6px 16px rgb(0 0 0 / 0.12);
   --shadow-sheet: 0 -8px 30px rgb(0 0 0 / 0.18);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Derived accents are recomputed wherever the route is set: custom properties inherit computed values. */
+:root,
+[data-route] {
+  --accent-strong: color-mix(in oklab, var(--accent) 55%, #1b1b1b);
+  --accent-soft: color-mix(in oklab, var(--accent) 12%, #ffffff);
 }
 
 [data-route="birthright"] { --accent: var(--hoshido); }

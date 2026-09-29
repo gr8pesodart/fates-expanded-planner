@@ -915,6 +915,10 @@
   border-bottom: 1px solid var(--line);
 }
 
+.panel-section > * {
+  min-width: 0;
+}
+
 .panel-section.tight {
   gap: 8px;
   padding: var(--s4) var(--s4) 4px;
@@ -975,6 +979,12 @@
   min-height: 24px;
   display: grid;
   place-items: center;
+}
+
+.rel-under .segmented button {
+  min-height: 22px;
+  padding: 0 10px;
+  font-size: 11px;
 }
 
 .rel-caption {

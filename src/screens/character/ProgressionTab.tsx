@@ -123,7 +123,7 @@ function LearnedLine({ dataset, row }: { dataset: Dataset; row: LevelRow }) {
   const onReclass = row.learned.filter((item) => item.onReclass)
   if (levelled.length) groups.push(['Learns', levelled])
   if (onReclass.length) groups.push([levelled.length ? '+' : 'Learns', onReclass])
-  if (!groups.length) return null
+  if (!groups.length) return <span className="level-learned" />
   return (
     <span className="level-learned">
       {groups.map(([label, skills]) => (
@@ -165,7 +165,7 @@ function ReclassSelect({ dataset, row, first, disabled, onChange }: { dataset: D
             <optgroup key={seal} label={SEAL_LABEL[seal]}>
               {options.map((option) => (
                 <option key={option.classId} value={option.classId}>
-                  {name(option.classId)}{option.newSegment ? ` (Lv ${option.level})` : ''}
+                  {name(option.classId)}{option.newSegment && option.level > 1 ? ` (Lv ${option.level})` : ''}
                 </option>
               ))}
             </optgroup>
