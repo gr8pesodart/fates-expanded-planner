@@ -67,4 +67,69 @@ describe('ugf-2.5.2 pack', () => {
   it('marks second-gen units with their fixed parent', () => {
     expect(unit('Shiro').fixedParent).toBe(unit('Ryoma').id)
   })
+
+  it('decodes route availability from the support-route byte', () => {
+    expect(unit('Ryoma').routes).toEqual(['birthright', 'revelation'])
+    expect(unit('Gunter').routes).toEqual(['conquest', 'revelation'])
+    expect(unit('Izana').routes).toEqual(['birthright', 'conquest'])
+    expect(unit('Fuga').routes).toEqual(['revelation'])
+    expect(unit('Yukimura').routes).toEqual(['birthright'])
+    expect(unit('Anna').routes).toEqual(['birthright', 'conquest', 'revelation'])
+  })
+
+  it('flags the eight DLC class families and Anna', () => {
+    const dlc = dataset.classes.filter((c) => c.dlc).map((c) => c.name)
+    expect(dlc).toHaveLength(10)
+    for (const name of [
+      'Dread Fighter (M)',
+      'Dread Fighter (F)',
+      'Dark Falcon (M)',
+      'Dark Falcon (F)',
+      'Ballistician',
+      'Witch',
+      'Lodestar',
+      'Vanguard',
+      'Great Lord',
+      'Grandmaster',
+    ]) {
+      expect(dlc).toContain(name)
+    }
+    expect(dataset.classes.find((c) => c.name === 'Samurai (M)')?.dlc).toBe(false)
+    expect(unit('Anna').dlc).toBe(true)
+    expect(unit('Ryoma').dlc).toBe(false)
+  })
+
+  it('pins class skill learn levels (Dread Fighter 1/10/25/35)', () => {
+    const dread = dataset.classes.find((c) => c.name === 'Dread Fighter (M)')
+    expect(dread?.skillLearn).toEqual([
+      { id: 128, level: 1 },
+      { id: 129, level: 10 },
+      { id: 130, level: 25 },
+      { id: 131, level: 35 },
+    ])
+    const samurai = dataset.classes.find((c) => c.name === 'Samurai (M)')
+    expect(samurai?.skillLearn).toEqual([
+      { id: 57, level: 1 },
+      { id: 39, level: 10 },
+    ])
+  })
+
+  it('carries skill descriptions and DLC flags', () => {
+    const byName = new Map(dataset.skillsById)
+    const strength = [...byName.values()].find((s) => s.name === 'Strength +2')
+    expect(strength?.description).toBe('Grants Str+2.')
+    const aggressor = [...byName.values()].find((s) => s.name === 'Aggressor')
+    expect(aggressor?.dlc).toBe(true)
+    const bushido = [...byName.values()].find((s) => s.name === 'Bushido')
+    expect(bushido?.dlc).toBe(false)
+  })
+
+  it('pins Ryoma pair-up support bonuses (SF: Spd / Str / Skl / Spd+2)', () => {
+    expect(unit('Ryoma').supportBonuses).toEqual([
+      [0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0, 0],
+      [0, 0, 0, 0, 2, 0, 0, 0],
+    ])
+  })
 })

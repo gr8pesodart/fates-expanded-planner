@@ -92,6 +92,10 @@ export interface UnitDef {
   slot: number
   gender: 'male' | 'female'
   supportRoute: number
+  /** Routes the unit can be recruited in (decoded from the support-route byte). */
+  routes: Route[]
+  /** DLC-only unit (currently Anna) — hidden when the run has DLC off. */
+  dlc: boolean
   levelCap: number | null
   baseStats: number[]
   growths: number[]
@@ -102,6 +106,10 @@ export interface UnitDef {
   reclasses: number[]
   weaponRanks: number[]
   personalSkills: { birthright: number | null; conquest: number | null; revelation: number | null }
+  /** C/B/A/S rows of pair-up support bonuses (8 stats each, cumulative). */
+  supportBonuses: number[][]
+  /** no/C/B/A/S rows of attack-stance bonuses (hit/crit/avoid/dodge). */
+  attackBonuses: number[][]
   /** PID of the fixed parent for second-gen units. */
   fixedParent: string | null
   isCorrin: boolean
@@ -111,19 +119,29 @@ export interface UnitDef {
 
 export type ClassTier = 'base' | 'promoted' | 'special'
 
+export interface ClassSkillLearn {
+  id: number
+  level: number
+}
+
 export interface ClassDef {
   id: number
   /** English name including a " (M)"/" (F)" suffix for gendered classes. */
   name: string
   ja: string
   tier: ClassTier
+  /** DLC class (Dread Fighter, Dark Falcon, Ballistician, Witch, Lodestar, Vanguard, Great Lord, Grandmaster). */
+  dlc: boolean
   baseStats: number[]
   growths: number[]
   caps: number[]
+  /** Pair-up stat bonuses granted when this class is the support unit. */
   pairUp: number[]
   weaponRanks: number[]
   /** Skills learned in this class, in learning order. */
   skills: number[]
+  /** Skills with the level they are learned at in this class. */
+  skillLearn: ClassSkillLearn[]
   promotesTo: number[]
   promotesFrom: number[]
   movement: number
@@ -132,6 +150,12 @@ export interface ClassDef {
 export interface SkillDef {
   id: number
   name: string
+  /** In-game description from the English message archive (null when absent). */
+  description: string | null
+  /** Index into the skill icon sheets (see src/data/assets.json). */
+  icon: number
+  /** Available only through DLC classes or DLC units. */
+  dlc: boolean
 }
 
 // ------------------------------ dataset ------------------------------------
