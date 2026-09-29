@@ -16,9 +16,9 @@ export default defineConfig({
         name: 'Fates Expanded Planner',
         short_name: 'Fates Expanded',
         description:
-          'Run planner for modded Fire Emblem Fates — UGF supports, inheritance, reclasses and resources.',
-        theme_color: '#0d1020',
-        background_color: '#0d1020',
+          'Army planner for modded Fire Emblem Fates — supports, classes, skills, class routes and pair-up.',
+        theme_color: '#f5f0e6',
+        background_color: '#f5f0e6',
         display: 'standalone',
         start_url: '.',
         scope: '.',
@@ -34,22 +34,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,json,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-stylesheets' },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 365 },
-            },
-          },
-        ],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,json,woff2}'],
       },
     }),
   ],

@@ -1,108 +1,94 @@
-import { useEffect, useState, type ReactElement } from 'react'
-import { Sigil, IconPlan, IconSupports, IconReference, IconSettings } from './components/icons'
-import { ArmyScreen } from './screens/ArmyScreen'
-import { SupportsScreen } from './screens/SupportsScreen'
-import { ReferenceScreen } from './screens/ReferenceScreen'
-import { SettingsScreen } from './screens/SettingsScreen'
-import { useActivePlan, usePlansStore } from './state/plansStore'
-import { getBuildProfile } from './data/modProfiles'
-import { ROUTES } from './data/types'
-import { clearShareHash, readSharedPlan } from './lib/share'
+import { FIRST_UNIT, lensOf, navigate, routeToHash, useRoute } from './lib/router'
+import type { AppRoute } from './lib/router'
+import { PairingsScreen } from './screens/PairingsScreen'
+import { PreviewScreen } from './screens/PreviewScreen'
+import { SetupScreen } from './screens/SetupScreen'
+import { UnitRouteScreen } from './screens/UnitRouteScreen'
+import { UnitScreen } from './screens/UnitScreen'
 
-type TabId = 'army' | 'supports' | 'reference' | 'settings'
+const LENS_ORDER = ['pairings', 'individual', 'preview'] as const
+const LENS_LABELS: Record<(typeof LENS_ORDER)[number], string> = {
+  pairings: 'Pairings',
+  individual: 'Individual',
+  preview: 'Preview',
+}
 
-const TABS: ReadonlyArray<{
-  id: TabId
-  label: string
-  icon: (p: { className?: string }) => ReactElement
-}> = [
-  { id: 'army', label: 'Army', icon: IconPlan },
-  { id: 'supports', label: 'Supports', icon: IconSupports },
-  { id: 'reference', label: 'Reference', icon: IconReference },
-  { id: 'settings', label: 'Saves', icon: IconSettings },
-]
+function lensTarget(lens: (typeof LENS_ORDER)[number], route: AppRoute): AppRoute {
+  if (lens === 'pairings') return { name: 'pairings' }
+  if (lens === 'preview') return { name: 'preview' }
+  const unitId = route.name === 'unit' || route.name === 'unit-route' ? route.unitId : FIRST_UNIT
+  return { name: 'unit', unitId }
+}
+
+function RunPill({ route }: { route: AppRoute }) {
+  const runName = 'New run'
+  return (
+    <div className="row">
+      <div className="runpill">
+        <span className="crest">{runName[0]}</span>
+        <b>{runName}</b>
+        <span className="meta">
+          <span className="chip">UGF 2.5.2</span>
+          <span className="chip accent">DLC</span>
+        </span>
+      </div>
+      <a
+        className="setup-link"
+        href={routeToHash({ name: 'setup' })}
+        aria-current={route.name === 'setup' ? 'page' : undefined}
+      >
+        Setup
+      </a>
+    </div>
+  )
+}
+
+function LensSwitcher({ route }: { route: AppRoute }) {
+  const active = lensOf(route)
+  const index = LENS_ORDER.indexOf(active)
+  return (
+    <nav className="lens" aria-label="Roster lens">
+      <span className="thumb" style={{ transform: `translateX(${index * 100}%)` }} aria-hidden="true" />
+      {LENS_ORDER.map((lens) => (
+        <button
+          key={lens}
+          type="button"
+          aria-pressed={active === lens}
+          onClick={() => navigate(lensTarget(lens, route))}
+        >
+          {LENS_LABELS[lens]}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+function Screen({ route }: { route: AppRoute }) {
+  switch (route.name) {
+    case 'setup':
+      return <SetupScreen />
+    case 'unit':
+      return <UnitScreen unitId={route.unitId} />
+    case 'unit-route':
+      return <UnitRouteScreen unitId={route.unitId} />
+    case 'preview':
+      return <PreviewScreen />
+    default:
+      return <PairingsScreen />
+  }
+}
 
 export default function App() {
-  const [tab, setTab] = useState<TabId>('army')
-  const plan = useActivePlan()
-  const importBundle = usePlansStore((s) => s.importBundle)
-  const [notice, setNotice] = useState<string | null>(null)
-
-  useEffect(() => {
-    const shared = readSharedPlan()
-    if (!shared) return
-    const result = importBundle(
-      JSON.stringify({ app: 'fates-expanded-planner', schema: 1, plans: [shared] }),
-    )
-    clearShareHash()
-    // One-time import of a plan embedded in the URL hash on first mount.
-    // oxlint-disable-next-line react/set-state-in-effect
-    setNotice(
-      'imported' in result
-        ? `Imported shared plan “${shared.name}”.`
-        : `Shared plan “${shared.name}” is already saved on this device.`,
-    )
-  }, [importBundle])
-
-  const profile = getBuildProfile(plan?.buildProfileId ?? 'ugf-2.5.2')
-  const route = ROUTES.find((r) => r.id === plan?.route) ?? ROUTES[2]
-
+  const route = useRoute()
   return (
-    <div className="app" data-route={plan?.route ?? 'revelation'}>
-      <header className="topbar">
-        <span className="sigil" aria-hidden>
-          <Sigil />
-        </span>
-        <div className="titleblock">
-          <h1>Fates Expanded Planner</h1>
-          <p className="sub">
-            {plan ? plan.name : 'No run yet'} · {profile.short}
-          </p>
-        </div>
-        <span className="route-pin">{route.label}</span>
+    <div className="app" data-route="revelation">
+      <header className="appbar">
+        <RunPill route={route} />
+        <LensSwitcher route={route} />
       </header>
-
-      <main className="shell">
-        {notice && (
-          <div className="banner" role="status">
-            <span>{notice}</span>
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              style={{ marginLeft: 'auto' }}
-              onClick={() => setNotice(null)}
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        <div className="screen" key={tab}>
-          {tab === 'army' && <ArmyScreen />}
-          {tab === 'supports' && <SupportsScreen />}
-          {tab === 'reference' && <ReferenceScreen />}
-          {tab === 'settings' && <SettingsScreen />}
-        </div>
-
-        <p className="footnote">
-          Fan-made planner for a modded copy of Fire Emblem Fates. Not affiliated with Nintendo or
-          Intelligent Systems.
-        </p>
+      <main className="appbody">
+        <Screen route={route} />
       </main>
-
-      <nav className="tabbar" aria-label="Main">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            aria-current={tab === id ? 'page' : undefined}
-            onClick={() => setTab(id)}
-          >
-            <Icon />
-            {label}
-          </button>
-        ))}
-      </nav>
     </div>
   )
 }

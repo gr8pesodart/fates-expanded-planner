@@ -1,0 +1,38 @@
+/* Transcribed verbatim from docs/design/reference.html — the token contract. */
+:root {
+  --paper: #f5f0e6;         /* page */
+  --paper-2: #ece5d6;       /* sunken wells, track backgrounds */
+  --card: #fffdf8;          /* raised surfaces */
+  --ink: #1f1b24;           /* text, strong lines */
+  --ink-2: #5d5566;         /* secondary text */
+  --ink-3: #9a91a3;         /* tertiary, disabled */
+  --line: #ddd3c2;          /* hairlines */
+
+  --hoshido: #d4432c;       /* Birthright vermilion */
+  --nohr: #6a4bc4;          /* Conquest amethyst */
+  --valla: #178f86;         /* Revelation jade */
+  --gold: #c99a2e;          /* S-rank / highlights */
+  --good: #3f8f4e;          /* positive cap mod, gains */
+  --bad: #c2473a;           /* negative cap mod, conflicts */
+
+  --accent: var(--valla);
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, var(--card));
+  --accent-ink: color-mix(in oklab, var(--accent) 70%, var(--ink));
+
+  --f-display: "Shippori Mincho B1", "Hiragino Mincho ProN", Georgia, serif;
+  --f-ui: "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-num: "JetBrains Mono", ui-monospace, monospace;
+
+  --r-sm: 8px; --r-md: 14px; --r-lg: 22px; --r-pill: 999px;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+  --shadow: 0 1px 0 rgb(31 27 36 / .06), 0 6px 18px -8px rgb(31 27 36 / .22);
+  --press: cubic-bezier(.3, 1.5, .6, 1);
+  --tap: 44px;
+}
+[data-route="birthright"] { --accent: var(--hoshido); }
+[data-route="conquest"]   { --accent: var(--nohr); }
+[data-theme="night"] {
+  --paper: #16131c; --paper-2: #211c2a; --card: #1d1925; --ink: #f1ebf7;
+  --ink-2: #b4aac0; --ink-3: #6f6680; --line: #342d40;
+  --shadow: 0 1px 0 rgb(0 0 0 / .4), 0 10px 24px -10px rgb(0 0 0 / .7);
+}
