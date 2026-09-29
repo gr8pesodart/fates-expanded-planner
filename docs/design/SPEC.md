@@ -112,9 +112,12 @@ areas may extend past the visible chip.
 - **Row** (padding 12/10, `--line` bottom border). Left side: PortraitChip 32, name, and a favourite
   star (filled `--ink` / outline `--ink-3`; tap toggles). Right side, gap 6: ClassSprite (tap opens
   the **class popup** listing every class available to the unit, grouped Base / Advanced; picking
-  one sets the current class), then the S, A+ and pair-up RelationSlots (each opens the
+  one sets the current class), then the S, A+ and pair-up RelationSlots (**child rows get a fourth
+  "Parent B" slot**, in `--ink-2` outline, synced with that parent's S slot; each opens the
   **character picker** for that slot), then the edit button (dark circle + arrow, opens the
   Character page). Below: a StatTable for the active lens.
+- **Children are always listed** (sorted to the end in Recruit order) and treated as available,
+  whether or not their parent has an S partner. There is no "needs a parent" state.
 - Rows use `content-visibility: auto`. There are about 70 rows, so there's no virtualiser unless
   profiling says otherwise.
 
@@ -275,7 +278,7 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
 | Set | Used by | Source |
 |---|---|---|
 | Talk portraits (`_st`, neutral expression, hair merged) → face crop + bust crop | PortraitChip, relationship cards, pickers | Owner's romfs `face/face/<name>_st.arc` (same decoder as the existing `_bu` faces). The owner's note says "source online"; the dump holds the same official talk sprites, so prefer it and fall back online only if extraction fails. |
-| Promo / splash art (Corrin M and F too) | Character header, Corrin gender cards | Online (official Fates artwork, e.g. Fire Emblem Wiki / Serenes Forest galleries). Record each source in `docs/ASSETS.md`. Per-character focal point in the manifest. |
+| Promo / splash art (Corrin M and F too) | Character header, Corrin gender cards | Online: official Fates base artwork, whichever of Fire Emblem Wiki / Serenes Forest has the higher resolution. Record each source in `docs/ASSETS.md`. Per-character focal point in the manifest. |
 | Stitched map sprites (body + unit head) | ClassSprite everywhere | romfs `unit/Body/<class>/青0.bch.lz` + `unit/Head/<unit>/青0.bch.lz`, with offsets from `unit/Body/<class>/anime.bin`; `unit/Unique/` overrides (Velouria, Keaton, Kana dragon…). Stitched **at runtime** from body frame + head frame + offsets. |
 | Skill icons | as today | unchanged |
 | UI icons | nav, sort, info, swap, star, edit | `docs/design/figma/icons/` → `src/components/icons/` |

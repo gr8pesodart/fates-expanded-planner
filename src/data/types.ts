@@ -162,6 +162,19 @@ export interface SkillDef {
   dlc: boolean
 }
 
+// ---------------------------- recruitment ----------------------------------
+
+/** One unit's join point on a route (src/data/packs/<id>/recruitment.json, curated with sources). */
+export interface RecruitmentEntry {
+  unit: string
+  /** Position in the route's recruitment order; optional recruits sit at their chapter. */
+  order: number
+  chapter: string
+  joinLevel: number
+  joinClassId: number
+  optional: boolean
+}
+
 // ------------------------------ dataset ------------------------------------
 
 export interface DatasetMeta {
@@ -184,6 +197,8 @@ export interface Dataset {
   classes: ClassDef[]
   classesById: Map<number, ClassDef>
   skillsById: Map<number, SkillDef>
+  /** Per-route join data keyed by unit id; null until the pack ships recruitment.json. */
+  recruitment: Record<Route, Map<string, RecruitmentEntry>> | null
 }
 
 // ------------------------------ helpers ------------------------------------

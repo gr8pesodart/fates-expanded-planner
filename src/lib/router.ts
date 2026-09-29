@@ -1,56 +1,76 @@
 import { useEffect, useState } from 'react'
 
+export type CharacterTab = 'avatar' | 'profile' | 'stats' | 'progression'
+
+export const CHARACTER_TABS: readonly CharacterTab[] = ['avatar', 'profile', 'stats', 'progression']
+
 export type AppRoute =
-  | { name: 'setup' }
-  | { name: 'pairings' }
-  | { name: 'unit'; unitId: string }
-  | { name: 'unit-route'; unitId: string }
-  | { name: 'preview'; shareToken?: string }
+  | { name: 'roster' }
+  | { name: 'unit'; unitId: string; tab: CharacterTab }
+  | { name: 'chart'; shareToken?: string }
+  | { name: 'runs' }
+  | { name: 'new-run' }
 
-export type Lens = 'pairings' | 'individual' | 'preview'
-
-/** Sentinel unit id until the roster store lands — the shell has no dataset. */
-export const FIRST_UNIT = '@first'
+export type NavSection = 'roster' | 'chart' | 'runs'
 
 export function parseHash(hash: string): AppRoute {
   const [path, query = ''] = hash.replace(/^#\/?/, '').split('?', 2)
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent)
-  if (parts[0] === 'setup') return { name: 'setup' }
-  if (parts[0] === 'preview') {
+  if (parts[0] === 'chart') {
     const shareToken = new URLSearchParams(query).get('plan') ?? undefined
-    return shareToken ? { name: 'preview', shareToken } : { name: 'preview' }
+    return shareToken ? { name: 'chart', shareToken } : { name: 'chart' }
   }
+  if (parts[0] === 'runs') return parts[1] === 'new' ? { name: 'new-run' } : { name: 'runs' }
   if (parts[0] === 'unit' && parts[1]) {
-    if (parts[2] === 'route') return { name: 'unit-route', unitId: parts[1] }
-    return { name: 'unit', unitId: parts[1] }
+    const tab = CHARACTER_TABS.find((item) => item === parts[2]) ?? 'profile'
+    return { name: 'unit', unitId: parts[1], tab }
   }
-  return { name: 'pairings' }
+  return { name: 'roster' }
 }
 
 export function routeToHash(route: AppRoute): string {
   switch (route.name) {
-    case 'setup':
-      return '#/setup'
-    case 'preview':
-      return route.shareToken ? `#/preview?plan=${encodeURIComponent(route.shareToken)}` : '#/preview'
+    case 'chart':
+      return route.shareToken ? `#/chart?plan=${encodeURIComponent(route.shareToken)}` : '#/chart'
+    case 'runs':
+      return '#/runs'
+    case 'new-run':
+      return '#/runs/new'
     case 'unit':
-      return `#/unit/${encodeURIComponent(route.unitId)}`
-    case 'unit-route':
-      return `#/unit/${encodeURIComponent(route.unitId)}/route`
+      return `#/unit/${encodeURIComponent(route.unitId)}/${route.tab}`
     default:
-      return '#/pairings'
+      return '#/roster'
   }
 }
 
-export function lensOf(route: AppRoute): Lens {
-  if (route.name === 'preview') return 'preview'
-  if (route.name === 'unit' || route.name === 'unit-route') return 'individual'
-  return 'pairings'
+export function sectionOf(route: AppRoute): NavSection {
+  if (route.name === 'chart') return 'chart'
+  if (route.name === 'runs' || route.name === 'new-run') return 'runs'
+  return 'roster'
 }
 
-export function navigate(route: AppRoute): void {
+// Entries this app pushed; a deep-linked character page has none, so Back falls back to the roster.
+let pushedEntries = 0
+
+export function navigate(route: AppRoute, options: { replace?: boolean } = {}): void {
   const next = routeToHash(route)
-  if (window.location.hash !== next) window.location.hash = next
+  if (window.location.hash === next) return
+  if (options.replace) {
+    window.location.replace(next)
+    return
+  }
+  pushedEntries += 1
+  window.location.hash = next
+}
+
+/** Back from a character page returns to wherever it was opened from (roster or chart). */
+export function goBack(fallback: AppRoute = { name: 'roster' }): void {
+  if (pushedEntries > 0) {
+    pushedEntries -= 1
+    window.history.back()
+    return
+  }
+  navigate(fallback, { replace: true })
 }
 
 export function useRoute(): AppRoute {

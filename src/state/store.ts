@@ -1,20 +1,21 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
-import type { PlanDocument, RunPatch, RunPlan, UnitPlan } from './model'
-import { createId, emptyRun, emptyUnitPlan, PLAN_SCHEMA, PLAN_STORAGE_KEY } from './model'
+import type { PlanDocument, RunPatch, RunPlan } from './model'
+import { createId, emptyRun, PLAN_SCHEMA, PLAN_STORAGE_KEY } from './model'
 import { isPlanDocument, parsePlanDocument, serializePlanDocument } from './serialization'
 
 export interface PlansStore extends PlanDocument {
-  createRun(name?: string): string
+  /** False until the user finishes the first new-run flow. */
+  onboarded: boolean
+  createRun(init?: RunPatch): string
   selectRun(runId: string): void
-  renameRun(runId: string, name: string): void
   updateRun(runId: string, patch: RunPatch): void
-  updateUnit(runId: string, unitId: string, update: (unit: UnitPlan) => UnitPlan): void
+  /** Apply a pure transform (src/logic/relationships.ts etc.) to a run. */
+  mutateRun(runId: string, transform: (run: RunPlan) => RunPlan): void
   duplicateRun(runId: string): string | null
   deleteRun(runId: string): void
   exportJson(): string
   importJson(json: string): void
-  replaceDocument(document: PlanDocument): void
 }
 
 function initialDocument(): PlanDocument {
@@ -22,55 +23,36 @@ function initialDocument(): PlanDocument {
   return { schema: PLAN_SCHEMA, runs: [run], activeRunId: run.id }
 }
 
-function withUpdatedRun(state: PlansStore, runId: string, update: (run: RunPlan) => RunPlan): Pick<PlansStore, 'runs'> {
-  return {
-    runs: state.runs.map((run) => run.id === runId
-      ? { ...update(run), updatedAt: new Date().toISOString() }
-      : run),
-  }
+function touched(run: RunPlan): RunPlan {
+  return { ...run, updatedAt: new Date().toISOString() }
 }
 
 export const usePlansStore = create<PlansStore>()(persist((set, get) => ({
   ...initialDocument(),
-  createRun(name) {
-    const run = { ...emptyRun(), ...(name === undefined ? {} : { name }) }
-    set((state) => ({ runs: [...state.runs, run], activeRunId: run.id }))
+  onboarded: false,
+  createRun(init = {}) {
+    const base = emptyRun()
+    const run: RunPlan = { ...base, ...init, corrin: { ...base.corrin, ...init.corrin } }
+    set((state) => {
+      const pristine = !state.onboarded && state.runs.length === 1 && Object.keys(state.runs[0].units).length === 0
+      return { runs: pristine ? [run] : [...state.runs, run], activeRunId: run.id, onboarded: true }
+    })
     return run.id
   },
   selectRun(runId) {
     if (get().runs.some((run) => run.id === runId)) set({ activeRunId: runId })
   },
-  renameRun(runId, name) {
-    set((state) => withUpdatedRun(state, runId, (run) => ({ ...run, name })))
-  },
   updateRun(runId, patch) {
-    set((state) => withUpdatedRun(state, runId, (run) => ({
-      ...run,
-      ...patch,
-      corrin: { ...run.corrin, ...patch.corrin },
-    })))
+    get().mutateRun(runId, (run) => ({ ...run, ...patch, corrin: { ...run.corrin, ...patch.corrin } }))
   },
-  updateUnit(runId, unitId, update) {
-    set((state) => withUpdatedRun(state, runId, (run) => ({
-      ...run,
-      units: { ...run.units, [unitId]: update(run.units[unitId] ?? emptyUnitPlan()) },
-    })))
+  mutateRun(runId, transform) {
+    set((state) => ({ runs: state.runs.map((run) => (run.id === runId ? touched(transform(run)) : run)) }))
   },
   duplicateRun(runId) {
     const source = get().runs.find((run) => run.id === runId)
     if (!source) return null
-    const duplicate: RunPlan = {
-      ...source,
-      id: createId(),
-      name: `${source.name} copy`,
-      units: Object.fromEntries(Object.entries(source.units).map(([unitId, unit]) => [unitId, {
-        ...unit,
-        classRoute: unit.classRoute.map((stop) => ({ ...stop })),
-        skills: [...unit.skills],
-      }])),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    const now = new Date().toISOString()
+    const duplicate: RunPlan = { ...structuredClone(source), id: createId(), name: `${source.name} copy`, createdAt: now, updatedAt: now }
     set((state) => ({ runs: [...state.runs, duplicate], activeRunId: duplicate.id }))
     return duplicate.id
   },
@@ -78,29 +60,28 @@ export const usePlansStore = create<PlansStore>()(persist((set, get) => ({
     const state = get()
     if (state.runs.length <= 1) return
     const runs = state.runs.filter((run) => run.id !== runId)
-    if (runs.length === state.runs.length) return
-    const activeRunId = state.activeRunId === runId ? runs[0].id : state.activeRunId
-    set({ runs, activeRunId })
+    set({ runs, activeRunId: state.activeRunId === runId ? runs[0].id : state.activeRunId })
   },
   exportJson() {
     const { schema, runs, activeRunId } = get()
     return serializePlanDocument({ schema, runs, activeRunId })
   },
   importJson(json) {
-    const document = parsePlanDocument(json)
-    set(document)
-  },
-  replaceDocument(document) {
-    set(document)
+    set({ ...parsePlanDocument(json), onboarded: true })
   },
 }), {
   name: PLAN_STORAGE_KEY,
   version: PLAN_SCHEMA,
   storage: createJSONStorage(() => localStorage),
-  partialize: ({ schema, runs, activeRunId }) => ({ schema, runs, activeRunId }),
-  migrate: () => initialDocument(),
+  partialize: ({ schema, runs, activeRunId, onboarded }) => ({ schema, runs, activeRunId, onboarded }),
+  migrate: () => ({ ...initialDocument(), onboarded: false }),
   merge: (persisted, current) => {
     if (!isPlanDocument(persisted)) return current
-    return { ...current, ...persisted }
+    const onboarded = (persisted as { onboarded?: unknown }).onboarded === true
+    return { ...current, ...persisted, onboarded }
   },
 }))
+
+export function useActiveRun(): RunPlan {
+  return usePlansStore((state) => state.runs.find((run) => run.id === state.activeRunId) ?? state.runs[0])
+}

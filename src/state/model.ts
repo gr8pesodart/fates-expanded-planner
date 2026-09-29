@@ -1,25 +1,18 @@
 import type { Route, StatKey } from '../data/types'
 
-export const PLAN_SCHEMA = 3 as const
+export const PLAN_SCHEMA = 4 as const
 
-export const PLAN_STORAGE_KEY = 'fates-expanded-planner:plans:v3'
+export const PLAN_STORAGE_KEY = 'fates-expanded-planner:plans:v4'
 
-export type ClassRouteVia =
-  | 'start'
-  | 'promotion'
-  | 'heart'
-  | 'partner'
-  | 'friendship'
-  | 'master'
-  | 'eternal'
-  | 'offspring'
-  | 'dlc'
+export const SKILL_SLOTS = 5
 
-export interface ClassStop {
+export type PairRole = 'front' | 'back'
+
+/** A class change taken on reaching `level` of progression segment `segment`. */
+export interface Reclass {
+  segment: number
+  level: number
   classId: number
-  fromLevel: number
-  toLevel: number
-  via: ClassRouteVia
 }
 
 export interface CorrinPlan {
@@ -29,18 +22,20 @@ export interface CorrinPlan {
   talentClassId: number | null
 }
 
+/**
+ * Relationships are stored on both sides and kept symmetric by src/logic/relationships.ts.
+ * A child's second parent is never stored: it is the fixed parent's `sPartner`.
+ */
 export interface UnitPlan {
-  inArmy: boolean
   sPartner?: string
   aPlusPartner?: string
-  variableParent?: string
+  pairPartner?: string
+  pairRole?: PairRole
   classId?: number
-  classRoute: ClassStop[]
   skills: (number | null)[]
   inheritSkill?: number
-  combatPartner?: string
-  combatRole?: 'front' | 'back'
-  notes?: string
+  reclasses: Reclass[]
+  eternalSeals?: number
 }
 
 export interface RunPlan {
@@ -50,6 +45,7 @@ export interface RunPlan {
   dlc: boolean
   route: Route
   corrin: CorrinPlan
+  favourites: string[]
   units: Record<string, UnitPlan>
   createdAt: string
   updatedAt: string
@@ -70,7 +66,7 @@ export interface RunPatch {
 }
 
 export function emptyUnitPlan(): UnitPlan {
-  return { inArmy: true, classRoute: [], skills: [null, null, null, null, null] }
+  return { skills: Array.from({ length: SKILL_SLOTS }, () => null), reclasses: [] }
 }
 
 export function unitPlanFor(run: RunPlan, unitId: string): UnitPlan {
@@ -85,7 +81,8 @@ export function emptyRun(id = createId()): RunPlan {
     modpackId: 'ugf-2.5.2',
     dlc: true,
     route: 'revelation',
-    corrin: { gender: 'male', boon: 'str', bane: 'lck', talentClassId: null },
+    corrin: { gender: 'female', boon: 'spd', bane: 'lck', talentClassId: null },
+    favourites: [],
     units: {},
     createdAt: now,
     updatedAt: now,

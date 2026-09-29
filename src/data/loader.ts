@@ -5,6 +5,8 @@ import type {
   DatasetEdge,
   DatasetMeta,
   RawSupportTuple,
+  RecruitmentEntry,
+  Route,
   SkillDef,
   UnitDef,
 } from './types'
@@ -16,6 +18,17 @@ import { decodeSupportType } from './types'
  */
 
 const cache = new Map<string, Promise<Dataset>>()
+
+// Optional pack files: absent files simply resolve to null instead of failing the build.
+const recruitmentFiles = import.meta.glob<{ default: unknown }>('./packs/*/recruitment.json')
+
+async function loadRecruitment(packId: string): Promise<Dataset['recruitment']> {
+  const load = recruitmentFiles[`./packs/${packId}/recruitment.json`]
+  if (!load) return null
+  const { routes } = (await load()).default as { routes: Record<Route, RecruitmentEntry[]> }
+  const index = (entries: RecruitmentEntry[] = []) => new Map(entries.map((entry) => [entry.unit, entry]))
+  return { birthright: index(routes.birthright), conquest: index(routes.conquest), revelation: index(routes.revelation) }
+}
 
 export function loadDataset(packId: string): Promise<Dataset> {
   const hit = cache.get(packId)
@@ -38,7 +51,7 @@ function indexEdges(edges: DatasetEdge[]): Map<string, DatasetEdge[]> {
 }
 
 async function loadUgfPack(): Promise<Dataset> {
-  const [metaModule, charactersModule, supportsModule, unitsModule, classesModule, skillsModule] =
+  const [metaModule, charactersModule, supportsModule, unitsModule, classesModule, skillsModule, recruitment] =
     await Promise.all([
       import('./packs/ugf-2.5.2/meta.json'),
       import('./packs/ugf-2.5.2/characters.json'),
@@ -46,6 +59,7 @@ async function loadUgfPack(): Promise<Dataset> {
       import('./packs/ugf-2.5.2/units.json'),
       import('./packs/ugf-2.5.2/classes.json'),
       import('./packs/ugf-2.5.2/skills.json'),
+      loadRecruitment('ugf-2.5.2'),
     ])
 
   const meta = metaModule.default as unknown as DatasetMeta
@@ -72,6 +86,7 @@ async function loadUgfPack(): Promise<Dataset> {
     classes,
     classesById: new Map(classes.map((c) => [c.id, c])),
     skillsById: new Map(skills.map((s) => [s.id, s])),
+    recruitment,
   }
 }
 
@@ -91,6 +106,7 @@ function pendingPack(packId: string): Dataset {
     classes: [],
     classesById: new Map(),
     skillsById: new Map(),
+    recruitment: null,
   }
 }
 

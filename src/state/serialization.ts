@@ -1,10 +1,9 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 import { ROUTES, STAT_KEYS } from '../data/types'
 import type { PlanDocument, RunPlan } from './model'
-import { PLAN_SCHEMA } from './model'
+import { PLAN_SCHEMA, SKILL_SLOTS } from './model'
 
 const ROUTE_IDS = new Set<string>(ROUTES.map((route) => route.id))
-const VIA_IDS = new Set(['start', 'promotion', 'heart', 'partner', 'friendship', 'master', 'eternal', 'offspring', 'dlc'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -27,22 +26,21 @@ function isRunPlan(value: unknown): value is RunPlan {
   if (!STAT_KEYS.includes(corrin.bane as (typeof STAT_KEYS)[number])) return false
   if (corrin.talentClassId !== null && typeof corrin.talentClassId !== 'number') return false
 
+  if (!Array.isArray(value.favourites) || !value.favourites.every((id) => typeof id === 'string')) return false
+
   for (const unit of Object.values(value.units)) {
-    if (!isRecord(unit) || typeof unit.inArmy !== 'boolean') return false
-    if (!Array.isArray(unit.skills) || unit.skills.length !== 5) return false
+    if (!isRecord(unit)) return false
+    if (!Array.isArray(unit.skills) || unit.skills.length !== SKILL_SLOTS) return false
     if (!unit.skills.every((skill) => skill === null || typeof skill === 'number')) return false
-    if (!Array.isArray(unit.classRoute)) return false
-    if (!unit.classRoute.every((stop) => {
-      if (!isRecord(stop)) return false
-      return typeof stop.classId === 'number' && typeof stop.fromLevel === 'number' &&
-        typeof stop.toLevel === 'number' && typeof stop.via === 'string' && VIA_IDS.has(stop.via)
-    })) return false
+    if (!Array.isArray(unit.reclasses)) return false
+    if (!unit.reclasses.every((step) => isRecord(step) && typeof step.segment === 'number' &&
+      typeof step.level === 'number' && typeof step.classId === 'number')) return false
     if (!isOptionalString(unit.sPartner) || !isOptionalString(unit.aPlusPartner) ||
-      !isOptionalString(unit.variableParent) || !isOptionalString(unit.combatPartner) ||
-      !isOptionalString(unit.notes)) return false
+      !isOptionalString(unit.pairPartner)) return false
     if (unit.classId !== undefined && typeof unit.classId !== 'number') return false
     if (unit.inheritSkill !== undefined && typeof unit.inheritSkill !== 'number') return false
-    if (unit.combatRole !== undefined && unit.combatRole !== 'front' && unit.combatRole !== 'back') return false
+    if (unit.eternalSeals !== undefined && typeof unit.eternalSeals !== 'number') return false
+    if (unit.pairRole !== undefined && unit.pairRole !== 'front' && unit.pairRole !== 'back') return false
   }
 
   return true
@@ -65,7 +63,7 @@ export function parsePlanDocument(json: string): PlanDocument {
   } catch {
     throw new Error('This file is not valid JSON.')
   }
-  if (!isPlanDocument(parsed)) throw new Error('This file is not a compatible Fates Planner schema 3 export.')
+  if (!isPlanDocument(parsed)) throw new Error('This file is not a compatible Fates Planner schema 4 export.')
   return parsed
 }
 
@@ -83,13 +81,13 @@ export function decodeSharedRun(token: string): RunPlan {
     throw new Error('The share link is incomplete or invalid.')
   }
   if (!isRecord(parsed) || parsed.schema !== PLAN_SCHEMA || !isRunPlan(parsed.run)) {
-    throw new Error('The share link does not contain a compatible schema 3 run.')
+    throw new Error('The share link does not contain a compatible schema 4 run.')
   }
   return parsed.run
 }
 
 export function shareUrlForRun(run: RunPlan, currentUrl = window.location.href): string {
   const url = new URL(currentUrl)
-  url.hash = `#/preview?plan=${encodeURIComponent(encodeSharedRun(run))}`
+  url.hash = `#/chart?plan=${encodeURIComponent(encodeSharedRun(run))}`
   return url.toString()
 }

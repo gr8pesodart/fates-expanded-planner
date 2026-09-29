@@ -1,121 +1,95 @@
-import { useEffect, useMemo, useState } from 'react'
-import { LensSwitcher } from './components/LensSwitcher'
-import { RunPill } from './components/RunPill'
-import { UnitListPane } from './components/UnitListPane'
-import { lensOf, navigate, useRoute } from './lib/router'
-import type { AppRoute, Lens } from './lib/router'
-import { PairingsScreen } from './screens/PairingsScreen'
-import { PreviewScreen } from './screens/PreviewScreen'
-import { SetupScreen } from './screens/SetupScreen'
-import { UnitRouteScreen } from './screens/UnitRouteScreen'
-import { UnitScreen } from './screens/UnitScreen'
-import { getBuildProfile } from './data/modProfiles'
-import { ROUTES } from './data/types'
-import { emptyRun } from './state/model'
-import { usePlansStore } from './state/store'
+import { useMemo, useSyncExternalStore } from 'react'
+import { Pickers } from './app/pickers'
+import { PlannerProvider } from './app/planner'
+import { Nav } from './components/Nav'
+import { Toaster } from './components/Sheet'
+import { sectionOf, useRoute } from './lib/router'
+import type { AppRoute } from './lib/router'
+import { CharacterScreen } from './screens/CharacterScreen'
+import { ChartScreen } from './screens/ChartScreen'
+import { NewRunScreen } from './screens/NewRunScreen'
+import { RosterScreen } from './screens/RosterScreen'
+import { RunsScreen } from './screens/RunsScreen'
+import type { RunPlan } from './state/model'
 import { decodeSharedRun } from './state/serialization'
-import { usePairingsVM } from './viewmodels/usePairingsVM'
-import type { RunPillVM } from './viewmodels/types'
+import { useActiveRun, usePlansStore } from './state/store'
 
-const EMPTY_RUN = emptyRun('empty-run')
+const DESKTOP = '(min-width: 1024px)'
 
-function Screen({ route }: { route: AppRoute }) {
+function useDesktop(): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      const query = window.matchMedia(DESKTOP)
+      query.addEventListener('change', notify)
+      return () => query.removeEventListener('change', notify)
+    },
+    () => window.matchMedia(DESKTOP).matches,
+  )
+}
+
+function Loading() {
+  return <p className="loading" role="status">Loading game data…</p>
+}
+
+function Main({ route, desktop }: { route: AppRoute; desktop: boolean }) {
   switch (route.name) {
-    case 'setup':
-      return <SetupScreen />
+    case 'chart':
+      return <ChartScreen />
+    case 'runs':
+      return <RunsScreen />
+    case 'new-run':
+      return <NewRunScreen />
     case 'unit':
-      return <UnitScreen unitId={route.unitId} />
-    case 'unit-route':
-      return <UnitRouteScreen unitId={route.unitId} />
-    case 'preview':
-      return <PreviewScreen />
+      if (!desktop) return <CharacterScreen unitId={route.unitId} tab={route.tab} />
+      return (
+        <div className="two-pane">
+          <RosterScreen activeUnitId={route.unitId} />
+          <CharacterScreen unitId={route.unitId} tab={route.tab} embedded />
+        </div>
+      )
     default:
-      return <PairingsScreen />
+      if (!desktop) return <RosterScreen />
+      return (
+        <div className="two-pane">
+          <RosterScreen />
+          <div className="pane-empty"><p className="muted">Open a character to plan their relationships, classes and progression.</p></div>
+        </div>
+      )
   }
 }
 
 export default function App() {
   const route = useRoute()
-  const shell = usePairingsVM()
-  const localRun = usePlansStore((state) => state.runs.find((item) => item.id === state.activeRunId)) ?? EMPTY_RUN
-  const sharedRun = useMemo(() => {
-    if (route.name !== 'preview' || !route.shareToken) return null
+  const desktop = useDesktop()
+  const run = useActiveRun()
+  const onboarded = usePlansStore((state) => state.onboarded)
+  const sharedRun: RunPlan | null = useMemo(() => {
+    if (route.name !== 'chart' || !route.shareToken) return null
     try {
       return decodeSharedRun(route.shareToken)
     } catch {
       return null
     }
   }, [route])
-  const run = sharedRun ?? localRun
-  const [theme, setTheme] = useState<'paper' | 'night'>('paper')
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme === 'night' ? 'night' : 'paper'
-  }, [theme])
-
-  const themeAttr = theme === 'night' ? 'night' : undefined
-  const profile = getBuildProfile(run.modpackId)
-  const runPill: RunPillVM = {
-    runName: run.name,
-    crest: run.name.trim().charAt(0).toUpperCase() || 'R',
-    modpackLabel: profile.id === 'ugf-2.5.2' ? 'UGF 2.5.2' : profile.short,
-    dlc: run.dlc,
-    route: run.route,
-    routeLabel: ROUTES.find((item) => item.id === run.route)?.label ?? run.route,
-    readOnly: Boolean(sharedRun),
-    onOpenRuns: () => navigate({ name: 'setup' }),
-    onOpenSetup: () => navigate({ name: 'setup' }),
-  }
-
-  if (route.name === 'setup') {
-    return (
-      <div className="app setupapp" data-route={run.route} data-theme={themeAttr}>
-        <main className="appbody wide">
-          <SetupScreen />
-        </main>
-      </div>
-    )
-  }
-
-  const activeUnitId = route.name === 'unit' || route.name === 'unit-route' ? route.unitId : undefined
-  const lens = lensOf(route)
-  const onSelectLens = (next: Lens): void => {
-    if (next === 'pairings') navigate({ name: 'pairings' })
-    else if (next === 'preview') navigate({ name: 'preview' })
-    else navigate({ name: 'unit', unitId: activeUnitId ?? shell.units[0]?.id ?? '' })
-  }
+  const shownRun = sharedRun ?? run
+  const firstRun = !onboarded && !sharedRun
 
   return (
-    <div className={sharedRun ? 'app shared-preview' : 'app'} data-route={run.route} data-theme={themeAttr}>
-      <header className="appbar">
-        <RunPill vm={runPill} />
-        <div className="appbarrow">
-          <LensSwitcher active={lens} onSelect={onSelectLens} />
-          <button
-            type="button"
-            className="themebtn"
-            aria-label={theme === 'night' ? 'Switch to paper theme' : 'Switch to night theme'}
-            aria-pressed={theme === 'night'}
-            onClick={() => setTheme((current) => (current === 'night' ? 'paper' : 'night'))}
-          >
-            {theme === 'night' ? '☀' : '☾'}
-          </button>
-        </div>
-      </header>
-      {sharedRun ? null : (
-        <aside className="sidepane">
-          <UnitListPane
-            query={shell.query}
-            onSearch={shell.onSearch}
-            filters={shell.filters}
-            units={shell.units}
-            activeId={activeUnitId}
-          />
-        </aside>
-      )}
-      <main className="appbody">
-        <Screen route={route} />
-      </main>
+    <div className="app" data-route={shownRun.route} data-shared={sharedRun ? '' : undefined}>
+      <PlannerProvider sharedRun={sharedRun} fallback={<Loading />}>
+        {firstRun ? (
+          <main className="main"><NewRunScreen first /></main>
+        ) : (
+          <>
+            {sharedRun ? null : <Nav section={sectionOf(route)} />}
+            <main className="main">
+              {sharedRun ? <ChartScreen /> : <Main route={route} desktop={desktop} />}
+            </main>
+            <Pickers />
+          </>
+        )}
+        <Toaster />
+      </PlannerProvider>
     </div>
   )
 }
