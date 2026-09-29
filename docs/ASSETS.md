@@ -90,3 +90,64 @@ it; never pull assets from the reference planners (Marigold, Athnir, soapy4159, 
 Assets are fan-use of Nintendo / Intelligent Systems property. The app carries a “fan-made, not
 affiliated” notice and the whole folder can be removed or swapped for monograms with one build
 flag.
+
+## Talk portraits (v3)
+
+Standing talk sprites back the PortraitChip, the relationship cards and the character pickers
+(SPEC › Assets required). `tools/assets/extract_portraits.py` reads the unit list from the data
+pack and, for each unit, decodes the neutral (“通常”) part of `face/face/<name>_st.arc`. Hair is
+merged the same way as the `_bu` faces: only units whose FaceData record carries a hair part
+(Corrin and the second-gen children, whose hair is recoloured by the variable parent) composite
+`face/hair/<hair>/髪0.bch.lz` tinted with the FaceData hair colour; everyone else has their hair
+baked into the body texture. Corrin M/F have no `fid` and fall back to the default avatar records
+`FSID_ST_マイユニ_男1_顔A` / `FSID_ST_マイユニ_女1_顔A`.
+
+| Set | Source in the dump | Files | Coverage |
+|---|---|---|---|
+| Talk portraits | `face/face/<name>_st.arc` neutral (“通常”) part + hair, trimmed and re-encoded | `public/assets/portraits/<slot>.webp` | **71/71 (100%)** |
+
+Output: 218–268 px wide, 231–269 px tall — the dump's ST textures are 256×256, trimmed to the
+content plus the crop boxes and never upscaled (well under the 512 px cap) — as quality-85 WebP
+with alpha. Total ≈830 KiB (11.7 KiB average, 17.3 KiB max), comfortably under the 60 KB
+per-file target.
+
+### Crop derivation
+
+Each `FSID_ST_*` FaceData record carries the framing the game itself uses: a 128×128 face rect at
+record +40 (top of hair to chin), a 110×218 bust rect at +48 and an eye rect at +56.
+
+- **face** — the 128×128 face rect grown by a 10% margin per side: a 154×154 square in texture
+  pixels, used by the 24–32px PortraitChip.
+- **bust** — a square of the bust rect's height (218), horizontally centred on the bust rect and
+  topped at its top edge. That is the game's own bust framing; the eye rect lands at 34% from the
+  top on average (25–41% across the roster), matching the ~38% card target from the SPEC.
+- **canvas** — the union of the alpha bounding box, the face box and the bust box, so both squares
+  always sit inside the image.
+
+Boxes are stored per unit in `src/data/portraits.json`:
+
+```json
+{
+  "generatedAt": "…",
+  "source": "Owner's romfs dump (work/cia-extract/romfs) via tools/assets/extract_portraits.py",
+  "coverage": { "resolved": 71, "total": 71 },
+  "units": {
+    "PID_リョウマ": {
+      "file": "assets/portraits/25.webp", "w": 253, "h": 257,
+      "face": [53, 0, 154, 154], "bust": [22, 1, 218, 218],
+      "source": "face/face/リョウマ_st.arc#通常 + hair"
+    }
+  }
+}
+```
+
+### Regenerating
+
+```bash
+python tools/assets/extract_portraits.py            # public/assets/portraits + src/data/portraits.json
+python tools/assets/extract_portraits.py --help     # --romfs, --fe-tools, --pack, --out, --manifest, --contact-sheet
+```
+
+The script also renders `docs/screenshots/v3/portraits.png`: every unit's face crop at 64px and
+bust crop at 115px with names, so the crops can be eyeballed in one image. `src/data/portraits.test.ts`
+pins coverage ≥ 90%, file existence under `public/`, and square in-bounds boxes.
