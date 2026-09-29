@@ -22,9 +22,10 @@ export interface SpriteProps {
 const ASSETS_ENABLED = import.meta.env.VITE_ASSETS !== 'off'
 
 function monogram(label: string): string {
-  const words = label.trim().split(/\s+/)
+  const clean = label.replace(/\([^)]*\)/g, ' ').trim()
+  const words = clean.split(/\s+/).filter(Boolean)
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return label.slice(0, 2)
+  return clean.slice(0, 2)
 }
 
 export function Sprite({ label, src, size = 'md', tone, kind, id, className }: SpriteProps) {
