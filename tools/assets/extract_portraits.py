@@ -286,7 +286,7 @@ def write_contact_sheet(rows: list[dict], out_dir: str, path: str) -> None:
         with Image.open(os.path.join(out_dir, os.path.basename(row["entry"]["file"]))) as opened:
             portrait = opened.convert("RGBA")
         x, yy, w, h = row["entry"]["face"]
-        face = portrait.crop((x, yy, x + w, y + h)).resize((FACE_CHIP, FACE_CHIP), Image.LANCZOS)
+        face = portrait.crop((x, yy, x + w, yy + h)).resize((FACE_CHIP, FACE_CHIP), Image.LANCZOS)
         cell_x = SHEET_PAD + (index % SHEET_COLUMNS) * SHEET_CELL
         cell_y = y + (index // SHEET_COLUMNS) * (FACE_CHIP + SHEET_LABEL)
         sheet.paste(face, (cell_x + (SHEET_CELL - SHEET_GAP - FACE_CHIP) // 2, cell_y), face)
