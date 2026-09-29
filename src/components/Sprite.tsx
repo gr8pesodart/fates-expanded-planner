@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { assetUrl } from '../data/assets'
+import type { AssetKind } from '../data/assets'
 
 export type SpriteSize = 'sm' | 'md' | 'lg'
-export type SpriteKind = 'unit' | 'class' | 'skill'
+export type SpriteKind = AssetKind
 
 export interface SpriteProps {
   /** Monogram + alt text source (unit/class/skill name). */
@@ -11,10 +13,7 @@ export interface SpriteProps {
   size?: SpriteSize
   /** Hoshido/Nohr tint on the placeholder. */
   tone?: 'hoshido' | 'nohr'
-  /**
-   * Future-proof hook for the generated asset manifest: the prototype passes
-   * kind/id, M0b resolves `src` from src/data/assets.json.
-   */
+  /** Look the asset up in the generated manifest by kind + game id. */
   kind?: SpriteKind
   id?: string | number
   className?: string
@@ -28,9 +27,10 @@ function monogram(label: string): string {
   return label.slice(0, 2)
 }
 
-export function Sprite({ label, src, size = 'md', tone, className }: SpriteProps) {
+export function Sprite({ label, src, size = 'md', tone, kind, id, className }: SpriteProps) {
   const [failed, setFailed] = useState(false)
-  const showImage = ASSETS_ENABLED && Boolean(src) && !failed
+  const resolved = src ?? (kind !== undefined && id !== undefined ? assetUrl(kind, id) : undefined)
+  const showImage = ASSETS_ENABLED && Boolean(resolved) && !failed
   const classes = ['sprite', size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : '', className]
     .filter(Boolean)
     .join(' ')
@@ -43,10 +43,11 @@ export function Sprite({ label, src, size = 'md', tone, className }: SpriteProps
       role="img"
       aria-label={label}
     >
-      {showImage ? <img src={src} alt="" onError={() => setFailed(true)} draggable={false} /> : monogram(label)}
+      {showImage ? <img src={resolved} alt="" onError={() => setFailed(true)} draggable={false} /> : monogram(label)}
     </span>
   )
 }
 
 /** Generic alias used where the asset is not a game sprite (portraits, icons). */
 export const AssetImage = Sprite
+

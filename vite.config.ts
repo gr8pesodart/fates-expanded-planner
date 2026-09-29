@@ -34,7 +34,19 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,json,woff2}'],
+        // Game assets stay out of the precache: they are lazy-loaded and
+        // cached on first use so the app shell stays small.
+        globPatterns: ['**/*.{js,css,html,svg,png,json,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /assets\/.*\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'game-assets',
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
       },
     }),
   ],

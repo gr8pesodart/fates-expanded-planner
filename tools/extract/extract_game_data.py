@@ -327,6 +327,7 @@ def build(
         routes = ROUTE_BY_SUPPORT_ROUTE.get(route_byte)
         if routes is None:
             fail(f"unknown support route {route_byte} for {pid}")
+        fid = string_at(u32(rec, 12))
         guard_ptr = u32(rec, 32)
         attack_ptr = u32(rec, 28)
         support_bonuses = [
@@ -339,6 +340,7 @@ def build(
             {
                 "id": pid,
                 "name": char_names[slot] if slot < len(char_names) else pid[4:],
+                "fid": fid or None,
                 "slot": slot,
                 "gender": "female" if rec[0] & 0x01 else "male",
                 "supportRoute": route_byte,
@@ -394,6 +396,7 @@ def build(
                 "id": index,
                 "name": class_names[index],
                 "ja": ja,
+                "jid": string_at(struct.unpack_from("<I", rec, 8)[0]),
                 "tier": tier,
                 "dlc": rec[123] != 0xFF,
                 "baseStats": read_stats(rec, 28, signed=True),

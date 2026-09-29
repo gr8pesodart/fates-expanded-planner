@@ -89,6 +89,8 @@ export interface DatasetEdge {
 export interface UnitDef {
   id: string
   name: string
+  /** Face id (FID_...) used to look up portraits; null for the avatar. */
+  fid: string | null
   slot: number
   gender: 'male' | 'female'
   supportRoute: number
@@ -129,6 +131,8 @@ export interface ClassDef {
   /** English name including a " (M)"/" (F)" suffix for gendered classes. */
   name: string
   ja: string
+  /** Job id (JID_...) naming the sprite folder under unit/Body. */
+  jid: string
   tier: ClassTier
   /** DLC class (Dread Fighter, Dark Falcon, Ballistician, Witch, Lodestar, Vanguard, Great Lord, Grandmaster). */
   dlc: boolean
