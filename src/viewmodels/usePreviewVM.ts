@@ -68,7 +68,10 @@ function factsFor(state: ProtoState, unitId: string): PreviewFactVM[] {
     facts.push({ label: 'S', value: name(plan.sPartner) })
   } else if (row?.fixedParent) {
     facts.push({ label: unitRow(row.fixedParent)?.gender === 'female' ? 'Mum' : 'Dad', value: name(row.fixedParent) })
-    if (plan.variableParent) facts.push({ label: 'Parent', value: name(plan.variableParent) })
+    if (plan.variableParent) {
+      const parentIsMum = unitRow(plan.variableParent)?.gender === 'female'
+      facts.push({ label: parentIsMum ? 'Mum' : 'Dad', value: name(plan.variableParent) })
+    }
     const inheritId = plan.inherit?.variable ?? plan.inherit?.fixed
     if (inheritId) facts.push({ label: 'Inherits', value: skillName(inheritId) })
     if (plan.sPartner) facts.push({ label: 'S', value: name(plan.sPartner) })

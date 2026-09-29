@@ -40,6 +40,7 @@ async function main() {
 
   const goto = async (hash) => {
     await page.goto(`${BASE}/#/${hash}`, { waitUntil: 'domcontentloaded', timeout: 8000 })
+    await page.evaluate(() => window.scrollTo(0, 0)).catch(() => {})
     await settle()
   }
 
@@ -65,8 +66,8 @@ async function main() {
   await shot('pairings-390')
   await shot('pairings-390-full', { full: true })
 
-  await page.locator('.unit', { hasText: 'Ryoma' }).first().locator('.pinbtn').click()
-  await page.locator('.unit', { hasText: 'Camilla' }).first().locator('.pinbtn').click()
+  await page.locator('.unitlist .unit', { hasText: 'Ryoma' }).first().locator('.pinbtn').click()
+  await page.locator('.unitlist .unit', { hasText: 'Camilla' }).first().locator('.pinbtn').click()
   await sleep(300)
   await shot('pairings-pinned-390')
 
@@ -74,9 +75,9 @@ async function main() {
   await shot('partner-sheet-390')
   await click('.sheet .closebtn')
 
-  await page.locator('.searchbar input').fill('zzz no such unit')
+  await page.locator('.appbody .searchbar input').fill('zzz no such unit')
   await shot('pairings-filtered-empty-390')
-  await page.locator('.searchbar input').fill('')
+  await page.locator('.appbody .searchbar input').fill('')
   await sleep(150)
 
   await goto('unit/PID_シノノメ')

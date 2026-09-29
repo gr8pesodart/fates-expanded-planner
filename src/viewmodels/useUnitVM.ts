@@ -76,7 +76,7 @@ function buildPoolSkills(state: ProtoState, unitId: string): PoolSkill[] {
           id: skillId,
           name: skillName(skillId),
           short: skillShort(skillId),
-          sourceLabel: `${cls.name} · ${level}`,
+          sourceLabel: `${className(classId)} · ${level}`,
           classId,
           level,
           dlc: Boolean(cls.dlc),

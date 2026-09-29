@@ -378,7 +378,7 @@
 .trayhead b { font-family: var(--f-display); }
 .traybtn { background: color-mix(in oklab, var(--card) 18%, transparent); color: var(--card); }
 .trayhint { font-size: 13px; color: color-mix(in oklab, var(--card) 70%, transparent); }
-.cmp { display: grid; grid-template-columns: 52px repeat(auto-fit, minmax(64px, 1fr)); gap: 4px 8px; font-size: 12px; align-items: center; }
+.cmp { display: grid; grid-template-columns: 52px repeat(var(--cols, 2), minmax(0, 1fr)); gap: 4px 8px; font-size: 12px; align-items: center; }
 .cmp2 { grid-template-columns: 96px 1fr 1fr; font-size: 13px; }
 .cmprow { display: contents; }
 .cmp .h { font-weight: 700; font-size: 13px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
@@ -542,10 +542,14 @@
 
 /* ── unit screen ────────────────────────────────────────── */
 .unitscreen, .routescreen { display: grid; gap: var(--s3); align-content: start; }
-.unithead { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; }
-.unitheadtext { display: grid; gap: 2px; min-width: 0; }
+.pairings, .unitscreen, .routescreen, .previewscreen, .setup { grid-template-columns: minmax(0, 1fr); }
+.unithead { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+.unitheadtext { display: grid; gap: 2px; min-width: 0; flex: 1 1 150px; }
 .unitheadtext h2 { font-size: 26px; }
-.routehead { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: var(--s2); align-items: center; }
+.unithead .btn:last-child { margin-left: auto; }
+.routehead { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+.routehead .unitheadtext { flex: 1 1 180px; }
+.routehead .btn:last-child { margin-left: auto; }
 .routehead h2 { font-size: 20px; }
 .relstrip { padding: var(--s1); gap: var(--s2); }
 .relchip-label { font: 700 10px var(--f-num); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }

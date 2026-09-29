@@ -8,6 +8,12 @@ export interface ClassCardProps {
   vm: ClassOptionVM
 }
 
+function bestIndex(values: number[]): number {
+  let best = 0
+  for (let i = 1; i < values.length; i += 1) if (values[i] > values[best]) best = i
+  return best
+}
+
 export function ClassCard({ vm }: ClassCardProps) {
   return (
     <article
@@ -24,7 +30,7 @@ export function ClassCard({ vm }: ClassCardProps) {
             {vm.dlc ? <Chip variant="accent">DLC</Chip> : null}
           </span>
           <span className="classgrowth">
-            <GrowthSpark values={vm.growths} label={`${vm.name} total growths`} />
+            <GrowthSpark values={vm.growths} best={bestIndex(vm.growths)} label={`${vm.name} total growths`} />
             <span className="num growthsum">Σ {vm.growthTotal}</span>
           </span>
         </span>

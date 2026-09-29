@@ -43,9 +43,8 @@ export function UnitScreen({ unitId }: { unitId: string }) {
         <Sprite label={vm.name} src={vm.sprite.src} tone={vm.sprite.tone} size="lg" />
         <div className="unitheadtext">
           <h2>{vm.name}</h2>
-          <span className="muted">
-            {vm.className} · <span className="num">{vm.levelLabel}</span>
-          </span>
+          <span className="muted">{vm.className}</span>
+          <span className="num muted">{vm.levelLabel}</span>
         </div>
         <button type="button" className="btn ghost" onClick={vm.onOpenRoute}>
           Class route →

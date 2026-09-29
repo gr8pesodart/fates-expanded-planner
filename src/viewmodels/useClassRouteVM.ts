@@ -80,7 +80,7 @@ export function useClassRouteVM(unitId: string): ClassRouteVM {
       if (!cls) continue
       addStopOptions.push({
         classId,
-        name: cls.name,
+        name: className(classId),
         sprite: classSprite(classId),
         source: group.source,
         sourceLabel: group.label,

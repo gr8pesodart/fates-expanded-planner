@@ -20,7 +20,8 @@ export function skillName(id: number): string {
 }
 
 export function className(id: number): string {
-  return PROTO_CLASSES[id]?.name ?? `Class ${id}`
+  const name = PROTO_CLASSES[id]?.name ?? `Class ${id}`
+  return name.replace(/ \((M|F)\)$/, '')
 }
 
 export function shortSkill(name: string): string {
@@ -153,7 +154,7 @@ export function partnerOffer(unitId: string): PartnerClassOffer | null {
   const base = classRow(baseId)
   if (!base) return null
   const skillId = base.skills[0] ?? 0
-  return { classId: baseId, name: base.name, skillName: skillName(skillId) }
+  return { classId: baseId, name: className(baseId), skillName: skillName(skillId) }
 }
 
 export function statKeyIndex(key: StatKey): number {

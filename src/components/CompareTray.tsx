@@ -34,7 +34,7 @@ export function CompareTray({ vm }: { vm: CompareTrayVM }) {
           </button>
         </div>
       </div>
-      <div className="cmp">
+      <div className="cmp" style={{ ['--cols' as string]: vm.columns.length }}>
         <span />
         {vm.columns.map((column) => (
           <span className="h" key={column.id}>

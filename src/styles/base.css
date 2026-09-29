@@ -82,6 +82,7 @@ button { font: inherit; color: inherit; }
   }
   .setupapp .appbody.wide { max-width: 760px; padding-top: var(--s5); }
   .tray { position: static; margin-top: var(--s4); border-radius: var(--r-lg); }
+  .sidepane .searchbar, .sidepane .scroller { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

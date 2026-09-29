@@ -12,8 +12,8 @@ export function PreviewScreen() {
           <span className="kicker">Preview · read-only</span>
           <h2>{vm.runPill.runName}</h2>
           <p className="muted">
-            {vm.runPill.routeLabel} · {vm.duoCount + vm.soloCount + vm.unassignedCount} units · permanent decisions stay
-            full-strength, planned class and skills fade.
+            {vm.runPill.routeLabel} · {vm.duoCount * 2 + vm.soloCount + vm.unassignedCount} units · permanent decisions
+            stay full-strength, planned class and skills fade.
           </p>
         </div>
         <div className="previewactions">
