@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { LensSwitcher } from './components/LensSwitcher'
 import { RunPill } from './components/RunPill'
 import { UnitListPane } from './components/UnitListPane'
@@ -9,7 +9,15 @@ import { PreviewScreen } from './screens/PreviewScreen'
 import { SetupScreen } from './screens/SetupScreen'
 import { UnitRouteScreen } from './screens/UnitRouteScreen'
 import { UnitScreen } from './screens/UnitScreen'
+import { getBuildProfile } from './data/modProfiles'
+import { ROUTES } from './data/types'
+import { emptyRun } from './state/model'
+import { usePlansStore } from './state/store'
+import { decodeSharedRun } from './state/serialization'
 import { usePairingsVM } from './viewmodels/usePairingsVM'
+import type { RunPillVM } from './viewmodels/types'
+
+const EMPTY_RUN = emptyRun('empty-run')
 
 function Screen({ route }: { route: AppRoute }) {
   switch (route.name) {
@@ -29,6 +37,16 @@ function Screen({ route }: { route: AppRoute }) {
 export default function App() {
   const route = useRoute()
   const shell = usePairingsVM()
+  const localRun = usePlansStore((state) => state.runs.find((item) => item.id === state.activeRunId)) ?? EMPTY_RUN
+  const sharedRun = useMemo(() => {
+    if (route.name !== 'preview' || !route.shareToken) return null
+    try {
+      return decodeSharedRun(route.shareToken)
+    } catch {
+      return null
+    }
+  }, [route])
+  const run = sharedRun ?? localRun
   const [theme, setTheme] = useState<'paper' | 'night'>('paper')
 
   useEffect(() => {
@@ -36,10 +54,22 @@ export default function App() {
   }, [theme])
 
   const themeAttr = theme === 'night' ? 'night' : undefined
+  const profile = getBuildProfile(run.modpackId)
+  const runPill: RunPillVM = {
+    runName: run.name,
+    crest: run.name.trim().charAt(0).toUpperCase() || 'R',
+    modpackLabel: profile.id === 'ugf-2.5.2' ? 'UGF 2.5.2' : profile.short,
+    dlc: run.dlc,
+    route: run.route,
+    routeLabel: ROUTES.find((item) => item.id === run.route)?.label ?? run.route,
+    readOnly: Boolean(sharedRun),
+    onOpenRuns: () => navigate({ name: 'setup' }),
+    onOpenSetup: () => navigate({ name: 'setup' }),
+  }
 
   if (route.name === 'setup') {
     return (
-      <div className="app setupapp" data-route={shell.runPill.route} data-theme={themeAttr}>
+      <div className="app setupapp" data-route={run.route} data-theme={themeAttr}>
         <main className="appbody wide">
           <SetupScreen />
         </main>
@@ -56,9 +86,9 @@ export default function App() {
   }
 
   return (
-    <div className="app" data-route={shell.runPill.route} data-theme={themeAttr}>
+    <div className={sharedRun ? 'app shared-preview' : 'app'} data-route={run.route} data-theme={themeAttr}>
       <header className="appbar">
-        <RunPill vm={shell.runPill} />
+        <RunPill vm={runPill} />
         <div className="appbarrow">
           <LensSwitcher active={lens} onSelect={onSelectLens} />
           <button
@@ -72,15 +102,17 @@ export default function App() {
           </button>
         </div>
       </header>
-      <aside className="sidepane">
-        <UnitListPane
-          query={shell.query}
-          onSearch={shell.onSearch}
-          filters={shell.filters}
-          units={shell.units}
-          activeId={activeUnitId}
-        />
-      </aside>
+      {sharedRun ? null : (
+        <aside className="sidepane">
+          <UnitListPane
+            query={shell.query}
+            onSearch={shell.onSearch}
+            filters={shell.filters}
+            units={shell.units}
+            activeId={activeUnitId}
+          />
+        </aside>
+      )}
       <main className="appbody">
         <Screen route={route} />
       </main>

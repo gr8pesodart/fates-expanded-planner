@@ -101,9 +101,6 @@ export const usePlansStore = create<PlansStore>()(persist((set, get) => ({
   migrate: () => initialDocument(),
   merge: (persisted, current) => {
     if (!isPlanDocument(persisted)) return current
-    const activeRunId = persisted.runs.some((run) => run.id === persisted.activeRunId)
-      ? persisted.activeRunId
-      : persisted.runs[0]?.id
-    return { ...current, ...persisted, activeRunId: activeRunId ?? current.activeRunId }
+    return { ...current, ...persisted }
   },
 }))

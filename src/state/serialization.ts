@@ -51,7 +51,7 @@ function isRunPlan(value: unknown): value is RunPlan {
 export function isPlanDocument(value: unknown): value is PlanDocument {
   if (!isRecord(value) || value.schema !== PLAN_SCHEMA || typeof value.activeRunId !== 'string') return false
   if (!Array.isArray(value.runs) || !value.runs.every(isRunPlan)) return false
-  return value.runs.some((run) => run.id === value.activeRunId) || value.runs.length === 0
+  return value.runs.length > 0 && value.runs.some((run) => run.id === value.activeRunId)
 }
 
 export function serializePlanDocument(document: PlanDocument): string {
@@ -90,6 +90,6 @@ export function decodeSharedRun(token: string): RunPlan {
 
 export function shareUrlForRun(run: RunPlan, currentUrl = window.location.href): string {
   const url = new URL(currentUrl)
-  url.hash = `#/preview?plan=${encodeSharedRun(run)}`
+  url.hash = `#/preview?plan=${encodeURIComponent(encodeSharedRun(run))}`
   return url.toString()
 }

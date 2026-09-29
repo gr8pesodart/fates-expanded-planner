@@ -56,6 +56,25 @@ button { font: inherit; color: inherit; }
     grid-template-rows: auto minmax(0, 1fr);
     min-height: 100vh;
   }
+  .app.shared-preview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .app.shared-preview .appbar {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s4);
+  }
+  .app.shared-preview .appbody {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 1024px;
+    width: 100%;
+    margin: 0 auto;
+  }
   .appbar {
     grid-column: 1;
     grid-row: 1;

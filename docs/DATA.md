@@ -15,6 +15,7 @@ and what is still open.
 | Child rules (fixed parents, growth averaging, cap-mod combination, class inheritance) | ✅ in `src/logic/` |
 | Pair-up bonuses (class bonuses + per-unit C/B/A/S support bonuses) | ✅ in the packs (rule sourced below) |
 | A+ (friendship) exact partner tables | ⚠️ approximated (same-gender A-rank partners) |
+| Current support rank in the saved plan | ⚠️ final S/A+ decisions only; pair-up assumes C when neither is selected |
 | Assets (class sprites, skill icons, face icons) | ✅ `public/assets/` + `src/data/assets.json` (docs/ASSETS.md) |
 
 ## Support pack — `tools/extract/extract_ugf_supports.py`
@@ -99,6 +100,7 @@ only to verify the decode.
 Known open item: second-gen units store empty (all-zero) support-bonus rows. Serenes Forest
 documents that children inherit their parents' rows (C: father's C, B: mother's B, A: father's A,
 S: mother's S); implementing that combination rule belongs to the pair-up feature, not extraction.
+The current planner therefore does not include inherited support rows in child pair-up projections.
 
 ## Mechanics implemented (src/logic)
 
@@ -147,6 +149,9 @@ Open questions (see also docs/REFERENCES.md):
 5. **Personal-skill slots.** The three personal-skill fields (+116/118/120) are difficulty variants
    (normal/hard/lunatic) in the table; they are identical for every playable unit on this build, so
    the route-keyed shape in the packs is harmless but semantically loose.
+6. **Current support rank.** A plan stores final S/A+ choices, not the active C/B/A support rank.
+   Pair-up projections infer S/A+ from final relationship choices and otherwise use C; B rank cannot
+   currently be selected.
 
 ## Pack format (v1)
 

@@ -43,6 +43,7 @@ export function SetupScreen() {
               key={modpack.id}
               className={['mod', modpack.selected ? 'sel' : ''].filter(Boolean).join(' ')}
               aria-pressed={modpack.selected}
+              disabled={!modpack.installed}
               onClick={modpack.onSelect}
             >
               <span className="modtop">
@@ -55,6 +56,13 @@ export function SetupScreen() {
           ))}
         </div>
       </section>
+
+      {vm.modpackWarning ? (
+        <div className="warncard">
+          <span className="chip warn">!</span>
+          <span className="warntext">{vm.modpackWarning}</span>
+        </div>
+      ) : null}
 
       <section className="card setupcard">
         <header className="cardhead">

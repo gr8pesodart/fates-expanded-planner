@@ -1,28 +1,38 @@
 # Fates Expanded Planner
 
 A mobile-first **army planner** for a modded Fire Emblem Fates playthrough: roster, supports and
-pairings, classes, skills, class routes, pair-up and second-gen parent/growth planning. Every number
-is computed live from the game's own data tables and the installed mod build's support graph.
+pairings, classes, skills, class routes, pair-up and second-gen parent/growth planning. Projections
+use the game's data tables and the installed build's support graph; documented approximations are
+listed below and in `docs/DATA.md`.
 
-> **v2 rebuild in progress on branch `v2`.** The app shell, design tokens, data pipeline and asset
-> pipeline are in place (Milestone 0); feature screens follow. The v1 UI (tag `v1-final`) is not a
-> design reference — see [docs/VISION.md](docs/VISION.md) and
-> [docs/design/reference.html](docs/design/reference.html).
+> **v2 integrated build on branch `v2`.** Setup, Pairings, Individual, Class Route and read-only
+> Preview are wired to the persisted plan store. The v1 UI (tag `v1-final`) is not a design
+> reference — see [docs/VISION.md](docs/VISION.md) and [docs/design/reference.html](docs/design/reference.html).
 
-## Current state (Milestone 0)
+## Current state
 
-- **Scaffold** — Vite 8 · React 19 · TypeScript strict (`verbatimModuleSyntax`,
-  `erasableSyntaxOnly`) · Zustand · tiny hash router · vite-plugin-pwa · oxlint · Vitest.
-- **Design tokens** — transcribed from `docs/design/reference.html` into `src/styles/tokens.css`,
-  with route accents (`[data-route]`) and night mode (`[data-theme="night"]`); self-hosted fonts.
-- **App shell** — header (run pill, Setup entry), Pairings / Individual / Preview lens switcher and
-  placeholder routes: `#/setup`, `#/pairings`, `#/unit/:id`, `#/unit/:id/route`, `#/preview`.
-- **Data** — 71 units, 129 classes, 229 skills with descriptions, learn levels, DLC flags, route
-  availability and per-unit pair-up support bonuses; 2,463 support edges from UGF 2.5.2.
+- **Setup and runs** — select the installed UGF build, DLC and route; persist multiple plans in
+  `localStorage`; rename, duplicate, delete, import/export JSON and copy share links.
+- **Pairings** — search and compare roster units; edit S/A+ relationships and Corrin; derive child
+  growths, offered classes and inherited-parent choices from the selected pairings.
+- **Individual and Class Route** — review class pools, growths, caps, projected stats and pair-up
+  deltas; plan five skills; edit combat partner/role; add class stops and validate seal/level rules.
+- **Preview** — shareable, read-only reference grouped by combat duos, solos and unassigned units;
+  permanent choices stay prominent, and planned classes/skills are de-emphasised.
+- **Data** — 71 unit definitions, 129 classes, 229 skills and 2,463 UGF 2.5.2 support edges.
+  Vanilla gameplay data is pending and that option is disabled in Setup.
 - **Assets** — official class sprites, skill icons and unit face icons extracted from the owner's
   own romfs dump into `public/assets/` (1.3 MB total) with a generated manifest
   (`src/data/assets.json`); coverage: skills 100%, units 100%, classes 96.9%. `VITE_ASSETS=off`
   swaps everything for monogram placeholders.
+
+### Data limitations
+
+- A+ partner options currently use same-gender A-rank supports as an approximation.
+- The plan schema records final S/A+ decisions, not current support rank. Pair-up math infers
+  S/A+ from those choices and otherwise uses C rank; B rank cannot be selected.
+- Child support-bonus rows are empty in the extracted table, and inherited skill timing/order still
+  needs an in-game mechanics check. See [docs/DATA.md](docs/DATA.md) for the full list.
 
 ## Commands
 
@@ -51,7 +61,9 @@ src/
   data/           types, packs/, loader, assets.json manifest + resolver, mod profiles, boons
   lib/            hash router, id helpers
   logic/          class pools, stat/child projection, skill pools, family links (pure functions)
-  screens/        route placeholders (setup / pairings / unit / unit route / preview)
+  screens/        Setup, Pairings, Individual, Class Route and Preview
+  state/          schema 3 local plan store, import/export and share serialization
+  viewmodels/     real-data hooks that feed presentational screens
   styles/         tokens.css (design contract) + base.css
 docs/
   VISION.md       product direction

@@ -1,13 +1,7 @@
-/**
- * The view-model contract between screens and the (future) store.
- *
- * Every screen reads exactly one hook from src/viewmodels/ and renders the VM
- * below. Wiring later = replacing hook bodies with plansStore selectors and
- * actions; screen and component files should not change. Every interactive
- * affordance carries its own callback so the seam stays prop-only.
- */
+/** Screen contracts for the plan-store-backed view models. */
 import type { ClassTier, Route, StatKey } from '../data/types'
-import type { ClassSourceId } from '../prototype/fixtures'
+
+export type ClassSourceId = 'own' | 'secondary' | 'parent' | 'partner' | 'friendship' | 'talent' | 'dlc'
 
 export type Tone = 'hoshido' | 'nohr'
 
@@ -68,6 +62,7 @@ export interface SetupVM {
   firstRun: boolean
   onFinish(): void
   onSkip(): void
+  modpackWarning: string | null
   dlcWarning: string | null
 }
 
@@ -388,10 +383,12 @@ export interface RouteStopVM {
   sprite: SpriteVM
   fromLevel: number
   toLevel: number
+  maxLevel: number
   seal: string
   done: boolean
   dlc: boolean
   skills: { id: number; name: string; short: string; learnLabel: string }[]
+  onSetToLevel(level: number): void
   onRemove(): void
 }
 
@@ -444,6 +441,9 @@ export interface DuoVM {
 
 export interface PreviewVM {
   runPill: RunPillVM
+  shareMode: boolean
+  shareError: string | null
+  loading: boolean
   duoCount: number
   soloCount: number
   unassignedCount: number

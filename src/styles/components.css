@@ -441,6 +441,8 @@
 .stop:last-child .rail::after { display: none; }
 .stop .box { padding: var(--s2) 0 var(--s4); display: grid; gap: 6px; }
 .stop .top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); flex-wrap: wrap; }
+.route-level { display: inline-flex; align-items: center; gap: 5px; font: 12px var(--f-num); color: var(--ink-2); }
+.route-level input { width: 54px; min-height: 34px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); padding: 0 5px; text-align: center; font: inherit; }
 .stopclass { display: flex; align-items: center; gap: var(--s2); font-family: var(--f-display); font-size: 16px; }
 .seal { font: 700 11px var(--f-num); letter-spacing: .06em; text-transform: uppercase; color: var(--accent-ink); }
 .stopmeta { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }

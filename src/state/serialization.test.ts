@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { emptyRun, PLAN_SCHEMA } from './model'
 import type { PlanDocument } from './model'
-import { decodeSharedRun, encodeSharedRun, parsePlanDocument, serializePlanDocument } from './serialization'
+import { parseHash } from '../lib/router'
+import {
+  decodeSharedRun,
+  encodeSharedRun,
+  parsePlanDocument,
+  serializePlanDocument,
+  shareUrlForRun,
+} from './serialization'
 
 describe('plan serialization', () => {
   it('round-trips a schema 3 export', () => {
@@ -21,6 +28,18 @@ describe('plan serialization', () => {
     }
 
     expect(decodeSharedRun(encodeSharedRun(run))).toEqual(run)
+  })
+
+  it('preserves plus signs in the copied preview URL', () => {
+    const run = emptyRun('run-share')
+    run.createdAt = '2026-09-29T00:00:00.000Z'
+    run.updatedAt = '2026-09-29T00:00:00.000Z'
+    const token = encodeSharedRun(run)
+    expect(token).toContain('+')
+
+    const route = parseHash(new URL(shareUrlForRun(run, 'https://planner.test/#/pairings')).hash)
+    expect(route).toEqual({ name: 'preview', shareToken: token })
+    expect(decodeSharedRun(route.name === 'preview' ? route.shareToken! : '')).toEqual(run)
   })
 
   it('rejects unsupported and malformed exports', () => {

@@ -24,8 +24,24 @@ export function RouteTimeline({ stops, onAddStop }: RouteTimelineProps) {
                 {stop.dlc ? <Chip variant="accent">DLC</Chip> : null}
               </span>
               <span className="num muted">
-                Lv {stop.fromLevel} → {stop.toLevel}
+                Lv {stop.fromLevel} →
               </span>
+              <label className="route-level">
+                <span>to</span>
+                <input
+                  type="number"
+                  min={stop.fromLevel}
+                  max={stop.maxLevel}
+                  step={1}
+                  value={stop.toLevel}
+                  aria-label={`${stop.name} ending level`}
+                  onChange={(event) => {
+                    const level = event.currentTarget.valueAsNumber
+                    if (Number.isInteger(level)) stop.onSetToLevel(level)
+                  }}
+                />
+                <span className="muted">/ {stop.maxLevel}</span>
+              </label>
             </div>
             <div className="stopmeta">
               <span className="seal">{stop.seal}</span>

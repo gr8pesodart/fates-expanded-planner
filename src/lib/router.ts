@@ -5,7 +5,7 @@ export type AppRoute =
   | { name: 'pairings' }
   | { name: 'unit'; unitId: string }
   | { name: 'unit-route'; unitId: string }
-  | { name: 'preview' }
+  | { name: 'preview'; shareToken?: string }
 
 export type Lens = 'pairings' | 'individual' | 'preview'
 
@@ -13,10 +13,13 @@ export type Lens = 'pairings' | 'individual' | 'preview'
 export const FIRST_UNIT = '@first'
 
 export function parseHash(hash: string): AppRoute {
-  const path = hash.replace(/^#\/?/, '')
+  const [path, query = ''] = hash.replace(/^#\/?/, '').split('?', 2)
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent)
   if (parts[0] === 'setup') return { name: 'setup' }
-  if (parts[0] === 'preview') return { name: 'preview' }
+  if (parts[0] === 'preview') {
+    const shareToken = new URLSearchParams(query).get('plan') ?? undefined
+    return shareToken ? { name: 'preview', shareToken } : { name: 'preview' }
+  }
   if (parts[0] === 'unit' && parts[1]) {
     if (parts[2] === 'route') return { name: 'unit-route', unitId: parts[1] }
     return { name: 'unit', unitId: parts[1] }
@@ -29,7 +32,7 @@ export function routeToHash(route: AppRoute): string {
     case 'setup':
       return '#/setup'
     case 'preview':
-      return '#/preview'
+      return route.shareToken ? `#/preview?plan=${encodeURIComponent(route.shareToken)}` : '#/preview'
     case 'unit':
       return `#/unit/${encodeURIComponent(route.unitId)}`
     case 'unit-route':

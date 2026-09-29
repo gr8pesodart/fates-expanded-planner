@@ -6,6 +6,19 @@ definition of done holds and the owner signs off.
 Read first: [VISION.md](VISION.md) (what & why), [design/reference.html](design/reference.html)
 (how it looks — open it in a browser at 390px and at 1280px), [DATA.md](DATA.md), [MODS.md](MODS.md).
 
+## Progress checkpoint
+
+M0 (setup/data/assets), P (responsive prototype) and M1–M5 (persisted Setup, Pairings, Individual,
+Class Route, combat pair-up and Preview) are implemented on `v2`. Integration review covered 390×844
+and 1280×800 layouts, the Ryoma × Camilla → Shiro growth journey, route-level carry, and an actual
+copied share link opened read-only. Final checks are clean: lint, build and 52 tests across 10 files.
+The main JavaScript entry is 111.28 KB gzip, with game data in separate lazy-loaded chunks. The
+production service worker registers, precaches the shell and caches viewed WebP assets on demand.
+
+M6 is not signed off yet: formal accessibility and Lighthouse reviews, an offline-mode check, and
+the deployment workflow still need review. Keep the branch on `v2` until those checks and the owner's
+review are complete. Current gameplay-data limitations are recorded in [DATA.md](DATA.md).
+
 ## Roles
 
 | Role | Who | Scope |
@@ -139,3 +152,10 @@ VISION.md, PWA offline incl. lazily cached assets, docs refresh, deploy workflow
    - M3: Corrin boon Spd/bane Lck changes growths; Shiro's pool includes Camilla's branch.
    - M4: a route Samurai 1→10 → Swordmaster acquires the right skills; an illegal jump is flagged.
    - M5: two duos + one solo render correctly in Preview; share link round-trips.
+
+## Completion record
+
+- M0, P and M1–M5 implementation is present on `v2`; see [PROTOTYPE.md](PROTOTYPE.md) for the
+  production screen/hook map and [DATA.md](DATA.md) for mechanics caveats.
+- P's screenshots in `docs/screenshots/prototype/` document the original fixture-backed layouts.
+- M6 and the final merge to `main` remain open until its checks and owner review are complete.
