@@ -1,84 +1,80 @@
 # Fates Expanded Planner
 
-A mobile-first **army planner** for a modded Fire Emblem Fates playthrough.
+A mobile-first **army planner** for a modded Fire Emblem Fates playthrough: roster, supports and
+pairings, classes, skills, class routes, pair-up and second-gen parent/growth planning. Every number
+is computed live from the game's own data tables and the installed mod build's support graph.
 
-Plan the run: who's in the army, who marries whom, which classes everyone uses, the skills they
-equip, and — for second-gen units — who their parents are and what growths they end up with.
-Stats, growths, class sets and skills are read from the game's own data tables, so the numbers are
-real; supports come from the installed **Unofficial Gay Fates** build, so the pairing rules are the
-expanded ones, not vanilla's.
+> **v2 rebuild in progress on branch `v2`.** The app shell, design tokens, data pipeline and asset
+> pipeline are in place (Milestone 0); feature screens follow. The v1 UI (tag `v1-final`) is not a
+> design reference — see [docs/VISION.md](docs/VISION.md) and
+> [docs/design/reference.html](docs/design/reference.html).
 
-**Live:** <https://gr8pesodart.github.io/fates-expanded-planner/>
+## Current state (Milestone 0)
 
-## What it does
+- **Scaffold** — Vite 8 · React 19 · TypeScript strict (`verbatimModuleSyntax`,
+  `erasableSyntaxOnly`) · Zustand · tiny hash router · vite-plugin-pwa · oxlint · Vitest.
+- **Design tokens** — transcribed from `docs/design/reference.html` into `src/styles/tokens.css`,
+  with route accents (`[data-route]`) and night mode (`[data-theme="night"]`); self-hosted fonts.
+- **App shell** — header (run pill, Setup entry), Pairings / Individual / Preview lens switcher and
+  placeholder routes: `#/setup`, `#/pairings`, `#/unit/:id`, `#/unit/:id/route`, `#/preview`.
+- **Data** — 71 units, 129 classes, 229 skills with descriptions, learn levels, DLC flags, route
+  availability and per-unit pair-up support bonuses; 2,463 support edges from UGF 2.5.2.
+- **Assets** — official class sprites, skill icons and unit face icons extracted from the owner's
+  own romfs dump into `public/assets/` (1.3 MB total) with a generated manifest
+  (`src/data/assets.json`); coverage: skills 100%, units 100%, classes 96.9%. `VITE_ASSETS=off`
+  swaps everything for monogram placeholders.
 
-- **Runs** — multiple saves with an obvious run switcher, route (Birthright / Conquest /
-  Revelation) and a per-run **game build** dropdown (which mods are installed).
-- **Corrin** — gender, boon/bane (real growth & cap effects), and a talent branch that also feeds
-  into Kana's class pool.
-- **Roster** — build the army from the full 71-unit dataset with English names; every unit has a
-  detail page.
-- **Classes** — pick any class the unit can actually reclass into: own branches, parents' branches
-  (second gen), and Partner/Friendship Seal branches once supports are set.
-- **Stats** — live stats / growths / caps tables per unit and chosen class, with Corrin boons and
-  child-parent averaging applied (Fates formulas).
-- **Skills** — equip up to five from the pool the unit can genuinely learn (personal skill + every
-  class in their pool), each labelled with its source and level.
-- **Supports & children** — set S and A+ ranks from the UGF graph; the planner shows the children a
-  pair produces, and the Pairings tab tracks mutual pairs, one-sided mistakes and who's unpaired.
-- **Children** — pick the second parent and watch growths average and cap modifiers combine;
-  parent branches join the class pool automatically.
-- **Reference** — browse all 71 units, 129 classes and 229 skills with full stat tables.
-- **Saves that stick** — autosave to the device, JSON export/import backup, shareable links, and
-  installable PWA (add to home screen, works offline).
-
-## Stack
-
-Vite 8 · React 19 · TypeScript · Zustand (persisted) · vite-plugin-pwa · lz-string · oxlint.
-No backend, no accounts, no tracking — static hosting only.
-
-## Development
+## Commands
 
 ```bash
 npm install
-npm run dev       # dev server
-npm run lint      # oxlint
-npm run build     # typecheck + production build (PWA)
+npm run dev          # vite dev server (localhost:5173)
+npm run lint         # oxlint — must stay clean
+npm run build        # tsc -b && vite build — must stay clean
+npm test             # vitest run (data spot-checks + logic + asset manifest)
 ```
 
-Regenerate the data packs after a mod/build change (see [docs/DATA.md](docs/DATA.md)):
+Regenerate data packs and assets after a mod/build change (see [docs/DATA.md](docs/DATA.md) and
+[docs/ASSETS.md](docs/ASSETS.md)):
 
 ```bash
-python tools/extract/extract_ugf_supports.py   # support graph (UGF Paragon export)
-python tools/extract/extract_game_data.py      # units/classes/skills (GameData tables)
+python tools/extract/extract_ugf_supports.py     # support graph (UGF Paragon export)
+python tools/extract/extract_game_data.py        # units/classes/skills (GameData + messages)
+python tools/assets/extract_assets.py            # class sprites / skill icons / face icons
 ```
 
 ## Repository layout
 
 ```
 src/
-  data/           types, build profiles, boons, dataset loader, packs/
-  logic/          class pools, stat/child projection, skill pools, family links
-  state/          plans store (zustand persist, schema v2)
-  screens/        Army (+ unit detail) / Supports / Reference / Saves
-  lib/            ids, share-link codec
+  components/     Sprite/AssetImage (official asset + monogram fallback)
+  data/           types, packs/, loader, assets.json manifest + resolver, mod profiles, boons
+  lib/            hash router, id helpers
+  logic/          class pools, stat/child projection, skill pools, family links (pure functions)
+  screens/        route placeholders (setup / pairings / unit / unit route / preview)
+  styles/         tokens.css (design contract) + base.css
 docs/
-  DESIGN.md       product scope, screens, save model, roadmap
+  VISION.md       product direction
+  BUILD_PLAN.md   milestones and roles
+  DATA.md         data pipeline: extraction, sources, verification notes
+  ASSETS.md       asset pipeline: sources, decoders, coverage
   MODS.md         what the installed mod build changes
-  DATA.md         data pipeline: extraction, verification notes
   REFERENCES.md   prior art and credits
+  design/         visual reference (source of truth for tokens/components)
 tools/
   extract/        Python extraction scripts (stdlib + fe_tools)
-  icons/          PWA icon generator
+  assets/         Python asset decoders + extraction script
 ```
 
 ## Data & credits
 
 - Unit/class/skill tables are extracted from the vanilla `GameData.bin` using table layouts
   documented by [RainThunder's fefates-tools](https://github.com/RainThunder/fefates-tools);
-  English names come from its enum lists. The installed build's UGF changes do not alter stats.
+  English names come from its enum lists, skill descriptions from the game's own message archive.
+  The installed build's UGF changes do not alter stats.
 - The support graph is extracted from UGF's own Paragon export.
-- Child-growth and class-inheritance rules follow Fates mechanics, cross-checked against
-  community calculators (see [docs/REFERENCES.md](docs/REFERENCES.md)).
-- No copyrighted art, audio or text is bundled. Fan-made; not affiliated with Nintendo or
+- Child-growth, pair-up and class-inheritance rules follow Fates mechanics, cross-checked against
+  community sources (see [docs/DATA.md](docs/DATA.md), [docs/REFERENCES.md](docs/REFERENCES.md)).
+- Sprites, icons and portraits are fan-use assets extracted from the **owner's own game dump**
+  (no data from other planners); the app is fan-made and not affiliated with Nintendo or
   Intelligent Systems.
