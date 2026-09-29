@@ -15,13 +15,15 @@ body {
 h1, h2, h3 { font-family: var(--f-display); font-weight: 800; letter-spacing: .01em; margin: 0; }
 p { margin: 0; }
 a { color: var(--accent-ink); }
+.ink { color: var(--ink); }
+.block { display: block; }
+.smallnum { font-size: 12px; }
 .num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
 .muted { color: var(--ink-2); }
 button { font: inherit; color: inherit; }
-
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ── app layout ─────────────────────────────────────────── */
+/* ── app shell: one column on mobile ─────────────────────── */
 .app {
   max-width: 560px;
   margin: 0 auto;
@@ -29,6 +31,10 @@ button { font: inherit; color: inherit; }
   display: flex;
   flex-direction: column;
 }
+.appbody { padding: 0 var(--s4) var(--s5); display: grid; gap: var(--s3); align-content: start; flex: 1; min-width: 0; }
+.appbody > * { min-width: 0; }
+.appbody.wide { max-width: 680px; width: 100%; margin: 0 auto; padding-bottom: 80px; }
+.sidepane { display: none; }
 .appbar {
   padding: 18px var(--s4) var(--s3);
   display: grid;
@@ -36,144 +42,48 @@ button { font: inherit; color: inherit; }
   background: linear-gradient(var(--paper), color-mix(in oklab, var(--paper) 85%, transparent));
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 3;
 }
-.appbar .row { display: flex; align-items: center; gap: var(--s2); }
-.appbody { padding: 0 var(--s4) var(--s5); display: grid; gap: var(--s3); align-content: start; flex: 1; }
+.appbarrow { display: flex; align-items: center; gap: var(--s2); }
+.appbarrow .lens { flex: 1; }
+
+/* ── desktop ≥1024px: list pane + detail pane ────────────── */
 @media (min-width: 1024px) {
-  .app { max-width: 1180px; }
+  .app {
+    max-width: 1280px;
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100vh;
+  }
+  .appbar {
+    grid-column: 1;
+    grid-row: 1;
+    align-content: start;
+    border-right: 1px solid var(--line);
+    background: var(--paper);
+    position: static;
+  }
+  .sidepane {
+    display: block;
+    grid-column: 1;
+    grid-row: 2;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 0 var(--s4) var(--s5);
+    min-height: 0;
+  }
+  .appbody {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    overflow-y: auto;
+    padding: var(--s5) var(--s6) 80px;
+    min-height: 0;
+  }
+  .setupapp .appbody.wide { max-width: 760px; padding-top: var(--s5); }
+  .tray { position: static; margin-top: var(--s4); border-radius: var(--r-lg); }
 }
 
-/* ── run pill ───────────────────────────────────────────── */
-.runpill {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  min-height: var(--tap);
-  padding: 0 var(--s3) 0 6px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  box-shadow: var(--shadow);
-  flex: 1;
-  min-width: 0;
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
-.runpill .crest {
-  width: 32px;
-  height: 32px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--accent);
-  display: grid;
-  place-items: center;
-  color: var(--card);
-  font: 800 15px var(--f-display);
-}
-.runpill b { font-family: var(--f-display); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.runpill .meta { margin-left: auto; display: flex; gap: 6px; flex: none; }
-.setup-link {
-  flex: none;
-  min-height: var(--tap);
-  display: inline-flex;
-  align-items: center;
-  padding: 0 14px;
-  border-radius: var(--r-pill);
-  box-shadow: inset 0 0 0 1.5px var(--line);
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 13px;
-}
-
-/* ── lens switcher ──────────────────────────────────────── */
-.lens {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  background: var(--paper-2);
-  border-radius: var(--r-pill);
-  padding: 4px;
-  position: relative;
-}
-.lens button {
-  position: relative;
-  z-index: 1;
-  border: 0;
-  background: none;
-  min-height: 38px;
-  border-radius: var(--r-pill);
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--ink-2);
-  cursor: pointer;
-}
-.lens button[aria-pressed="true"] { color: var(--card); }
-.lens .thumb {
-  position: absolute;
-  inset: 4px auto 4px 4px;
-  width: calc((100% - 8px) / 3);
-  border-radius: var(--r-pill);
-  background: var(--ink);
-  transition: transform .35s var(--press);
-}
-
-/* ── primitives ─────────────────────────────────────────── */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--r-pill);
-  background: var(--paper-2);
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.chip.accent { background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; }
-.card { background: var(--card); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: var(--s4); }
-.btn {
-  min-height: var(--tap);
-  padding: 0 18px;
-  border-radius: var(--r-pill);
-  border: 0;
-  font-weight: 700;
-  cursor: pointer;
-  background: var(--ink);
-  color: var(--card);
-  transition: transform .2s var(--press);
-}
-.btn:active { transform: scale(.95); }
-.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
-.btn.accent { background: var(--accent); }
-
-.sprite {
-  width: 48px;
-  height: 48px;
-  flex: none;
-  border-radius: var(--r-md);
-  display: grid;
-  place-items: center;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--sp, var(--accent-soft)), color-mix(in oklab, var(--sp, var(--accent)) 30%, var(--card)));
-  font: 800 18px var(--f-display);
-  color: var(--ink);
-  image-rendering: pixelated;
-}
-.sprite img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.sprite.sm { width: 36px; height: 36px; font-size: 14px; border-radius: 10px; }
-.sprite.lg { width: 76px; height: 76px; font-size: 30px; border-radius: var(--r-lg); }
-.sprite[data-h] { --sp: color-mix(in oklab, var(--hoshido) 30%, var(--card)); }
-.sprite[data-n] { --sp: color-mix(in oklab, var(--nohr) 30%, var(--card)); }
-
-.placeholder {
-  display: grid;
-  gap: var(--s2);
-  min-height: 240px;
-  align-content: center;
-  justify-items: start;
-  text-align: left;
-}
-.placeholder .kicker { font: 700 11px var(--f-num); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
-.placeholder h2 { font-size: 26px; }
-
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
