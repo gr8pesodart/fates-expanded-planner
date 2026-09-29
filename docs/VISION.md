@@ -1,4 +1,10 @@
-# Vision — Fates Expanded Planner v2
+# Vision — Fates Expanded Planner
+
+> **v3 (2026-09-29):** the screens and look are now defined by the owner's Figma design, captured in
+> [design/SPEC.md](design/SPEC.md): **Roster · Chart · Runs** plus a per-unit Character page
+> (Avatar / Profile / Stats / Progression). The *journey* and *lens* sections below describe the v2
+> layout and are superseded wherever they disagree with SPEC. Principles, mechanics, assets policy
+> (plus online splash art) and success criteria still apply.
 
 > v2 is a **ground-up rebuild**. The v1 app (tag `v1-final`, branch `main` before the rebuild) is a
 > *data* reference only: its extractors, data packs and `src/logic/` mechanics may be reused after

@@ -3,12 +3,12 @@
 Mobile-first **army planner** for a modded FE Fates build: roster, supports/pairings, classes,
 skills, class routes, pair-up and second-gen parent/growth planning.
 
-**v2 rebuild in progress on branch `v2`.** Read, in order: [docs/VISION.md](docs/VISION.md)
-(product direction), [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) (milestones, roles, done-criteria),
-[docs/design/reference.html](docs/design/reference.html) (visual source of truth — open it in a
-browser), then [docs/DATA.md](docs/DATA.md) before touching data and [docs/MODS.md](docs/MODS.md)
-before changing mod assumptions. The v1 UI (tag `v1-final`, `docs/legacy/`) is **not** a design
-reference — reuse only its data pipeline and `src/logic/` after review.
+**v3 overhaul in progress** (Figma redesign: Roster · Chart · Runs + Character page). Read, in
+order: [docs/design/SPEC.md](docs/design/SPEC.md) (visual + interaction source of truth, Figma
+`bT3rsrSL9exw83MYWzMF73`), [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) › v3 (milestones, done-criteria),
+[docs/VISION.md](docs/VISION.md) (product direction; its screen list is superseded by SPEC), then
+[docs/DATA.md](docs/DATA.md) before touching data and [docs/MODS.md](docs/MODS.md) before changing mod
+assumptions. `docs/design/reference.html` and the v1/v2 UIs are **not** design references.
 
 ## Commands
 
@@ -31,16 +31,17 @@ python tools/assets/extract_assets.py           # sprites/icons/faces -> public/
   surface is the per-run **game build** dropdown.
 - **Mod-aware by default.** Support rules come from the installed build's graph. Feature flags
   live in `src/data/modProfiles.ts`.
-- **Official sprites, sourced properly.** Class sprites, skill icons and unit face icons come from
-  the owner's own romfs dump via `tools/assets/` (fallback sources logged in `docs/ASSETS.md`).
+- **Official sprites, sourced properly.** Class sprites (body + unit head, stitched), skill icons and
+  talk portraits come from the owner's own romfs dump via `tools/assets/`. Splash/promo art is the
+  one set sourced online (owner-approved, v3); every file's source is logged in `docs/ASSETS.md`.
   Never take assets from the reference planners. No audio, no full textures/models. Everything
   must still render with `VITE_ASSETS=off` (monogram placeholders). Data packs hold factual game
   data with provenance in `meta.json`.
 - **Do not copy from other planners.** Marigold (closed), Athnir / soapy4159 / hiushi (no
   license) are references only — see docs/REFERENCES.md. Game mechanics are facts; implement them
   independently.
-- **Design comes from `docs/design/reference.html`.** Transcribe its `:root` tokens verbatim; match
-  its components (hanko stamps, skill gems, sparklines, split growth bars, duo cards).
+- **Design comes from `docs/design/SPEC.md`** (Figma). Colours only via the SPEC token table; every
+  active/selected state uses the route accent (`--accent` / `--accent-strong`).
 - Backend-free and static-host friendly: `localStorage` + JSON export + URL-hash share only.
 
 ## Critical context — the companion build
@@ -71,13 +72,13 @@ format notes live in docs/ASSETS.md.
 - Game rules live in `src/logic/` (pure functions, no React): class pools/inheritance
   (`classes.ts`), stat/child projection (`stats.ts`), skill pools (`skills.ts`), pair children
   (`family.ts`). Screens stay presentational.
-- Styling: design tokens in `src/styles/tokens.css` (transcribed from the reference, verbatim);
+- Styling: design tokens in `src/styles/tokens.css` (the SPEC token table);
   resets/typography and shell primitives in `src/styles/base.css`. Screens use those classes. No
   CSS framework. Route accent: set `data-route` on `.app`; use `var(--accent)` tokens.
-- Routing: tiny hash router in `src/lib/router.ts` (`#/setup`, `#/pairings`, `#/unit/:id`,
-  `#/unit/:id/route`, `#/preview`). No router library.
-- Store: the v1 plans store was removed with the rebuild; M1 lands the new store (`schema: 3`,
-  fresh localStorage key, no v1 migration).
+- Routing: tiny hash router in `src/lib/router.ts` (v3: `#/roster`, `#/unit/:id/<tab>`, `#/chart`,
+  `#/runs`, `#/runs/new`). No router library.
+- Store: v3 moves to `schema: 4` (fresh localStorage key, no migration). Relationship writes are
+  symmetric and owned by the store.
 - Assets: `Sprite`/`AssetImage` resolves `kind` + game id through `src/data/assets.json`; missing
   entries and `VITE_ASSETS=off` fall back to monograms.
 

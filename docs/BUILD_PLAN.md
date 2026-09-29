@@ -1,4 +1,96 @@
-# Build plan — v2
+# Build plan
+
+## v3 — Figma overhaul (current)
+
+Requested 2026-09-29. It replaces the v2 information architecture (Setup / Pairings / Individual /
+Route / Preview lenses) with the owner's Figma design: **Roster · Chart · Runs** plus a Character
+page (Avatar / Profile / Stats / Progression). Read [design/SPEC.md](design/SPEC.md) first; it is
+the visual and interaction source of truth. `design/reference.html` and the v2 screenshots are
+historical.
+
+Branch **`v3`** off `v2` (tag `v2-final` first). Keep: data packs and extractors, `src/logic/`,
+`src/state/serialization.ts`, the asset pipeline, and the view-model seam pattern (screens read typed
+hooks and never import stores or fixtures). Replace: tokens, `base.css`/`components.css`,
+`src/components/`, `src/screens/`, `src/viewmodels/`, `src/prototype/`, the router table.
+
+### A — Assets (gated; do first, in parallel with B)
+
+1. **Talk portraits.** Extend `tools/assets/extract_assets.py` to decode `face/face/<name>_st.arc`
+   (neutral expression, hair merged exactly like the `_bu` faces). Emit one WebP per unit plus two
+   crop boxes in the manifest: `face` (square) and `bust` (about 3:4). Corrin M/F default faces.
+   Coverage ≥ 90%.
+2. **Stitched map sprites (spike, then build).** `unit/Body/<class>/anime.bin` is a BinArchive of
+   per-frame records: body cell, head cell, and a signed head offset (e.g. `0xfe` = −2). Decode it,
+   extract frame 0 of each body sheet and of each `unit/Head/<unit>/青0.bch.lz`, and write
+   `sprites.json` = `{ bodies: {classId: {file, w, h, head: {x, y}}}, heads: {unitId: {file, w, h}},
+   unique: {…} }`. Handle `unit/Unique/` bodies (Velouria, Keaton, Kana dragon…), generic heads
+   for units without their own, and gendered bodies. `ClassSprite` composes body + head at runtime.
+   **Gate:** a contact sheet (`docs/screenshots/v3/sprites.png`) of 12 unit×class combos, compared
+   against in-game captures, signed off by the owner before the screens depend on it.
+3. **Splash art.** Official Fates promo art for every unit plus Corrin M/F, sourced online
+   (Fire Emblem Wiki / Serenes Forest galleries). Log every file's source URL and licence note in
+   `docs/ASSETS.md`. Convert to WebP ≤ 900px tall. `splash.json` holds a focal point per unit
+   (`{x, y}` in 0–1) so the header crops on the face. `VITE_ASSETS=off` falls back to a route-hue
+   gradient.
+4. UI icons: port `docs/design/figma/icons/*.svg` to `src/components/icons/` as `currentColor`
+   components, and add `mdi:sort-alphabetical-ascending` and `mdi:sort-numeric-descending`.
+
+### B — Data and logic
+
+1. **Recruitment** (curated, sourced): per route, the recruit order index, join chapter, join level
+   and join class for every unit; children get their paralogue. Store it in
+   `src/data/packs/<id>/recruitment.json` generated from a curated source file under
+   `tools/extract/curated/` with citations (Serenes Forest recruitment pages). Test Yukimura, Gunter,
+   Izana and Fuga availability, and Birthright vs Conquest order for Kaze/Jakob/Felicia.
+2. **Lenses** `src/logic/lenses.ts`: the nine lenses in SPEC › Stats as pure functions
+   `(dataset, run, unitId, classId?) → StatRow` where a cell is `number | null` (null renders `-`).
+   Reuse `stats.ts` (child averaging, cap mods, boon/bane) and `pairUp.ts`.
+3. **Progression engine** `src/logic/progression.ts`: from the start class/level and the list of
+   reclass picks `{ segment, level, classId }`, derive segments (Base / Advanced / Special / Eternal
+   extensions), per-level class, skills learned per level, valid reclass options per level,
+   expected average stats per level (growth accumulation with class-cap clamping), and the effective
+   growth / pair-up at each level. Reuse `classRoute.ts` rules. Tests: Corrin Nohr Princess → Samurai
+   @10 → Swordmaster @12 → Master of Arms @A15 matches the mock's skills (Dragon Fang, Duelist's
+   Blow, Vantage, Astra, Swordfaire…); an illegal promotion is not offered.
+4. **Sort** `src/logic/rosterSort.ts` (done, tested): favourites first → chosen sort → recruit
+   order tiebreak; children trail first-gen; a stat sort on a `-` column resets to recruit order.
+   Recruitment data must give optional recruits (Mozu, Izana, Fuga…) the index of their chapter.
+
+### C — State (`schema: 4`, fresh key; v2 was never released, so no migration)
+
+`RunPlan` gains `favourites: string[]`. `UnitPlan` keeps `sPartner`, `aPlusPartner`,
+`variableParent`, `classId`, `skills`, `inheritSkill`, `combatPartner` and `combatRole`, and
+replaces `classRoute` with `reclasses: { segment: number; level: number; classId: number }[]`.
+Relationship writes are **symmetric** (S and A+ both ways, pair-up partner and roles both ways,
+child "Parent B" ↔ parent's S). The store owns that, with tests. UI state (non-persisted, or
+persisted separately): roster lens, sort, open info panel.
+
+### D — Screens (after A-gate for sprites; portraits/splash can use monograms until ready)
+
+1. Tokens + base CSS + shared components from SPEC › Shared components (StatTable, StatLensRail,
+   Segmented, PortraitChip, RelationSlot, ClassSprite, SkillCard, BottomNav, Sheet/Popover).
+2. Roster + sort sheet + class popup + character picker.
+3. Character page: header/tabs, Profile (+ skill picker), Stats, Avatar, Progression.
+4. Chart. 5. Runs + new-run setup flow. 6. Desktop layouts (SPEC › Desktop).
+
+Routes: `#/roster`, `#/unit/:id/(avatar|profile|stats|progression)`, `#/chart`, `#/runs`,
+`#/runs/new`, and a share link that opens `#/chart` read-only.
+
+### Done when
+
+- `npm run lint && npm run build && npm test` are clean. The AGENTS.md spot-checks still pass, plus
+  new tests for lenses, progression, recruitment and symmetric relationships.
+- Screenshots at 390×844 of every Figma frame's state are saved next to the Figma render in
+  `docs/screenshots/v3/` and reviewed side by side. The same screens at 1280×800 too.
+- Journeys: new Revelation run → Corrin boon Spd/bane Lck → S Corrin×Anna from the Roster slot
+  (it shows on both rows) → pair them → the Chart shows the duo; swap flips front/back. On Kana's
+  profile, Parent B is Anna. Progression reclass at 10 recomputes the skills below.
+- `VITE_ASSETS=off` renders monograms and the gradient splash everywhere.
+- The owner signs off on sprites (A-gate) and on the final screens.
+
+---
+
+# v2 record (historical)
 
 Branch: **`v2`** (off `main`; v1 is tagged `v1-final`). Merge to `main` only when every milestone's
 definition of done holds and the owner signs off.
