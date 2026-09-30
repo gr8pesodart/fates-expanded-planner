@@ -364,8 +364,10 @@
   display: block;
 }
 
-.sprite img {
+.sprite img,
+.sprite-cell {
   image-rendering: pixelated;
+  background-repeat: no-repeat;
 }
 
 .sprite-single {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { ASSETS_ENABLED, portraitArt, spriteLayers } from '../data/art'
+import type { SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
 
 function monogram(label: string): string {
@@ -35,23 +36,48 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
   return <span className={`portrait cropped ${className}`} role="img" aria-label={name} style={style} />
 }
 
-/** Map sprite: class body with the unit's head stitched on (offsets from unit/Body/<class>/anime.bin). */
+/**
+ * One cell of a sprite image. Layered images are [low | high] strips of the game's per-pixel
+ * draw-priority mask, so a cell is picked with background-position.
+ */
+function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: number; y: number; scale: number; cell: 0 | 1 }) {
+  const style: CSSProperties = {
+    position: 'absolute',
+    left: x * scale,
+    top: y * scale,
+    width: image.w * scale,
+    height: image.h * scale,
+    backgroundImage: `url("${image.file}")`,
+    backgroundSize: `${(image.layers ?? 1) * image.w * scale}px ${image.h * scale}px`,
+    backgroundPosition: `${-cell * image.w * scale}px 0`,
+  }
+  return <span className="sprite-cell" style={style} />
+}
+
+/**
+ * Map sprite: class body with the unit's head stitched on (offsets from unit/Body/<class>/anime.bin).
+ * Higher draw priority wins and the head wins ties, which with the game's two body and two head
+ * levels is the stack body-low, head-low (back hair), body-high, head-high.
+ */
 export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: { unitId: string | null; classId: number; name: string; size?: number; tile?: boolean }) {
   const layers = spriteLayers(unitId, classId)
   const wrap = (content: ReactNode) => (
     <span className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
   )
   if (!layers) return wrap(<span className="sprite-mono">{monogram(name)}</span>)
-  if (layers.kind === 'single') return wrap(<img className="sprite-single" src={layers.image.file} alt="" draggable={false} />)
-  const { body, head, offset } = layers
+  if (layers.kind === 'single' && !layers.image.layers) return wrap(<img className="sprite-single" src={layers.image.file} alt="" draggable={false} />)
+  const body = layers.kind === 'single' ? layers.image : layers.body
+  const head = layers.kind === 'stitched' ? layers.head : null
+  const offset = layers.kind === 'stitched' ? layers.offset : null
   const scale = size / Math.max(body.w, body.h)
-  const headNode = head && offset
-    ? <img src={head.file} alt="" draggable={false} style={{ position: 'absolute', left: offset.x * scale, top: offset.y * scale, width: head.w * scale, height: head.h * scale, zIndex: offset.behind ? 0 : 2 }} />
-    : null
+  const cell = (image: SpriteImage, x: number, y: number, level: 0 | 1) =>
+    level === 1 && !image.layers ? null : <SpriteCell image={image} x={x} y={y} scale={scale} cell={level} />
   return wrap(
     <span className="sprite-stage" style={{ width: body.w * scale, height: body.h * scale }}>
-      <img src={body.file} alt="" draggable={false} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }} />
-      {headNode}
+      {cell(body, 0, 0, 0)}
+      {head && offset ? cell(head, offset.x, offset.y, 0) : null}
+      {cell(body, 0, 0, 1)}
+      {head && offset ? cell(head, offset.x, offset.y, 1) : null}
     </span>,
   )
 }

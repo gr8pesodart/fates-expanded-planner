@@ -16,13 +16,15 @@ export interface PortraitEntry {
 
 export interface SpriteImage {
   file: string
+  /** Cell size. Layered images are 2-cell strips: [low priority | high priority]. */
   w: number
   h: number
+  layers?: 2
 }
 
 export interface SpriteBody extends SpriteImage {
   /** Mounted (and some other) classes draw the unit's 16×16 "small" head cell instead of the 32×32 one. */
-  head: { x: number; y: number; behind?: boolean; variant?: 'small' | 'large' } | null
+  head: { x: number; y: number; variant?: 'small' | 'large' } | null
 }
 
 interface SpriteHead extends SpriteImage {
