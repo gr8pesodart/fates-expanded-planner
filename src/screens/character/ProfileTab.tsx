@@ -3,20 +3,24 @@ import { usePickers } from '../../app/pickerStore'
 import { usePlanner } from '../../app/plannerContext'
 import { useUi } from '../../app/ui'
 import { ClassSprite } from '../../components/art'
+import { Icon } from '../../components/icons'
 import { Rail, Segmented } from '../../components/controls'
 import type { SlotKind } from '../../components/slots'
-import { RelationCard } from '../../components/relations'
+import { RelationCard, UnitLink } from '../../components/relations'
 import { slotLabel } from '../../components/slots'
 import { SkillCard } from '../../components/SkillCard'
 import { StatTable } from '../../components/StatTable'
-import type { UnitDef } from '../../data/types'
+import type { Dataset, UnitDef } from '../../data/types'
 import type { UnitContext } from '../../logic/army'
-import { displayName, personalSkill } from '../../logic/army'
+import { armyUnits, displayName, personalSkill } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
 import { CLASS_CARD_LENSES, colourReferenceClassIds, lensDef, lensRow } from '../../logic/lenses'
 import { setPairRole } from '../../logic/relationships'
 import { sealGain, skillView, unitClassIds } from '../../app/unitViews'
 import { emptyUnitPlan, SKILL_SLOTS } from '../../state/model'
+import type { RunPlan } from '../../state/model'
+import { navigate } from '../../lib/router'
+import { compareRecruitOrder } from '../../app/selectors'
 
 export function ProfileTab({ ctx }: { ctx: UnitContext }) {
   const { dataset, run, readOnly, mutate } = usePlanner()
@@ -30,15 +34,16 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
   const friendshipGains = [...new Set(ctx.pool
     .filter((entry) => entry.branch === 'aplus' && dataset.classesById.get(entry.classId)?.tier === 'base')
     .map((entry) => classFamily(dataset.classesById.get(entry.classId)!.name)))]
-  const relations: { kind: SlotKind; partner: ReturnType<typeof person>; caption: ReactNode; more?: number }[] = [
-    { kind: 's', partner: person(ctx.sPartner), caption: ctx.sPartner ? gainsCaption(sealGain(ctx, dataset, 'seal')) : null },
+  const people = (...units: (UnitDef | undefined)[]) => units.flatMap((unit) => { const view = person(unit); return view ? [view] : [] })
+  const relations: { kind: SlotKind; partners: { id: string; name: string }[]; caption: ReactNode }[] = [
+    { kind: 's', partners: people(ctx.sPartner), caption: ctx.sPartner ? gainsCaption(sealGain(ctx, dataset, 'seal')) : null },
     ctx.unit.isCorrin
-      ? { kind: 'a', partner: person(ctx.friendshipPartners[0]), more: Math.max(0, ctx.friendshipPartners.length - 1), caption: gainsCaption(friendshipGains.join(', ') || null) }
-      : { kind: 'a', partner: person(ctx.aPlusPartner), caption: ctx.aPlusPartner ? gainsCaption(sealGain(ctx, dataset, 'aplus')) : null },
+      ? { kind: 'a', partners: people(...ctx.friendshipPartners), caption: friendshipCaption(friendshipGains) }
+      : { kind: 'a', partners: people(ctx.aPlusPartner), caption: ctx.aPlusPartner ? gainsCaption(sealGain(ctx, dataset, 'aplus')) : null },
   ]
   relations.push({
     kind: 'pair',
-    partner: person(ctx.pairPartner),
+    partners: people(ctx.pairPartner),
     caption: ctx.pairPartner ? (
       <Segmented
         label="Pair up position"
@@ -61,6 +66,11 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
     units: { ...next.units, [unitId]: { ...(next.units[unitId] ?? emptyUnitPlan()), classId } },
   }))
   const personal = personalSkill(ctx.unit, run)
+  const openUnit = (id: string) => navigate({ name: 'unit', unitId: id, tab: 'profile' })
+  // Quick links: a child's two parents, otherwise the unit's children on this roster.
+  const family = ctx.isChild
+    ? [dataset.unitsById.get(ctx.unit.fixedParent ?? ''), ctx.variableParent].filter((unit): unit is UnitDef => unit !== undefined)
+    : childrenOnRoster(dataset, run, ctx)
 
   return (
     <>
@@ -70,11 +80,24 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
           {relations.map((item) => (
             <div key={item.kind} className="rel-col">
               <h3 className="sub-title">{slotLabel(item.kind, ctx.unit.isCorrin)}</h3>
-              <RelationCard kind={item.kind} partner={item.partner} corrin={ctx.unit.isCorrin} more={item.more} disabled={readOnly} onClick={() => openPicker({ character: { unitId, kind: item.kind } })} />
+              <div className="rel-card-wrap">
+                <RelationCard kind={item.kind} partners={item.partners} corrin={ctx.unit.isCorrin} disabled={readOnly} onClick={() => openPicker({ character: { unitId, kind: item.kind } })} />
+                {item.partners.length === 1 ? (
+                  <button type="button" className="rel-open" aria-label={`Open ${item.partners[0].name}`} onClick={() => openUnit(item.partners[0].id)}>
+                    <Icon name="openInNew" size={16} />
+                  </button>
+                ) : null}
+              </div>
               <div className="rel-under">{item.caption}</div>
             </div>
           ))}
         </div>
+        {family.length ? (
+          <div className="family-links">
+            <h3 className="sub-title">{ctx.isChild ? 'Parents' : 'Children'}</h3>
+            {family.map((unit) => <UnitLink key={unit.id} unit={unit} onOpen={() => openUnit(unit.id)} />)}
+          </div>
+        ) : null}
       </section>
 
       <section className="panel-section" aria-labelledby="class-title">
@@ -135,6 +158,21 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
       </section>
     </>
   )
+}
+
+function childrenOnRoster(dataset: Dataset, run: RunPlan, ctx: UnitContext): UnitDef[] {
+  const roster = new Set(armyUnits(dataset, run).map((unit) => unit.id))
+  const spouse = ctx.plan.sPartner
+  return dataset.units
+    .filter((unit) => roster.has(unit.id) && unit.fixedParent !== null && (unit.fixedParent === ctx.unit.id || unit.fixedParent === spouse))
+    .sort((a, b) => compareRecruitOrder(dataset, run, a, b))
+}
+
+/** One line only: several Friendship Seal classes collapse to "Gains multiple" (full list on hover / for AT). */
+function friendshipCaption(classes: string[]) {
+  if (classes.length <= 1) return gainsCaption(classes[0] ?? null)
+  const all = classes.join(', ')
+  return <span className="rel-caption" title={`Gains ${all}`} aria-label={`Gains ${all}`}>Gains multiple</span>
 }
 
 function gainsCaption(className: string | null) {

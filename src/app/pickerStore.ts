@@ -11,7 +11,7 @@ interface PickerState {
   character: { unitId: string; kind: SlotKind } | null
   classes: string | null
   skill: { unitId: string; slot: SkillTarget } | null
-  sort: 'roster' | 'chart' | false
+  sort: 'roster' | 'chart' | 'parents' | false
   open(next: Partial<Omit<PickerState, 'open' | 'close'>>): void
   close(): void
 }

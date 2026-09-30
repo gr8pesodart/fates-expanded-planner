@@ -1802,26 +1802,84 @@
   color: var(--on-dark);
 }
 
-.parent-primary { margin-top: 4px; font: var(--t-cell); }
-.parent-cards { display: grid; gap: var(--s3); }
-.parent-card {
+.parent-cards {
   display: grid;
-  gap: var(--s3);
-  width: 100%;
-  padding: var(--s3);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--surface);
-  text-align: left;
+  overflow: hidden;
 }
-.parent-card[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.parent-card-head { display: grid; gap: 2px; }
-.parent-name { font: var(--t-name); }
-.parent-availability { font: var(--t-cell); color: var(--ink); }
-.parent-availability.muted, .parent-inheritance-label { font: var(--t-cell); color: var(--ink-2); }
-.parent-class-tree { display: flex; flex-wrap: wrap; gap: var(--s3); }
-.parent-class { display: grid; justify-items: center; gap: 2px; min-width: 52px; font: var(--t-cell); }
+
+/* Figma 15:1542: stacked cards; the chosen parent inverts to a dark fill. */
+.parent-card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: var(--s3);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.parent-card:first-child { border-top: 0; }
+
+.parent-card[data-active] {
+  background: var(--accent-strong);
+  color: var(--on-dark);
+}
+
+/* Invisible full-card select target; the star sits above it. */
+.parent-card-select {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.parent-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.parent-card-head .star {
+  position: relative;
+  z-index: 1;
+}
+
+.parent-name {
+  font: var(--t-name);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parent-class-tree {
+  display: flex;
+  margin-left: auto;
+}
+
+.parent-class-tree { gap: 2px; }
+
+.parent-availability {
+  margin: 0;
+  font: 400 12px/1.3 var(--f-ui);
+}
+
+.parent-availability.muted {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.parent-card[data-active] .parent-availability.muted { color: rgb(255 255 255 / 0.7); }
+
 .parent-stat-block { display: grid; gap: 5px; }
+
+.parent-inheritance-label {
+  margin: 0;
+  font: var(--t-sub);
+  color: var(--ink-2);
+}
+
+.parent-card[data-active] .parent-inheritance-label { color: rgb(255 255 255 / 0.75); }
 
 .route-name {
   font: var(--t-section);
@@ -1980,4 +2038,94 @@
 
 @media (prefers-reduced-motion: reduce) {
   .character-layer { animation: none; }
+}
+
+/* ---------- relationship links ---------- */
+
+.rel-card-wrap {
+  position: relative;
+  /* .rel-col centres its items; the card sizes off this wrapper, so it must span the column. */
+  justify-self: stretch;
+}
+
+/* Figma 3:4136: white rounded square, top-right, opens the partner's page. */
+.rel-open {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.rel-open::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+/* Grids have no name overlay, so no bottom shade either. */
+.rel-card[data-grid]::after {
+  display: none;
+}
+
+.rel-card-grid {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  background: var(--hue);
+}
+
+.rel-card-cell {
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 1;
+  border-radius: 0;
+}
+
+.rel-card-cell.spare {
+  background: transparent;
+}
+
+.family-links {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s2);
+}
+
+.unit-link {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+}
+
+.unit-link-name {
+  flex: 1;
+  min-width: 0;
+  font: var(--t-name);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unit-link-go {
+  width: 28px;
+  height: 28px;
+}
+
+.sort-group {
+  margin: var(--s4) 0 var(--s1);
 }

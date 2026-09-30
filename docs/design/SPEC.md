@@ -102,7 +102,9 @@ areas may extend past the visible chip.
 
 ## Roster (`3:970`)
 
-- Sticky header: "Roster" title, lens rail and **sort button** top-right. The icon reflects the active
+- Sticky header (no shadow; the bottom border fades in only after scrolling): "Roster" title, lens
+  rail and **sort button** top-right. With Link pair-up partners on, linked pairs sit together with
+  the Chart's swap button on the line between them. The icon reflects the active
   sort and direction. The sheet presents Recruit order, Name and each stat with its own icon; `-`
   columns are disabled. Direction is selectable. A **Show** segmented control filters to All / First
   gen / Children (a filtered-out pair partner leaves the other unit unlinked). Favourites-first and
@@ -137,10 +139,26 @@ areas may extend past the visible chip.
   `--ink` text; inactive tabs are `rgb(0 0 0 / .45)` fill with white text. The tabs are
   **Avatar** (Corrin only), **Profile**, **Stats** and **Progression**; second-generation units also
   have a **Parents** tab. The default is Profile.
-- **Panel**: white, with a `--r-sheet` top radius, overlapping the splash by about 78px. Tab
-  contents scroll inside the page (the whole page scrolls). A sticky white header repeats the name
-  and tab buttons; switching tabs preserves scroll. Opening another character starts at the top and
-  slides the page in.
+- **Panel**: white, with a `--r-sheet` top radius, overlapping the splash by about 78px. Opening
+  another character starts at the top and slides the page in.
+- **Mobile layering**: the character page is a fixed, scrolling layer over the screen it was opened
+  from (Roster or Chart), which stays mounted and `inert` underneath. Closing it — including iOS's
+  edge swipe-back, which previews a snapshot of that screen — reveals it unchanged, with no re-render
+  or scroll jump.
+- **Sticky header**: a zero-height sticky rail at the very top of the page holds a white header —
+  back button, the name (21/700), then the tab pills — that slides in (340ms, ease-out) once the hero
+  tabs scroll away and slides out (240ms, ease-in) when they return, pinned to the top throughout.
+  Spacious margins (12/16px, plus the top safe area). Switching tabs preserves scroll.
+- **Swipes**: a horizontal swipe on the panel moves to the previous/next tab; the content follows the
+  finger and the tab contents slide (old out, new in from the opposite side). Swipes starting within
+  24px of the left edge are left to the system back gesture, and horizontal scrollers (pill rails,
+  tab rails, form controls) keep their own gestures. The Roster swipes between stat lenses the same
+  way, sliding every row's stat table.
+- **Relationships**: each filled card has a white rounded-square "open" button top-right (Figma
+  `3:4136`) that opens that character. Corrin's A Rank holds several partners: one shows the normal
+  card; 2–4 a 2×2 grid of busts; more a larger grid (3×3, …) of face crops, with square cells and
+  spare cells in the slot hue; the caption becomes "Gains multiple" (full list as its label/tooltip).
+  Below the grid, **Children** (or, for a child, **Parents**) link rows open those characters.
 
 ### Avatar tab (`3:5890`) — Corrin only
 
@@ -186,11 +204,16 @@ areas may extend past the visible chip.
 
 ### Parents tab — children only
 
-The Parents tab lists the fixed parent's possible spouses (first-generation only, except Kana: Corrin
-can marry into the second generation) with a Recruit, Name or Chapter sort control. Each candidate
-shows route availability (`--ink`; `--ink-2` plus "· available before *fixed parent*" when they join
-earlier), the inherited class tree drawn with **the child's** sprites, and the child's resulting
-stat modifiers and growth rates.
+Figma `15:1542`. **Parent A** is a link row (portrait, name, arrow → their page). **Parent B** lists
+the fixed parent's possible spouses (first-generation only, except Kana: Corrin can marry into the
+second generation) with a sort button (SortIcon) opening a sheet: Recruit order, Name, each stat of
+the inherited modifiers and growths, direction, and a "Show the child's resulting values" toggle.
+Cards are stacked in one bordered list: portrait, name, favourite star and the inherited class
+tree's sprites (drawn as **the child**) on the right; then availability — italic `--ink-2` when the
+candidate joins before Parent A, otherwise with a bold "(+N chapters)" delta; then three 8-column
+tables (no Mov): inherited stat modifiers, growths and pair-up bonuses. By default these show the
+**parent's own contribution** (their modifiers, their personal growths, their B + S pair-up rows);
+the toggle switches to the child's results. The chosen parent's card inverts to `--accent-strong`.
 
 ### Stats tab (`3:5892`)
 
@@ -257,7 +280,10 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
 
 ## Chart (`3:10134`)
 
-- The "Chart" title, then a list of cards (`--line` border, `--r-lg`, gap 20, padding 10).
+- The "Chart" title and sort button in a sticky white header (as the Roster's, no shadow; a 1px
+  `--line` bottom border fades in over 150ms only once the page has scrolled), then a list of cards
+  (`--line` border, `--r-lg`, gap 20, padding 10). Map sprites render at whole-number scales only
+  (32px = 1×), so Chart and Roster sprites are 32px.
 - A sort button opens its own Recruit / Name / Stat sheet with direction, a **Show** filter (All /
   First gen / Children), Favourites-first and Link pair-up partners; these settings do not share state with the Roster. Class sprites have no chip
   background and sit between the portrait and name.

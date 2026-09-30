@@ -267,16 +267,34 @@ Open questions (see also docs/REFERENCES.md):
 3. **A+ partners.** Exact per-character A+ lists are not in the extracted data, and UGF's A+
    behaviour is not documented beyond its support graph; v3.1 offers platonic edges that reach
    rank A and stores the choice one-way (Friendship Seal semantics).
-4. **Child pair-up bonuses.** Children have empty support-bonus rows in the table; the documented
-   inheritance rule (father C / mother B / father A / mother S) still needs a mechanics decision.
+4. **Child pair-up bonuses — resolved (v3.2).** Children's rows are empty in the table; they take
+   the father's C and A rows and the mother's B and S rows (Serenes Forest › Pair-Up Stats: "Any |
+   Father's C | Mother's B | Father's A | Mother's S"), except Shigure and male Kana, who take C/A
+   from their mother (GameFAQs child pair-up guide). Every other child's fixed parent is the father,
+   so the planner uses **fixed parent → C/A, variable parent → B/S** (`supportBonusesOf`), which also
+   covers UGF's same-sex couples, for which vanilla defines no rule.
 5. **Personal-skill slots.** The three personal-skill fields (+116/118/120) are difficulty variants
    (normal/hard/lunatic) in the table; they are identical for every playable unit on this build, so
    the route-keyed shape in the packs is harmless but semantically loose.
 6. **Current support rank.** A plan stores final S/A+ choices, not the active C/B/A support rank.
    v3 pair-up projections use S for spouses and otherwise the pair's highest non-S rank.
-7. **Pair-up Mov.** Some classes grant Mov when paired, but `pairUp` is the eight stats at class
-   record `+60` and `+68` starts the weapon ranks; the Mov bonus byte is not located yet. Pair-up
-   lenses render Mov as `-` until it is decoded.
+7. **Pair-up Mov — resolved (v3.2).** Pair-up blocks are `[Mov, Str, Mag, Skl, Spd, Lck, Def, Res]`,
+   not HP-first: the first byte of the class record's `+60` block is 1 for exactly the 14 classes
+   Serenes Forest lists with Mov +1 (Paladin, Great Knight, Bow Knight, Outlaw, Adventurer, Wyvern
+   Lord, Malig Knight, Dark Knight, Strategist, Falcon Knight, Kinshi Knight, Ninja, Master Ninja,
+   Dark Falcon) and 0 elsewhere; personal support rows share the layout with that slot always 0. The
+   pack keeps the raw order; `lenses.ts › pairUpRow` maps it to a table row (HP blank, Mov last).
+8. **Route-locked Nobles (v3.2).** Hoshido Noble is unavailable on Conquest and Nohr Noble on
+   Birthright, for everyone including children and seal partners (Fire Emblem Fandom › Nohr Prince:
+   "Nohr Noble (Conquest/Revelation)", "Hoshido Noble (Birthright/Revelation)"); `army.ts ›
+   classOnRoute` filters every class pool.
+9. **Jakob/Felicia (v3.2).** The retainer of the *opposite* gender to Corrin joins in Chapter 6; the
+   other joins after Chapter 15 at Lv 13 (Serenes Forest recruitment tables). The curated source
+   carries `lateIfCorrin`; `recruitment.json` emits an `ifCorrin` override that `recruitmentOf`
+   applies for the run's Corrin.
+10. **Corrin's A-rank seals (v3.2, confirmed).** Corrin *does* take a partner's secondary class when
+    the primary can't be sealed: Kaden/Selkie → Diviner, Keaton/Velouria → Fighter (Serenes Forest ›
+    Class Changing: "the character will borrow their partner's second class set instead").
 
 ## Pack format (v1)
 

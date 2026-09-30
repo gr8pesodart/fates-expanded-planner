@@ -3,6 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware'
 import type { LensId } from '../logic/lenses'
 import type { GenerationFilter, RosterSort } from '../logic/rosterSort'
 import { DEFAULT_ROSTER_SORT, directionOfSort } from '../logic/rosterSort'
+import type { ParentSort } from '../logic/parents'
+import { DEFAULT_PARENT_SORT } from '../logic/parents'
 
 interface UiState {
   rosterLens: LensId
@@ -16,6 +18,11 @@ interface UiState {
   chartGeneration: GenerationFilter
   classLens: LensId
   classFilter: 'base' | 'promoted' | 'all'
+  parentSort: ParentSort
+  /** Parents tab: false (default) shows each parent's own contribution, true the child's results. */
+  parentEffective: boolean
+  setParentSort(sort: ParentSort): void
+  setParentEffective(value: boolean): void
   setRosterLens(lens: LensId): void
   setRosterSort(sort: RosterSort): void
   setRosterFavouritesFirst(value: boolean): void
@@ -41,6 +48,10 @@ export const useUi = create<UiState>()(persist((set) => ({
   chartGeneration: 'all',
   classLens: 'baseStats',
   classFilter: 'base',
+  parentSort: DEFAULT_PARENT_SORT,
+  parentEffective: false,
+  setParentSort: (parentSort) => set({ parentSort }),
+  setParentEffective: (parentEffective) => set({ parentEffective }),
   setRosterLens: (rosterLens) => set({ rosterLens }),
   setRosterSort: (rosterSort) => set({ rosterSort }),
   setRosterFavouritesFirst: (rosterFavouritesFirst) => set({ rosterFavouritesFirst }),
@@ -72,6 +83,8 @@ export const useUi = create<UiState>()(persist((set) => ({
       chartLinkPairs: persisted.chartLinkPairs ?? true,
       rosterGeneration: persisted.rosterGeneration ?? 'all',
       chartGeneration: persisted.chartGeneration ?? 'all',
+      parentSort: persisted.parentSort ?? DEFAULT_PARENT_SORT,
+      parentEffective: persisted.parentEffective ?? false,
     }
   },
 }))

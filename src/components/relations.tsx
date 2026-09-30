@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react'
+import type { UnitDef } from '../data/types'
+import { displayName } from '../logic/army'
 import { Portrait } from './art'
 import { Icon } from './icons'
 import type { SlotKind } from './slots'
 import { slotLabel } from './slots'
-
 
 /** `corrin` swaps the A+ glyph for A: Corrin's A slot holds A-rank Friendship Seal partners. */
 function Glyph({ kind, corrin = false }: { kind: SlotKind; corrin?: boolean }) {
@@ -32,34 +34,63 @@ export function RelationSlot({ kind, partner, onClick, ownerName, disabled, corr
   )
 }
 
-/** Profile relationship card: bust portrait with the name overlaid, or the empty glyph. */
-export function RelationCard({ kind, partner, onClick, disabled, corrin = false, more = 0 }: {
+/**
+ * Profile relationship card: bust portrait with the name overlaid, or the empty glyph. Corrin's A
+ * slot can hold several partners: 2–4 share a 2×2 grid of busts, more use a larger grid of face
+ * crops (Figma 14:352); spare cells take the slot hue.
+ */
+export function RelationCard({ kind, partners, onClick, disabled, corrin = false }: {
   kind: SlotKind
-  partner: { id: string; name: string } | null
+  partners: readonly { id: string; name: string }[]
   onClick(): void
   disabled?: boolean
   corrin?: boolean
-  more?: number
 }) {
   const slot = slotLabel(kind, corrin)
+  const [first] = partners
+  const columns = partners.length > 1 ? Math.ceil(Math.sqrt(partners.length)) : 1
+  const names = partners.map((partner) => partner.name).join(', ')
   return (
     <button
       type="button"
       className="rel-card"
       data-kind={kind}
-      data-filled={partner ? '' : undefined}
-      aria-label={partner ? `${slot}: ${partner.name}${more ? ` and ${more} more` : ''}. Change` : `Choose ${slot}`}
+      data-filled={first ? '' : undefined}
+      data-grid={columns > 1 ? '' : undefined}
+      aria-label={first ? `${slot}: ${names}. Change` : `Choose ${slot}`}
       onClick={onClick}
       disabled={disabled}
     >
-      {partner ? (
+      {!first ? (
+        <span className="rel-card-empty"><Glyph kind={kind} corrin={corrin} /></span>
+      ) : columns === 1 ? (
         <>
-          <Portrait unitId={partner.id} name={partner.name} crop="bust" className="rel-card-art" />
-          <span className="rel-card-name">{partner.name}{more ? ` +${more}` : ''}</span>
+          <Portrait unitId={first.id} name={first.name} crop="bust" className="rel-card-art" />
+          <span className="rel-card-name">{first.name}</span>
         </>
       ) : (
-        <span className="rel-card-empty"><Glyph kind={kind} corrin={corrin} /></span>
+        <span className="rel-card-grid" style={{ gridTemplate: `repeat(${columns}, minmax(0, 1fr)) / repeat(${columns}, minmax(0, 1fr))` }}>
+          {Array.from({ length: columns * columns }, (_, index) => {
+            const partner = partners[index]
+            return partner
+              ? <Portrait key={partner.id} unitId={partner.id} name={partner.name} crop={columns > 2 ? 'face' : 'bust'} className="rel-card-cell" />
+              : <span key={`spare-${index}`} className="rel-card-cell spare" />
+          })}
+        </span>
       )}
+    </button>
+  )
+}
+
+/** A tappable row that opens another character's page (family quick links, Parent A). */
+export function UnitLink({ unit, onOpen, children }: { unit: UnitDef; onOpen(): void; children?: ReactNode }) {
+  const name = displayName(unit)
+  return (
+    <button type="button" className="unit-link" aria-label={`Open ${name}`} onClick={onOpen}>
+      <Portrait unitId={unit.id} name={name} className="chip-32" />
+      <span className="unit-link-name">{name}</span>
+      {children}
+      <span className="edit-btn unit-link-go" aria-hidden="true"><Icon name="arrowRight" size={20} /></span>
     </button>
   )
 }

@@ -15,6 +15,8 @@ import type { ClassPoolEntry } from '../logic/classes'
 import { buildProgression, dlcClassesFor } from '../logic/progression'
 import type { RosterSort } from '../logic/rosterSort'
 import { directionOfSort } from '../logic/rosterSort'
+import type { ParentSort } from '../logic/parents'
+import { parentSortDirection, parentSortIcon } from '../logic/parents'
 import { toggleFriendshipPartner } from '../logic/relationships'
 import { inheritableSkillPool, skillPool } from '../logic/skills'
 import { SKILL_SLOTS, emptyUnitPlan } from '../state/model'
@@ -29,6 +31,7 @@ export function Pickers() {
   if (character) return <CharacterPicker {...character} onClose={close} />
   if (classes) return <ClassPicker unitId={classes} onClose={close} />
   if (skill) return <SkillPicker {...skill} onClose={close} />
+  if (sort === 'parents') return <ParentSortSheet onClose={close} />
   if (sort) return <SortSheet target={sort} onClose={close} />
   return null
 }
@@ -271,6 +274,55 @@ function SortSheet({ target, onClose }: { target: 'roster' | 'chart'; onClose():
         <label className="switch-row">
           <span className="sub-title">Link pair-up partners</span>
           <input type="checkbox" role="switch" checked={linkPairs} onChange={(event) => setLinked(event.target.checked)} />
+        </label>
+      </div>
+      <button type="button" className="btn primary sort-done" onClick={closeAnimated}>Done</button>
+    </Sheet>
+  )
+}
+
+const STAT_ROWS = STAT_TABLE_KEYS.slice(0, 8).map((key, column) => ({ label: STAT_TABLE_LABELS[key], column }))
+
+/** Parents tab sort: recruit/name, or a stat of the inherited modifiers or growths (Figma 15:1542). */
+function ParentSortSheet({ onClose }: { onClose(): void }) {
+  const ui = useUi()
+  const [closing, setClosing] = useState(false)
+  const sort = ui.parentSort
+  const closeAnimated = () => {
+    if (closing) return
+    setClosing(true)
+    window.setTimeout(onClose, 180)
+  }
+  const isActive = (next: ParentSort) => sort.kind === next.kind && ('column' in sort ? 'column' in next && sort.column === next.column : true)
+  const pick = (next: ParentSort) => ui.setParentSort({ ...next, direction: parentSortDirection(next) })
+  const row = (next: ParentSort, label: string, disabled = false) => (
+    <button key={`${next.kind}-${'column' in next ? next.column : ''}`} type="button" className="sort-row" aria-pressed={isActive(next)} disabled={disabled} onClick={() => pick(next)}>
+      <SortIcon sort={{ ...parentSortIcon(next), direction: parentSortDirection(sort) }} size={30} />
+      {label}
+    </button>
+  )
+  return (
+    <Sheet title="Sort parents by" onClose={closeAnimated} closing={closing}>
+      <div className="pick-list">
+        {row({ kind: 'recruit' }, 'Recruit order')}
+        {row({ kind: 'name' }, 'Name')}
+      </div>
+      <h3 className="sub-title sort-group">Inherited stat modifiers</h3>
+      <div className="pick-list">
+        {STAT_ROWS.map(({ label, column }) => row({ kind: 'modifier', column }, label, column === 0))}
+      </div>
+      <h3 className="sub-title sort-group">Inherited stat growths</h3>
+      <div className="pick-list">
+        {STAT_ROWS.map(({ label, column }) => row({ kind: 'growth', column }, label))}
+      </div>
+      <div className="sort-direction">
+        <span className="sub-title">Direction</span>
+        <Segmented label="Sort direction" value={parentSortDirection(sort)} options={[{ id: 'asc', label: 'Ascending' }, { id: 'desc', label: 'Descending' }]} onChange={(direction) => ui.setParentSort({ ...sort, direction })} />
+      </div>
+      <div className="sort-toggles">
+        <label className="switch-row">
+          <span className="sub-title">Show the child's resulting values</span>
+          <input type="checkbox" role="switch" checked={ui.parentEffective} onChange={(event) => ui.setParentEffective(event.target.checked)} />
         </label>
       </div>
       <button type="button" className="btn primary sort-done" onClick={closeAnimated}>Done</button>
