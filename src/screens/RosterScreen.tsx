@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useRef } from 'react'
 import { usePickers } from '../app/pickerStore'
 import { usePlanner } from '../app/plannerContext'
 import { useUi } from '../app/ui'
@@ -15,6 +15,7 @@ import { displayName } from '../logic/army'
 import { lensDef, LENSES } from '../logic/lenses'
 import { toggleFavourite } from '../logic/relationships'
 import { navigate } from '../lib/router'
+import { useSwipePager } from '../lib/swipe'
 
 const SORT_LABEL = { recruit: 'Recruit order', name: 'Name', stat: 'Stat' } as const
 
@@ -23,6 +24,9 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
   const { entries, sort } = useSortedRoster(rosterLens, rosterSort, { favouritesFirst: rosterFavouritesFirst, linkPairs: rosterLinkPairs, generation: rosterGeneration })
   const openPicker = usePickers((state) => state.open)
   const lens = lensDef(rosterLens)
+  const lensIndex = LENSES.findIndex((item) => item.id === rosterLens)
+  const listRef = useRef<HTMLUListElement | null>(null)
+  useSwipePager(listRef, lensIndex, LENSES.length, (next) => setRosterLens(LENSES[next].id))
   return (
     <section className="screen roster" aria-labelledby="roster-title">
       <div className="roster-sticky-head">
@@ -40,16 +44,16 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
           onSelect={setRosterLens}
         />
       </div>
-      <ul className="roster-list">
+      <ul ref={listRef} className="roster-list" data-swipe>
         {entries.map((entry) => (
-          <RosterRow key={entry.unitId} entry={entry} signed={lens.signed} active={entry.unitId === activeUnitId} referenceRows={entries.map((item) => item.lensRow)} />
+          <RosterRow key={entry.unitId} entry={entry} signed={lens.signed} slideIndex={lensIndex} active={entry.unitId === activeUnitId} referenceRows={entries.map((item) => item.lensRow)} />
         ))}
       </ul>
     </section>
   )
 }
 
-const RosterRow = memo(function RosterRow({ entry, signed, active, referenceRows }: { entry: RosterEntry; signed: boolean; active: boolean; referenceRows: (number | null)[][] }) {
+const RosterRow = memo(function RosterRow({ entry, signed, slideIndex, active, referenceRows }: { entry: RosterEntry; signed: boolean; slideIndex: number; active: boolean; referenceRows: (number | null)[][] }) {
   const { dataset, readOnly, mutate } = usePlanner()
   const openPicker = usePickers((state) => state.open)
   const { ctx, name, unitId } = entry
@@ -82,7 +86,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, active, referenceRows
           <EditButton label={`Open ${name}`} onClick={open} />
         </div>
       </div>
-      <StatTable row={entry.lensRow} signed={signed} label={`${name} stats`} referenceRows={referenceRows} />
+      <StatTable row={entry.lensRow} signed={signed} label={`${name} stats`} referenceRows={referenceRows} slideIndex={slideIndex} />
     </li>
   )
 })

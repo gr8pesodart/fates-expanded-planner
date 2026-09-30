@@ -134,7 +134,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
                     <li className="level-info">
                       <div className="stat-block"><h3 className="sub-title">Expected Stats</h3><StatTable row={row.expected} inverse label="Expected stats" /></div>
                       <div className="stat-block"><h3 className="sub-title">Effective Growth Rate</h3><StatTable row={row.growths} inverse label="Effective growth rate" /></div>
-                      <div className="stat-block"><h3 className="sub-title">Effective Pair Up Bonuses</h3><StatTable row={row.pairUp.map((value, index) => (index === 0 ? null : value))} signed inverse label="Effective pair up bonuses" /></div>
+                      <div className="stat-block"><h3 className="sub-title">Effective Pair Up Bonuses</h3><StatTable row={row.pairUp} signed inverse label="Effective pair up bonuses" /></div>
                     </li>
                   ) : null}
                 </Fragment>

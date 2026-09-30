@@ -1,7 +1,9 @@
 import type { ClassDef, ClassTier, Dataset } from '../data/types'
 import type { Reclass, RunPlan } from '../state/model'
 import type { UnitContext } from './army'
-import { pairRank } from './army'
+import { classOnRoute, pairRank, supportBonusesOf } from './army'
+import { pairUpRow } from './lenses'
+import type { StatRow } from './lenses'
 import { classFamily, sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
 import { projectUnit } from './stats'
@@ -36,7 +38,8 @@ export interface LevelRow {
   expected: number[]
   /** Effective growths / pair-up bonuses of the class held after this row. */
   growths: number[]
-  pairUp: number[]
+  /** Table row: HP blank, Mov last (see lenses › pairUpRow). */
+  pairUp: StatRow
 }
 
 export interface ProgressionSegment {
@@ -117,13 +120,7 @@ export function reclassOptions(
   if (current.tier === 'base' && level >= MASTER_SEAL_MIN_LEVEL) {
     for (const promo of current.promotesTo) {
       const promotedId = sexedClassId(dataset, promo, ctx.unit.gender)
-      const promoted = dataset.classesById.get(promotedId)
-      const family = classFamily(current.name)
-      const allowed = family !== 'Nohr Prince' && family !== 'Nohr Princess'
-        || run.route === 'revelation'
-        || run.route === 'conquest' && promoted && classFamily(promoted.name) === 'Nohr Noble'
-        || run.route === 'birthright' && promoted && classFamily(promoted.name) === 'Hoshido Noble'
-      if (allowed) offer({ classId: promotedId, seal: 'master', level: 1, newSegment: true })
+      if (classOnRoute(dataset, promotedId, run.route)) offer({ classId: promotedId, seal: 'master', level: 1, newSegment: true })
     }
   }
 
@@ -207,6 +204,7 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
   const personalGrowths = projectUnit(dataset, ctx.unit, undefined, ctx.projection).growths
   const pairPartner = ctx.pairPartner
   const rank = pairPartner ? pairRank(dataset, run, ctx.unit.id, pairPartner.id) : null
+  const supportBonuses = supportBonusesOf(dataset, run, ctx)
 
   let classDef = dataset.classesById.get(ctx.start.classId)
   if (!classDef) return { segments: [], dropped: events, eternalSeals, startsWith: [] }
@@ -236,7 +234,7 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
   const snapshot = (def: ClassDef) => ({
     expected: personal.map((value, i) => Math.round((value + def.baseStats[i]) * 10) / 10),
     growths: projectUnit(dataset, ctx.unit, def.id, ctx.projection).growths,
-    pairUp: pairUpBonus(def.pairUp, ctx.unit.supportBonuses, rank),
+    pairUp: pairUpRow(pairUpBonus(def.pairUp, supportBonuses, rank)),
   })
 
   const segments: ProgressionSegment[] = []

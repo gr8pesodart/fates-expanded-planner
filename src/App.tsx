@@ -1,4 +1,4 @@
-import { useMemo, useSyncExternalStore } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Pickers } from './app/pickers'
 import { PlannerProvider } from './app/planner'
 import { Nav } from './components/Nav'
@@ -31,7 +31,43 @@ function Loading() {
   return <p className="loading" role="status">Loading game data…</p>
 }
 
-function Main({ route, desktop }: { route: AppRoute; desktop: boolean }) {
+function Section({ route }: { route: AppRoute }) {
+  switch (route.name) {
+    case 'chart':
+      return <ChartScreen />
+    case 'runs':
+      return <RunsScreen />
+    case 'new-run':
+      return <NewRunScreen />
+    default:
+      return <RosterScreen />
+  }
+}
+
+/**
+ * On mobile the character page is a layer over the screen it was opened from, which stays mounted
+ * (and keeps its scroll) underneath. Closing it — including iOS's swipe-back, which previews a
+ * snapshot of that screen — reveals exactly what the snapshot showed, instead of re-rendering the
+ * roster from scratch and visibly popping.
+ */
+function MobileMain({ route, backdrop }: { route: AppRoute; backdrop: AppRoute }) {
+  const layered = route.name === 'unit'
+  return (
+    <>
+      <div className="base-layer" inert={layered || undefined}>
+        <Section route={layered ? backdrop : route} />
+      </div>
+      {route.name === 'unit' ? (
+        <div className="character-layer">
+          <CharacterScreen key={route.unitId} unitId={route.unitId} tab={route.tab} />
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+/** Desktop: the roster stays beside the character page (two panes). */
+function DesktopMain({ route }: { route: AppRoute }) {
   switch (route.name) {
     case 'chart':
       return <ChartScreen />
@@ -40,7 +76,6 @@ function Main({ route, desktop }: { route: AppRoute; desktop: boolean }) {
     case 'new-run':
       return <NewRunScreen />
     case 'unit':
-      if (!desktop) return <CharacterScreen key={route.unitId} unitId={route.unitId} tab={route.tab} />
       return (
         <div className="two-pane">
           <RosterScreen activeUnitId={route.unitId} />
@@ -48,7 +83,6 @@ function Main({ route, desktop }: { route: AppRoute; desktop: boolean }) {
         </div>
       )
     default:
-      if (!desktop) return <RosterScreen />
       return (
         <div className="two-pane">
           <RosterScreen />
@@ -61,6 +95,9 @@ function Main({ route, desktop }: { route: AppRoute; desktop: boolean }) {
 export default function App() {
   const route = useRoute()
   const desktop = useDesktop()
+  // The screen a character page was opened from (a deep link falls back to the roster).
+  const [backdrop, setBackdrop] = useState<AppRoute>(() => (route.name === 'unit' ? { name: 'roster' } : route))
+  if (route.name !== 'unit' && route !== backdrop) setBackdrop(route)
   const run = useActiveRun()
   const onboarded = usePlansStore((state) => state.onboarded)
   const sharedRun: RunPlan | null = useMemo(() => {
@@ -83,7 +120,7 @@ export default function App() {
           <>
             {sharedRun ? null : <Nav section={sectionOf(route)} />}
             <main className="main">
-              {sharedRun ? <ChartScreen /> : <Main route={route} desktop={desktop} />}
+              {sharedRun ? <ChartScreen /> : desktop ? <DesktopMain route={route} /> : <MobileMain route={route} backdrop={backdrop} />}
             </main>
             <Pickers />
           </>

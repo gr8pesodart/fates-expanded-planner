@@ -178,6 +178,8 @@ export interface RecruitmentEntry {
   joinLevel: number
   joinClassId: number
   optional: boolean
+  /** Jakob/Felicia: the retainer of Corrin's own gender joins after Chapter 15 instead. */
+  ifCorrin?: Partial<Record<'male' | 'female', { order: number; chapter: string; joinLevel: number }>>
 }
 
 // ------------------------------ dataset ------------------------------------

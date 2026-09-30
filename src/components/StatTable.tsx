@@ -2,17 +2,30 @@ import type { CSSProperties } from 'react'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import type { StatRow } from '../logic/lenses'
 import { formatCell } from '../logic/lenses'
+import { SlideSwap } from './SlideSwap'
 
-export function StatTable({ row, signed = false, inverse = false, label, referenceRows }: { row: StatRow; signed?: boolean; inverse?: boolean; label?: string; referenceRows?: StatRow[] }) {
-  return (
+export function StatTable({ row, signed = false, inverse = false, label, referenceRows, mov = true, slideIndex }: {
+  row: StatRow
+  signed?: boolean
+  inverse?: boolean
+  label?: string
+  referenceRows?: StatRow[]
+  /** Parent-inheritance tables have no Mov (the Parents design drops the column). */
+  mov?: boolean
+  /** When set, a change slides the old table out and the new one in (Roster lens swipes). */
+  slideIndex?: number
+}) {
+  const keys = mov ? STAT_TABLE_KEYS : STAT_TABLE_KEYS.filter((key) => key !== 'mov')
+  const columns: CSSProperties | undefined = mov ? undefined : { gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }
+  const table = (
     <div className={inverse ? 'stat-table inverse' : 'stat-table'} role="table" aria-label={label}>
-      <div className="stat-row" role="row">
-        {STAT_TABLE_KEYS.map((key) => (
+      <div className="stat-row" role="row" style={columns}>
+        {keys.map((key) => (
           <span key={key} className="stat-head" role="columnheader">{STAT_TABLE_LABELS[key]}</span>
         ))}
       </div>
-      <div className="stat-row" role="row">
-        {STAT_TABLE_KEYS.map((key, index) => {
+      <div className="stat-row" role="row" style={columns}>
+        {keys.map((key, index) => {
           const value = row[index] ?? null
           const tone = signed && value !== null && value !== 0 ? (value > 0 ? 'up' : 'down') : undefined
           const reference = referenceRows?.map((candidate) => candidate[index]).filter((item): item is number => item !== null && item !== undefined) ?? []
@@ -22,6 +35,7 @@ export function StatTable({ row, signed = false, inverse = false, label, referen
       </div>
     </div>
   )
+  return slideIndex === undefined ? table : <SlideSwap index={slideIndex}>{table}</SlideSwap>
 }
 
 function statTone(value: number, values: number[]): CSSProperties {

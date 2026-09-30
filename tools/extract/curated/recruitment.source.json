@@ -113,7 +113,13 @@
         "promotedAtJoin": true,
         "optional": false,
         "notes": "Permanent recruit in Chapter 6 if Corrin is male; otherwise joins after Chapter 15 (Chapter 16 base-stats row, level 13).",
-        "cite": "https://serenesforest.net/fire-emblem-fates/hoshidan-characters/recruitment/"
+        "cite": "https://serenesforest.net/fire-emblem-fates/hoshidan-characters/recruitment/",
+        "lateIfCorrin": {
+          "gender": "female",
+          "chapter": "After Chapter 15",
+          "chapterSortKey": 15.5,
+          "joinLevel": 13
+        }
       },
       {
         "unit": "PID_ジョーカー",
@@ -125,7 +131,13 @@
         "promotedAtJoin": true,
         "optional": false,
         "notes": "Permanent recruit in Chapter 6 if Corrin is female; otherwise joins after Chapter 15 (Chapter 16 base-stats row, level 13).",
-        "cite": "https://serenesforest.net/fire-emblem-fates/hoshidan-characters/recruitment/"
+        "cite": "https://serenesforest.net/fire-emblem-fates/hoshidan-characters/recruitment/",
+        "lateIfCorrin": {
+          "gender": "male",
+          "chapter": "After Chapter 15",
+          "chapterSortKey": 15.5,
+          "joinLevel": 13
+        }
       },
       {
         "unit": "PID_アンナ",
@@ -595,7 +607,13 @@
         "promotedAtJoin": true,
         "optional": false,
         "notes": "Permanent recruit in Chapter 6 if Corrin is male; otherwise joins after Chapter 15 (Chapter 16 base-stats row, level 13).",
-        "cite": "https://serenesforest.net/fire-emblem-fates/nohrian-characters/recruitment/"
+        "cite": "https://serenesforest.net/fire-emblem-fates/nohrian-characters/recruitment/",
+        "lateIfCorrin": {
+          "gender": "female",
+          "chapter": "After Chapter 15",
+          "chapterSortKey": 15.5,
+          "joinLevel": 13
+        }
       },
       {
         "unit": "PID_ジョーカー",
@@ -607,7 +625,13 @@
         "promotedAtJoin": true,
         "optional": false,
         "notes": "Permanent recruit in Chapter 6 if Corrin is female; otherwise joins after Chapter 15 (Chapter 16 base-stats row, level 13).",
-        "cite": "https://serenesforest.net/fire-emblem-fates/nohrian-characters/recruitment/"
+        "cite": "https://serenesforest.net/fire-emblem-fates/nohrian-characters/recruitment/",
+        "lateIfCorrin": {
+          "gender": "male",
+          "chapter": "After Chapter 15",
+          "chapterSortKey": 15.5,
+          "joinLevel": 13
+        }
       },
       {
         "unit": "PID_アンナ",
@@ -1125,7 +1149,13 @@
         "promotedAtJoin": true,
         "optional": false,
         "notes": "Permanent recruit in Chapter 6 if Corrin is male; otherwise joins after Chapter 15 (Chapter 16 base-stats row, level 13).",
-        "cite": "https://serenesforest.net/fire-emblem-fates/revelation/character-recruitment/"
+        "cite": "https://serenesforest.net/fire-emblem-fates/revelation/character-recruitment/",
+        "lateIfCorrin": {
+          "gender": "female",
+          "chapter": "After Chapter 15",
+          "chapterSortKey": 15.5,
+          "joinLevel": 13
+        }
       },
       {
         "unit": "PID_ジョーカー",
@@ -1137,7 +1167,13 @@
         "promotedAtJoin": true,
         "optional": false,
         "notes": "Permanent recruit in Chapter 6 if Corrin is female; otherwise joins after Chapter 15 (Chapter 16 base-stats row, level 13).",
-        "cite": "https://serenesforest.net/fire-emblem-fates/revelation/character-recruitment/"
+        "cite": "https://serenesforest.net/fire-emblem-fates/revelation/character-recruitment/",
+        "lateIfCorrin": {
+          "gender": "male",
+          "chapter": "After Chapter 15",
+          "chapterSortKey": 15.5,
+          "joinLevel": 13
+        }
       },
       {
         "unit": "PID_アンナ",

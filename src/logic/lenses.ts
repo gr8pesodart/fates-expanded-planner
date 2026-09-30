@@ -1,7 +1,7 @@
 import type { Dataset } from '../data/types'
 import type { RunPlan } from '../state/model'
 import type { UnitContext } from './army'
-import { pairRank } from './army'
+import { pairRank, supportBonusesOf } from './army'
 import { sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
 import { projectUnit } from './stats'
@@ -53,6 +53,16 @@ export function blankColumns(lens: LensId): number[] {
 
 const withoutHp = (row: number[]): StatRow => row.map((value, index) => (index === 0 ? null : value))
 
+/**
+ * Pair-up blocks (class `pairUp` and personal support rows) are [Mov, Str, Mag, Skl, Spd, Lck,
+ * Def, Res]: there is no HP bonus, and the first byte is the +1 Mov that mounted/flying classes
+ * give (it matches Serenes Forest's Mov column for all 14 such classes). Returns a table row:
+ * HP blank, Mov last.
+ */
+export function pairUpRow(block: readonly number[]): StatRow {
+  return [null, ...block.slice(1, 8), block[0] ?? 0]
+}
+
 export function lensRow(dataset: Dataset, run: RunPlan, ctx: UnitContext, lens: LensId, classId = ctx.currentClassId): StatRow {
   const classDef = dataset.classesById.get(classId)
   const empty = (): StatRow => Array.from({ length: 8 }, () => null)
@@ -77,21 +87,17 @@ export function lensRow(dataset: Dataset, run: RunPlan, ctx: UnitContext, lens: 
       row = classDef ? [...classDef.growths] : empty()
       break
     case 'classPairUp':
-      row = classDef ? withoutHp(classDef.pairUp) : empty()
-      break
+      return classDef ? pairUpRow(classDef.pairUp) : [...empty(), null]
     case 'personalPairUp': {
       const rank = ctx.pairPartner ? pairRank(dataset, run, ctx.unit.id, ctx.pairPartner.id) : 'S'
-      row = withoutHp(pairUpBonus(null, ctx.unit.supportBonuses, rank))
-      break
+      return pairUpRow(pairUpBonus(null, supportBonusesOf(dataset, run, ctx), rank))
     }
     case 'effectivePairUp': {
       const rank = ctx.pairPartner ? pairRank(dataset, run, ctx.unit.id, ctx.pairPartner.id) : null
-      row = withoutHp(pairUpBonus(classDef?.pairUp, ctx.unit.supportBonuses, rank))
-      break
+      return pairUpRow(pairUpBonus(classDef?.pairUp, supportBonusesOf(dataset, run, ctx), rank))
     }
   }
-  // Mov has no growth or personal modifier. Pair-up Mov bonuses exist in-game but the class-table
-  // byte is not decoded yet (docs/DATA.md › Open questions), so those lenses show "-" too.
+  // Mov has no growth or personal modifier.
   const movement = lens === 'maxStats' || lens === 'baseStats' ? classDef?.movement ?? null : null
   return [...row, movement]
 }
@@ -129,12 +135,18 @@ function playableClassIds(dataset: Dataset): number[] {
  * unit's own options at that tier, since they fold in the unit's personal values.
  */
 export function colourReferenceClassIds(dataset: Dataset, run: RunPlan, ctx: UnitContext, lens: LensId, classId: number, ownClassIds: readonly number[]): number[] {
-  const tier = dataset.classesById.get(classId)?.tier
-  if (!CLASS_LENSES.has(lens)) return ownClassIds.filter((id) => dataset.classesById.get(id)?.tier === tier)
+  // DLC classes sit on the special track in the data but are reached from, and play at, advanced
+  // level; colouring them only against each other (three classes) skewed their shades.
+  const level = (id: number) => {
+    const def = dataset.classesById.get(id)
+    return def?.dlc ? 'promoted' : def?.tier
+  }
+  const tier = level(classId)
+  if (!CLASS_LENSES.has(lens)) return ownClassIds.filter((id) => level(id) === tier)
   const ids = new Set<number>()
   for (const id of playableClassIds(dataset)) {
     const def = dataset.classesById.get(id)
-    if (!def || def.tier !== tier || (def.dlc && !run.dlc)) continue
+    if (!def || level(id) !== tier || (def.dlc && !run.dlc)) continue
     ids.add(sexedClassId(dataset, id, ctx.unit.gender))
   }
   return [...ids]

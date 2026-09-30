@@ -1,4 +1,4 @@
-import type { Dataset, UnitDef } from '../data/types'
+import type { Dataset, RecruitmentEntry, Route, UnitDef } from '../data/types'
 import type { RunPlan, UnitPlan } from '../state/model'
 import { unitPlanFor } from '../state/model'
 import type { ClassPoolEntry } from './classes'
@@ -6,6 +6,16 @@ import { classFamily, classPool, primaryBaseClass, sexedClassId } from './classe
 import type { PairUpRank } from './pairUp'
 import { variableParentOf } from './relationships'
 import { fixedParentIsCorrin } from './stats'
+
+// Route-locked promotions (Fire Emblem Fandom › Nohr Prince: "Nohr Noble (Conquest/Revelation)",
+// "Hoshido Noble (Birthright/Revelation)"). The lock is on the class, so no seal or inheritance
+// reaches the other route's Noble.
+const ROUTE_LOCKED: Record<string, Route> = { 'Hoshido Noble': 'conquest', 'Nohr Noble': 'birthright' }
+
+export function classOnRoute(dataset: Dataset, classId: number, route: Route): boolean {
+  const def = dataset.classesById.get(classId)
+  return !def || ROUTE_LOCKED[classFamily(def.name)] !== route
+}
 
 /** Units on this run's roster: route + DLC availability, only the chosen Corrin and their Kana. */
 export function armyUnits(dataset: Dataset, run: RunPlan): UnitDef[] {
@@ -56,9 +66,16 @@ function partner(dataset: Dataset, id: string | undefined): UnitDef | undefined 
   return id ? dataset.unitsById.get(id) : undefined
 }
 
+/** The unit's recruitment row on this run's route, with the Corrin-gender override applied. */
+export function recruitmentOf(dataset: Dataset, run: RunPlan, unitId: string): RecruitmentEntry | undefined {
+  const entry = dataset.recruitment?.[run.route]?.get(unitId)
+  const override = entry?.ifCorrin?.[run.corrin.gender]
+  return entry && override ? { ...entry, ...override } : entry
+}
+
 /** Join class/level from the route's recruitment data, else the unit's own base class at Lv 1. */
 export function classStart(dataset: Dataset, run: RunPlan, unit: UnitDef): ClassStart {
-  const joined = dataset.recruitment?.[run.route]?.get(unit.id)
+  const joined = recruitmentOf(dataset, run, unit.id)
   const known = joined && dataset.classesById.has(joined.joinClassId) ? joined : undefined
   const classId = sexedClassId(dataset, known?.joinClassId ?? primaryBaseClass(dataset, unit) ?? unit.classes[0] ?? 0, unit.gender)
   const defaultLevel = known?.joinLevel ?? 1
@@ -83,7 +100,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     ? (plan.friendshipPartners ?? []).flatMap((id) => {
       const donor = dataset.unitsById.get(id)
       const reachesA = (dataset.edgesByCharacter.get(unit.id) ?? []).some((edge) => (edge.a === id || edge.b === id) && edge.info.ranks.a !== null)
-      return donor && reachesA && donor.gender === unit.gender && rosterIds.has(id) ? [donor] : []
+      return donor && reachesA && id !== plan.sPartner && donor.gender === unit.gender && rosterIds.has(id) ? [donor] : []
     })
     : []
   const pool = classPool(dataset, unit, {
@@ -95,6 +112,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     fixedParentIsCorrin: fixedParentIsCorrin(dataset, unit),
   })
   const start = classStart(dataset, run, unit)
+  const routePool = pool.filter((entry) => classOnRoute(dataset, entry.classId, run.route))
   const lastReclass = [...plan.reclasses].sort((a, b) => a.segment - b.segment || a.level - b.level).at(-1)?.classId
   return {
     unit,
@@ -105,7 +123,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     aPlusPartner,
     friendshipPartners: friendshipDonors,
     pairPartner: partner(dataset, plan.pairPartner),
-    pool,
+    pool: routePool,
     start,
     currentClassId: plan.classId ?? lastReclass ?? start.classId,
     projection: {
@@ -114,6 +132,29 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
       variableParentId: variableParent?.id ?? null,
     },
   }
+}
+
+const NO_BONUS: readonly number[] = [0, 0, 0, 0, 0, 0, 0, 0]
+
+/**
+ * Personal pair-up rows [C, B, A, S]. Children's rows are empty in the game data: they take C and A
+ * from the father and B and S from the mother (Serenes Forest › Pair-Up Stats), except Shigure and
+ * male Kana, who take C and A from their mother (GameFAQs child pair-up guide). Every other child's
+ * fixed parent is the father, so "fixed parent → C/A, variable parent → B/S" covers them all — and
+ * gives UGF's same-sex couples a consistent answer.
+ */
+export function supportBonusesOf(dataset: Dataset, run: RunPlan, ctx: UnitContext): readonly (readonly number[])[] {
+  if (!ctx.isChild) return ctx.unit.supportBonuses
+  const rowsOf = (parent: UnitDef | undefined): readonly (readonly number[])[] => {
+    if (!parent) return []
+    if (parent.fixedParent === null) return parent.supportBonuses
+    // Corrin can marry a child, so Kana's other parent may itself be second-generation.
+    const parentCtx = unitContext(dataset, run, parent.id)
+    return parentCtx ? supportBonusesOf(dataset, run, parentCtx) : []
+  }
+  const fixed = rowsOf(ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined)
+  const variable = rowsOf(ctx.variableParent)
+  return [fixed[0] ?? NO_BONUS, variable[1] ?? NO_BONUS, fixed[2] ?? NO_BONUS, variable[3] ?? NO_BONUS]
 }
 
 /**

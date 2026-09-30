@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { candidatesFor } from '../app/selectors'
+import { candidatesFor, recruitIndex } from '../app/selectors'
 import { loadDataset } from '../data/loader'
 import type { Dataset } from '../data/types'
 import { emptyRun } from '../state/model'
 import type { RunPlan } from '../state/model'
-import { unitContext } from './army'
+import { classStart, unitContext } from './army'
 import { classFamily } from './classes'
 import { setBond, toggleFriendshipPartner } from './relationships'
 
@@ -52,6 +52,31 @@ describe('Corrin support and child classes', () => {
     expect(ctx.pool.some((entry) => entry.branch === 'parent' && classFamily(dataset.classesById.get(entry.classId)!.name) === talentFamily)).toBe(true)
   })
 
+  it('recruits the opposite-gender retainer in Chapter 6 and the other after Chapter 15 at Lv 13', () => {
+    const felicia = dataset.units.find((unit) => unit.name === 'Felicia')!
+    const jakob = dataset.units.find((unit) => unit.name === 'Jakob')!
+    const gunter = dataset.units.find((unit) => unit.name === 'Gunter')!
+    for (const [gender, early, late] of [['male', felicia, jakob], ['female', jakob, felicia]] as const) {
+      const run: RunPlan = { ...emptyRun('test'), route: 'conquest', corrin: { ...emptyRun('test').corrin, gender } }
+      expect(recruitIndex(dataset, run, early)).toBeLessThan(recruitIndex(dataset, run, gunter))
+      expect(recruitIndex(dataset, run, late)).toBeGreaterThan(recruitIndex(dataset, run, gunter))
+      expect(classStart(dataset, run, late)).toMatchObject({ level: 13, chapter: 'After Chapter 15', variableLevel: false })
+      expect(classStart(dataset, run, early)).toMatchObject({ level: 1, chapter: 'Chapter 6' })
+    }
+  })
+
+  it('keeps each route\'s Noble off the other route for everyone, children included', () => {
+    const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === 'female')!
+    const kana = dataset.units.find((unit) => unit.fixedParent === corrin.id)!
+    const families = (route: RunPlan['route']) => unitContext(dataset, { ...makeRun(), route }, kana.id)!.pool
+      .map((entry) => classFamily(dataset.classesById.get(entry.classId)!.name))
+    expect(families('conquest')).toContain('Nohr Noble')
+    expect(families('conquest')).not.toContain('Hoshido Noble')
+    expect(families('birthright')).toContain('Hoshido Noble')
+    expect(families('birthright')).not.toContain('Nohr Noble')
+    expect(families('revelation')).toEqual(expect.arrayContaining(['Nohr Noble', 'Hoshido Noble']))
+  })
+
   it('passes the Nohr Prince tree, not the talent, when Corrin is the variable parent', () => {
     const talentClassId = dataset.classes.find((item) => item.name === 'Samurai (M)')!.id
     let run: RunPlan = { ...emptyRun('test'), route: 'revelation', corrin: { ...emptyRun('test').corrin, gender: 'male', talentClassId } }
@@ -66,6 +91,19 @@ describe('Corrin support and child classes', () => {
     expect(inherited).not.toContain('Samurai')
   })
 
+  it('gives Corrin the secondary class of a Kitsune/Wolfskin A-rank partner (Serenes Forest › Class Changing)', () => {
+    const talentClassId = dataset.classes.find((item) => item.name === 'Samurai (M)')!.id
+    const base: RunPlan = { ...emptyRun('test'), route: 'revelation', corrin: { ...emptyRun('test').corrin, gender: 'male', talentClassId } }
+    const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === 'male')!
+    for (const [name, expected] of [['Kaden', 'Diviner'], ['Keaton', 'Fighter']] as const) {
+      const donor = dataset.units.find((unit) => unit.name === name)!
+      const run = toggleFriendshipPartner(base, corrin.id, donor.id)
+      const gained = unitContext(dataset, run, corrin.id)!.pool
+        .filter((entry) => entry.branch === 'aplus').map((entry) => classFamily(dataset.classesById.get(entry.classId)!.name))
+      expect(gained[0]).toBe(expected)
+    }
+  })
+
   it('lists Corrin\'s S choices in route recruit order', () => {
     const run = makeRun()
     const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === 'female')!
@@ -74,7 +112,7 @@ describe('Corrin support and child classes', () => {
     expect(isChild.some(Boolean)).toBe(true)
     expect(isChild).toEqual([...isChild].sort((a, b) => Number(a) - Number(b)))
     for (const group of [false, true]) {
-      const positions = choices.filter((_, index) => isChild[index] === group).map((choice) => dataset.recruitment!.revelation!.get(choice.unit.id)!.order)
+      const positions = choices.filter((_, index) => isChild[index] === group).map((choice) => recruitIndex(dataset, run, choice.unit))
       expect(positions).toEqual([...positions].sort((a, b) => a - b))
     }
   })

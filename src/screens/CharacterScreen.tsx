@@ -8,6 +8,8 @@ import { displayName, unitContext } from '../logic/army'
 import { toggleFavourite } from '../logic/relationships'
 import type { CharacterTab } from '../lib/router'
 import { goBack, navigate } from '../lib/router'
+import { useSwipePager } from '../lib/swipe'
+import { SlideSwap } from '../components/SlideSwap'
 import { AvatarTab } from './character/AvatarTab'
 import { ProfileTab } from './character/ProfileTab'
 import { ProgressionTab } from './character/ProgressionTab'
@@ -19,12 +21,29 @@ const TAB_LABEL: Record<CharacterTab, string> = { avatar: 'Avatar', profile: 'Pr
 export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: string; tab: CharacterTab; embedded?: boolean }) {
   const { dataset, run, readOnly, mutate } = usePlanner()
   const ctx = useMemo(() => unitContext(dataset, run, unitId), [dataset, run, unitId])
+  const articleRef = useRef<HTMLElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
   useLayoutEffect(() => {
+    // On mobile the page scrolls inside its own layer; scrolling the window would move the
+    // roster underneath it.
+    const layer = articleRef.current?.closest('.character-layer')
+    if (layer) {
+      layer.scrollTo(0, 0)
+      return
+    }
     document.querySelector('.main')?.scrollTo(0, 0)
     window.scrollTo(0, 0)
   }, [unitId])
   const heroTabsRef = useRef<HTMLDivElement | null>(null)
   const pinned = useScrolledPast(heroTabsRef)
+  const tabs: CharacterTab[] = ctx ? [
+    ...(ctx.unit.isCorrin ? ['avatar' as const] : []),
+    'profile', 'stats', 'progression',
+    ...(ctx.isChild ? ['parents' as const] : []),
+  ] : []
+  const active = tabs.includes(tab) ? tab : 'profile'
+  const activeIndex = tabs.indexOf(active)
+  useSwipePager(panelRef, activeIndex, tabs.length, (next) => navigate({ name: 'unit', unitId, tab: tabs[next] }, { replace: true }), tabs.length > 1)
   if (!ctx) {
     return (
       <section className="screen character missing">
@@ -33,16 +52,24 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
     )
   }
   const name = displayName(ctx.unit)
-  const tabs: CharacterTab[] = [
-    ...(ctx.unit.isCorrin ? ['avatar' as const] : []),
-    'profile', 'stats', 'progression',
-    ...(ctx.isChild ? ['parents' as const] : []),
-  ]
-  const active = tabs.includes(tab) ? tab : 'profile'
   const favourite = run.favourites.includes(unitId)
 
   return (
-    <article className="screen character" aria-label={name}>
+    <article ref={articleRef} className="screen character" aria-label={name}>
+      {/* Zero-height rail at the top of the page: pinned from the start, so the head slides in and out in place once the hero tabs scroll away. */}
+      <div className="char-sticky">
+        <div className="char-sticky-head" data-shown={pinned} inert={!pinned}>
+          <div className="char-sticky-top">
+            {embedded ? null : (
+              <button type="button" className="icon-btn char-sticky-back" aria-label="Back" onClick={() => goBack()}>
+                <Icon name="arrowLeft" size={24} />
+              </button>
+            )}
+            <h2 className="char-sticky-name">{name}</h2>
+          </div>
+          <CharacterTabs unitId={unitId} name={name} tabs={tabs} active={active} />
+        </div>
+      </div>
       <header className="char-hero">
         <Splash unitId={unitId} name={name} />
         {embedded ? null : (
@@ -60,19 +87,14 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
           </div>
         </div>
       </header>
-      <div className="char-panel" role="tabpanel" aria-label={TAB_LABEL[active]}>
-        {/* Zero-height rail: pins without taking layout space; the head slides in once the hero tabs scroll away. */}
-        <div className="char-sticky">
-          <div className="char-sticky-head" data-shown={pinned} inert={!pinned}>
-            <h2 className="char-sticky-name">{name}</h2>
-            <CharacterTabs unitId={unitId} name={name} tabs={tabs} active={active} />
-          </div>
-        </div>
-        {active === 'avatar' ? <AvatarTab /> : null}
-        {active === 'profile' ? <ProfileTab ctx={ctx} /> : null}
-        {active === 'stats' ? <StatsTab ctx={ctx} /> : null}
-        {active === 'progression' ? <ProgressionTab ctx={ctx} /> : null}
-        {active === 'parents' && ctx.isChild ? <ParentsTab ctx={ctx} /> : null}
+      <div ref={panelRef} className="char-panel" role="tabpanel" aria-label={TAB_LABEL[active]} data-swipe>
+        <SlideSwap index={activeIndex}>
+          {active === 'avatar' ? <AvatarTab /> : null}
+          {active === 'profile' ? <ProfileTab ctx={ctx} /> : null}
+          {active === 'stats' ? <StatsTab ctx={ctx} /> : null}
+          {active === 'progression' ? <ProgressionTab ctx={ctx} /> : null}
+          {active === 'parents' && ctx.isChild ? <ParentsTab ctx={ctx} /> : null}
+        </SlideSwap>
       </div>
     </article>
   )

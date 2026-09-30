@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { Dataset, UnitDef } from '../data/types'
 import { edgePartner, supportPartners } from '../data/types'
 import type { UnitContext } from '../logic/army'
-import { armyUnits, displayName, unitContext } from '../logic/army'
+import { armyUnits, displayName, recruitmentOf, unitContext } from '../logic/army'
 import { classFamily, classPool } from '../logic/classes'
 import type { LensId } from '../logic/lenses'
 import { lensRow } from '../logic/lenses'
@@ -18,7 +18,7 @@ export interface RosterEntry extends RosterSortEntry {
 }
 
 export function recruitIndex(dataset: Dataset, run: RunPlan, unit: UnitDef): number {
-  return dataset.recruitment?.[run.route]?.get(unit.id)?.order ?? 1000 + unit.slot
+  return recruitmentOf(dataset, run, unit.id)?.order ?? 1000 + unit.slot
 }
 
 /**
@@ -107,7 +107,8 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
         if (edge.info.ranks.a === null) return false
         if (!subject.isCorrin) return true
         const id = edgePartner(edge, subjectId)
-        return dataset.unitsById.get(id)?.gender === subject.gender
+        // Corrin's S partner can't double as an A-rank Friendship Seal partner.
+        return dataset.unitsById.get(id)?.gender === subject.gender && run.units[subjectId]?.sPartner !== id
       })
     pool = edges.map((edge) => ({ id: edgePartner(edge, subjectId), fast: edge.info.fast }))
   }

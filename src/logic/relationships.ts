@@ -42,8 +42,22 @@ export function setBond(run: RunPlan, unitId: string, kind: BondKind, partnerId:
       units = edit(units, unitId, (plan) => ({ ...plan, pairRole: role }))
       units = edit(units, partnerId, (plan) => ({ ...plan, pairRole: role === 'front' ? 'back' : 'front' }))
     }
+    // Corrin's S partner can't also be one of Corrin's A-rank Friendship Seal partners.
+    if (kind === 'sPartner') {
+      units = dropFriendshipPartner(units, unitId, partnerId)
+      units = dropFriendshipPartner(units, partnerId, unitId)
+    }
   }
   return { ...run, units }
+}
+
+function dropFriendshipPartner(units: Units, ownerId: string, partnerId: string): Units {
+  const current = units[ownerId]?.friendshipPartners
+  if (!current?.includes(partnerId)) return units
+  return edit(units, ownerId, ({ friendshipPartners: _old, ...plan }) => {
+    const next = current.filter((id) => id !== partnerId)
+    return next.length ? { ...plan, friendshipPartners: next } : plan
+  })
 }
 
 export function setPairRole(run: RunPlan, unitId: string, role: PairRole): RunPlan {

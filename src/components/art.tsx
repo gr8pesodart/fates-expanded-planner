@@ -107,6 +107,40 @@ function useAnimationIndex(sequence: SpriteAnimationFrame[] | undefined, enabled
   return sequence?.length ? index % sequence.length : 0
 }
 
+const decodedImages = new Set<string>()
+const decoding = new Map<string, Promise<void>>()
+
+function decodeImage(src: string): Promise<void> {
+  const existing = decoding.get(src)
+  if (existing) return existing
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = src
+  // A failed load still settles, so a missing file can't hold the sprite back forever.
+  const done = image.decode().catch(() => {}).then(() => { decodedImages.add(src) })
+  decoding.set(src, done)
+  return done
+}
+
+/**
+ * True once every image has decoded. Heads and bodies are separate files; revealing the sprite
+ * only when both are ready stops a headless body (or a floating head) flashing in first.
+ */
+function useImagesReady(urls: readonly string[]): boolean {
+  const key = urls.join('|')
+  const ready = urls.every((url) => decodedImages.has(url))
+  const [, rerender] = useState(0)
+  useEffect(() => {
+    if (ready || !key) return
+    let cancelled = false
+    void Promise.all(key.split('|').map(decodeImage)).then(() => {
+      if (!cancelled) rerender((count) => count + 1)
+    })
+    return () => { cancelled = true }
+  }, [key, ready])
+  return ready
+}
+
 export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: { unitId: string | null; classId: number; name: string; size?: number; tile?: boolean }) {
   const layers = spriteLayers(unitId, classId)
   const spriteRef = useRef<HTMLSpanElement | null>(null)
@@ -114,15 +148,17 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: 
   const animation = layers?.kind === 'stitched' ? layers.body.animation : layers?.kind === 'single' ? layers.image.animation : undefined
   const animationIndex = useAnimationIndex(animation, visible)
   const frame = animation?.[animationIndex]
+  const head = layers?.kind === 'stitched'
+    ? layers.offset?.variant === 'small' ? layers.smallHead ?? layers.head : layers.head
+    : null
+  const ready = useImagesReady(!layers ? [] : layers.kind === 'single' ? [layers.image.file] : [layers.body.file, ...(head ? [head.file] : [])])
   const wrap = (content: ReactNode) => (
     <span ref={spriteRef} className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
   )
   if (!layers) return wrap(<span className="sprite-mono">{monogram(name)}</span>)
+  if (!ready) return wrap(null)
   if (layers.kind === 'single' && !layers.image.layers && !layers.image.frameCount) return wrap(<img className="sprite-single" src={layers.image.file} alt="" draggable={false} />)
   const body = layers.kind === 'single' ? layers.image : layers.body
-  const head = layers.kind === 'stitched'
-    ? layers.offset?.variant === 'small' ? layers.smallHead ?? layers.head : layers.head
-    : null
   const offset = layers.kind !== 'stitched' ? null
     : frame?.[2] !== undefined && frame[3] !== undefined ? { x: frame[2], y: frame[3] } : layers.offset
   const bodyCell = frame?.[0] ?? 0

@@ -104,7 +104,7 @@ def validate_entry(entry: dict, route: str, index: int, units: dict[str, dict], 
     if cls["id"] not in pool:
         v.warn(where, f"{entry['name']}'s join class {cls['name']} is not in the unit's class pool")
 
-    return {
+    row = {
         "unit": unit_id,
         "order": 0,
         "chapter": entry["chapter"],
@@ -112,6 +112,16 @@ def validate_entry(entry: dict, route: str, index: int, units: dict[str, dict], 
         "joinClassId": cls["id"],
         "optional": entry["optional"],
     }
+    # Jakob/Felicia: the retainer of Corrin's own gender joins after Chapter 15 instead.
+    late = entry.get("lateIfCorrin")
+    if late is not None:
+        for key in ("gender", "chapter", "chapterSortKey", "joinLevel"):
+            if key not in late:
+                fail(f"{where}: lateIfCorrin is missing '{key}'")
+        if late["gender"] not in ("male", "female"):
+            fail(f"{where}: lateIfCorrin.gender must be male or female")
+        row["_late"] = late
+    return row
 
 
 def build(source: dict, units_data: dict, classes_data: dict, v: Validator) -> dict:
@@ -137,6 +147,20 @@ def build(source: dict, units_data: dict, classes_data: dict, v: Validator) -> d
         built.sort(key=lambda pair: pair[0])
         for order, (_, row) in enumerate(built):
             row["order"] = order
+        for _, row in built:
+            late = row.pop("_late", None)
+            if late is None:
+                continue
+            # Slot in after every unit sorting at or before the late key (fractional, so the
+            # default orders of everyone else stay untouched).
+            before = [other["order"] for key, other in built if other is not row and key <= late["chapterSortKey"]]
+            row["ifCorrin"] = {
+                late["gender"]: {
+                    "order": (max(before) if before else -1) + 0.5,
+                    "chapter": late["chapter"],
+                    "joinLevel": late["joinLevel"],
+                }
+            }
         out_routes[route] = [row for _, row in built]
 
     return {

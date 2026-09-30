@@ -3,7 +3,7 @@ import { usePlanner } from '../../app/plannerContext'
 import { ClassSprite } from '../../components/art'
 import { Segmented } from '../../components/controls'
 import { StatTable } from '../../components/StatTable'
-import { displayName, unitContext } from '../../logic/army'
+import { displayName, recruitmentOf, unitContext } from '../../logic/army'
 import { classFamily, classPool } from '../../logic/classes'
 import { lensRow } from '../../logic/lenses'
 import { setVariableParent } from '../../logic/relationships'
@@ -46,7 +46,7 @@ export function ParentsTab({ ctx }: { ctx: UnitContext }) {
     return {
       ...choice,
       earlierThanPrimary,
-      availability: dataset.recruitment?.[run.route]?.get(choice.unit.id)?.chapter ?? 'Route start',
+      availability: recruitmentOf(dataset, run, choice.unit.id)?.chapter ?? 'Route start',
       inherited,
       modifiers: candidateCtx ? lensRow(dataset, candidateRun, candidateCtx, 'statModifiers') : [],
       growths: candidateCtx ? lensRow(dataset, candidateRun, candidateCtx, 'personalGrowths') : [],
