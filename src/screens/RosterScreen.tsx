@@ -87,7 +87,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, active, referenceRows
         <div className="roster-id">
           <Portrait unitId={unitId} name={name} className="chip-32" />
           <button type="button" className="sprite-btn" aria-label={`${classDef?.name ?? 'Class'} — choose ${name}'s class`} disabled={readOnly} onClick={() => openPicker({ classes: unitId })}>
-            <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={28} />
+            <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
           </button>
           <span className="unit-name">{name}</span>
           <StarButton on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((run) => toggleFavourite(run, unitId))} />

@@ -66,7 +66,7 @@ function ChartRow({ entry }: { entry: RosterEntry }) {
     <div className="chart-row" onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
       <div className="roster-id">
         <Portrait unitId={unitId} name={name} className="chip-24" />
-        <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={24} />
+        <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
         <span className="unit-name">{name}</span>
         <StarButton on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((run) => toggleFavourite(run, unitId))} />
       </div>
