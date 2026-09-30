@@ -36,5 +36,5 @@ export function assetEntry(kind: AssetKind, id: string | number): AssetEntry | u
 
 export function assetUrl(kind: AssetKind, id: string | number): string | undefined {
   const entry = assetEntry(kind, id)
-  return entry ? `${BASE_URL}${entry.file}` : undefined
+  return entry ? `${BASE_URL}${entry.file}?v=${encodeURIComponent(ASSET_MANIFEST.generatedAt)}` : undefined
 }

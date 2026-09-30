@@ -38,14 +38,15 @@ export interface SplashEntry {
   focal: { x: number; y: number }
 }
 
-interface PortraitManifest { units: Record<string, PortraitEntry> }
+interface PortraitManifest { generatedAt?: string; units: Record<string, PortraitEntry> }
 interface SpriteManifest {
+  generatedAt?: string
   bodies: Record<string, SpriteBody>
   heads: Record<string, SpriteHead>
   genericHeads?: Record<string, SpriteHead>
   unique?: Record<string, Record<string, SpriteImage>>
 }
-interface SplashManifest { units: Record<string, SplashEntry> }
+interface SplashManifest { generatedAt?: string; units: Record<string, SplashEntry> }
 
 const manifests = import.meta.glob<{ default: unknown }>(['./portraits.json', './sprites.json', './splash.json'], { eager: true })
 
@@ -60,7 +61,9 @@ const SPLASH = manifest<SplashManifest>('splash')
 export const ASSETS_ENABLED = import.meta.env.VITE_ASSETS !== 'off'
 
 const BASE_URL = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`
-const url = (file: string) => `${BASE_URL}${file}`
+// Asset URLs carry the manifest's generation stamp: the service worker caches images CacheFirst by
+// URL, and regenerated files keep their names (the sprite strips changed layout on regeneration).
+const url = (file: string, version?: string) => `${BASE_URL}${file}${version ? `?v=${encodeURIComponent(version)}` : ''}`
 
 export interface PortraitArt {
   src: string
@@ -73,7 +76,7 @@ export interface PortraitArt {
 export function portraitArt(unitId: string, crop: 'face' | 'bust'): PortraitArt | null {
   if (!ASSETS_ENABLED) return null
   const entry = PORTRAITS?.units[unitId]
-  if (entry) return { src: url(entry.file), box: entry[crop], w: entry.w, h: entry.h }
+  if (entry) return { src: url(entry.file, PORTRAITS?.generatedAt), box: entry[crop], w: entry.w, h: entry.h }
   const legacy = assetUrl('unit', unitId)
   return legacy ? { src: legacy, box: null, w: 128, h: 128 } : null
 }
@@ -99,11 +102,11 @@ export function spriteLayers(unitId: string | null, classId: number): SpriteLaye
 }
 
 function withUrl<T extends SpriteImage>(image: T): T {
-  return { ...image, file: url(image.file) }
+  return { ...image, file: url(image.file, SPRITES?.generatedAt) }
 }
 
 export function splashArt(unitId: string): (SplashEntry & { src: string }) | null {
   if (!ASSETS_ENABLED) return null
   const entry = SPLASH?.units[unitId]
-  return entry ? { ...entry, src: url(entry.file) } : null
+  return entry ? { ...entry, src: url(entry.file, SPLASH?.generatedAt) } : null
 }

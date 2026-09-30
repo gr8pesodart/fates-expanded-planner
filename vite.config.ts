@@ -39,10 +39,12 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,json,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /assets\/.*\.webp$/,
+            // URLs carry ?v=<manifest generatedAt>, so regenerated art is fetched fresh; the cache
+            // was renamed when the sprite files changed layout under the same names.
+            urlPattern: /assets\/.*\.webp(\?.*)?$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'game-assets',
+              cacheName: 'game-assets-v2',
               expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
