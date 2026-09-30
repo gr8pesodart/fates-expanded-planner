@@ -12,6 +12,9 @@ import { registerUpdates } from './app/pwa'
 
 registerUpdates()
 
+// iOS Safari ignores user-scalable=no, so pinch-zoom has to be cancelled at its gesture events.
+document.addEventListener('gesturestart', (event) => event.preventDefault(), { passive: false })
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

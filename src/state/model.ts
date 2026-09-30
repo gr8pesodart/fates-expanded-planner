@@ -39,6 +39,11 @@ export interface UnitPlan {
   inheritFixedSkill?: number
   reclasses: Reclass[]
   eternalSeals?: number
+  /**
+   * Corrin only: same-gender partners Corrin plans to reach A with. Corrin can't hold an A+ rank but
+   * can Friendship Seal into any of these partners' classes (Fire Emblem Wiki › Friendship Seal).
+   */
+  friendshipPartners?: string[]
   /** Recruitment level for units whose join level depends on when they're recruited. */
   joinLevel?: number
 }

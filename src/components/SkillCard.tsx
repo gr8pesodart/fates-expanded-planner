@@ -25,8 +25,10 @@ export function SkillCard({ skill, locked = false, onClick, tag, emptyText = 'Ta
         {skill
           ? <SkillIcon skillId={skill.id} name={skill.name} size={32} />
           : <span className="skill-icon" style={{ width: 32, height: 32 }} aria-hidden="true"><Icon name="plus" size={18} /></span>}
-        {locked ? <Icon name="lock" size={16} className="skill-card-lock" /> : null}
-        <span className="skill-card-name">{skill?.name ?? 'Empty slot'}</span>
+        <span className="skill-card-name">
+          {locked ? <Icon name="lock" size={12} className="skill-card-lock" /> : null}
+          {skill?.name ?? 'Empty slot'}
+        </span>
       </span>
       <span className="skill-card-desc">
         {skill ? skill.description ?? 'No description.' : <span>{emptyText}</span>}

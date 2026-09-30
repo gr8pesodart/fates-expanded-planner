@@ -43,6 +43,8 @@ function isRunPlan(value: unknown): value is RunPlan {
     if (unit.inheritFixedSkill !== undefined && typeof unit.inheritFixedSkill !== 'number') return false
     if (unit.eternalSeals !== undefined && typeof unit.eternalSeals !== 'number') return false
     if (unit.joinLevel !== undefined && typeof unit.joinLevel !== 'number') return false
+    if (unit.friendshipPartners !== undefined && (!Array.isArray(unit.friendshipPartners) ||
+      !unit.friendshipPartners.every((id) => typeof id === 'string'))) return false
     if (unit.pairRole !== undefined && unit.pairRole !== 'front' && unit.pairRole !== 'back') return false
   }
 

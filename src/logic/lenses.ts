@@ -2,6 +2,7 @@ import type { Dataset } from '../data/types'
 import type { RunPlan } from '../state/model'
 import type { UnitContext } from './army'
 import { pairRank } from './army'
+import { sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
 import { projectUnit } from './stats'
 
@@ -99,4 +100,42 @@ export function formatCell(value: number | null, signed: boolean): string {
   if (value === null) return '-'
   const rounded = Number.isInteger(value) ? String(value) : value.toFixed(1)
   return signed && value > 0 ? `+${rounded}` : rounded
+}
+
+const CLASS_LENSES: ReadonlySet<LensId> = new Set(['baseStats', 'classGrowths', 'classPairUp'])
+const playableCache = new WeakMap<Dataset, number[]>()
+
+/** Classes some playable unit can reach (own sets, reclass sets, their promotions, DLC); excludes enemy-only classes. */
+function playableClassIds(dataset: Dataset): number[] {
+  const cached = playableCache.get(dataset)
+  if (cached) return cached
+  const ids = new Set<number>()
+  const visit = (id: number) => {
+    const def = dataset.classesById.get(id)
+    if (!def || ids.has(id)) return
+    ids.add(id)
+    def.promotesTo.forEach(visit)
+  }
+  for (const unit of dataset.units) [...unit.classes, ...unit.reclasses].forEach(visit)
+  for (const def of dataset.classes) if (def.dlc) ids.add(def.id)
+  const list = [...ids]
+  playableCache.set(dataset, list)
+  return list
+}
+
+/**
+ * Which classes a lens row is coloured against. Class lenses compare the class with every playable
+ * class of its tier ("Nohr Princess against other base classes"); effective lenses compare the
+ * unit's own options at that tier, since they fold in the unit's personal values.
+ */
+export function colourReferenceClassIds(dataset: Dataset, run: RunPlan, ctx: UnitContext, lens: LensId, classId: number, ownClassIds: readonly number[]): number[] {
+  const tier = dataset.classesById.get(classId)?.tier
+  if (!CLASS_LENSES.has(lens)) return ownClassIds.filter((id) => dataset.classesById.get(id)?.tier === tier)
+  const ids = new Set<number>()
+  for (const id of playableClassIds(dataset)) {
+    const def = dataset.classesById.get(id)
+    if (!def || def.tier !== tier || (def.dlc && !run.dlc)) continue
+    ids.add(sexedClassId(dataset, id, ctx.unit.gender))
+  }
+  return [...ids]
 }

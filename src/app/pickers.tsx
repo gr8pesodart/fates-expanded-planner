@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ClassSprite, Portrait } from '../components/art'
 import { Icon } from '../components/icons'
 import type { SlotKind } from '../components/slots'
-import { SLOT_LABEL } from '../components/slots'
+import { slotLabel } from '../components/slots'
 import { Sheet } from '../components/Sheet'
 import { Segmented } from '../components/controls'
 import { SortIcon } from '../components/SortIcon'
@@ -15,6 +15,7 @@ import type { ClassPoolEntry } from '../logic/classes'
 import { buildProgression, dlcClassesFor } from '../logic/progression'
 import type { RosterSort } from '../logic/rosterSort'
 import { directionOfSort } from '../logic/rosterSort'
+import { toggleFriendshipPartner } from '../logic/relationships'
 import { inheritableSkillPool, skillPool } from '../logic/skills'
 import { SKILL_SLOTS, emptyUnitPlan } from '../state/model'
 import { applyBond, bondOf, usePickers } from './pickerStore'
@@ -40,19 +41,28 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
   if (!owner) return null
   const ownerName = displayName(owner)
   const subjectId = kind === 'parent' ? owner.fixedParent : unitId
-  const current = subjectId ? run.units[subjectId]?.[bondOf(kind)] : undefined
+  // Corrin has no A+; the A slot is a set of planned Friendship Seal partners, so picks toggle.
+  const multi = kind === 'a' && owner.isCorrin
+  const chosen = multi ? run.units[unitId]?.friendshipPartners ?? [] : []
+  const current = subjectId && !multi ? run.units[subjectId]?.[bondOf(kind)] : undefined
+  const isPicked = (id: string) => (multi ? chosen.includes(id) : id === current)
   const pick = (partnerId: string | null) => {
+    if (multi) {
+      mutate((next) => toggleFriendshipPartner(next, unitId, partnerId))
+      return
+    }
     mutate((next) => applyBond(dataset, next, unitId, kind, partnerId))
     onClose()
   }
   const shown = candidates.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()))
   return (
     <Sheet
-      title={`${SLOT_LABEL[kind]} for ${ownerName}`}
+      title={`${slotLabel(kind, owner.isCorrin)} for ${ownerName}`}
       onClose={onClose}
       wide
-      actions={current ? <button type="button" className="text-btn" onClick={() => pick(null)}>Clear</button> : null}
+      actions={current || chosen.length ? <button type="button" className="text-btn" onClick={() => pick(null)}>Clear</button> : null}
     >
+      {multi ? <p className="empty-note pick-hint">Corrin can't have an A+ rank, but can Friendship Seal into the class of any same-gender A-rank partner. Pick the ones you plan to reach.</p> : null}
       <label className="search">
         <Icon name="search" size={18} />
         <input type="search" placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search characters" />
@@ -64,7 +74,7 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
             key={item.unit.id}
             type="button"
             className="pick-card"
-            aria-pressed={item.unit.id === current}
+            aria-pressed={isPicked(item.unit.id)}
             onClick={() => pick(item.unit.id)}
           >
             <Portrait unitId={item.unit.id} name={item.name} crop="bust" className="pick-art" />
@@ -78,6 +88,7 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
           </button>
         ))}
       </div>
+      {multi ? <button type="button" className="btn primary sort-done" onClick={onClose}>Done</button> : null}
     </Sheet>
   )
 }

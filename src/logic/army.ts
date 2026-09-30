@@ -43,6 +43,8 @@ export interface UnitContext {
   variableParent: UnitDef | undefined
   sPartner: UnitDef | undefined
   aPlusPartner: UnitDef | undefined
+  /** Corrin only: the eligible planned Friendship Seal partners (Corrin has no A+). */
+  friendshipPartners: UnitDef[]
   pairPartner: UnitDef | undefined
   pool: ClassPoolEntry[]
   start: ClassStart
@@ -75,12 +77,13 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
   const sPartner = partner(dataset, plan.sPartner)
   const aPlusPartner = partner(dataset, plan.aPlusPartner)
   const rosterIds = new Set(armyUnits(dataset, run).map((entry) => entry.id))
+  // Corrin's Friendship Seal partners: the planned ones that are still eligible (same gender, can
+  // reach A, on this roster). A gender switch or route change quietly drops the rest.
   const friendshipDonors = unit.isCorrin
-    ? (dataset.edgesByCharacter.get(unit.id) ?? []).flatMap((edge) => {
-      if (edge.info.ranks.a === null) return []
-      const id = edge.a === unit.id ? edge.b : edge.a
+    ? (plan.friendshipPartners ?? []).flatMap((id) => {
       const donor = dataset.unitsById.get(id)
-      return donor && donor.gender === unit.gender && rosterIds.has(id) ? [donor] : []
+      const reachesA = (dataset.edgesByCharacter.get(unit.id) ?? []).some((edge) => (edge.a === id || edge.b === id) && edge.info.ranks.a !== null)
+      return donor && reachesA && donor.gender === unit.gender && rosterIds.has(id) ? [donor] : []
     })
     : []
   const pool = classPool(dataset, unit, {
@@ -100,6 +103,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     variableParent,
     sPartner,
     aPlusPartner,
+    friendshipPartners: friendshipDonors,
     pairPartner: partner(dataset, plan.pairPartner),
     pool,
     start,

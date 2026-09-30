@@ -69,6 +69,17 @@ export function setVariableParent(dataset: Dataset, run: RunPlan, childId: strin
   return fixed ? setBond(run, fixed, 'sPartner', parentId) : run
 }
 
+/** Corrin's planned A-rank partners are a set, not an exclusive bond: add or remove one; null clears all. */
+export function toggleFriendshipPartner(run: RunPlan, corrinId: string, partnerId: string | null): RunPlan {
+  const units = edit(run.units, corrinId, ({ friendshipPartners = [], ...plan }) => {
+    const next = partnerId === null ? []
+      : friendshipPartners.includes(partnerId) ? friendshipPartners.filter((id) => id !== partnerId)
+        : [...friendshipPartners, partnerId]
+    return next.length ? { ...plan, friendshipPartners: next } : plan
+  })
+  return { ...run, units }
+}
+
 export function toggleFavourite(run: RunPlan, unitId: string): RunPlan {
   const favourites = run.favourites.includes(unitId)
     ? run.favourites.filter((id) => id !== unitId)

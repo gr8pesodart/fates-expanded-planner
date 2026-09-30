@@ -93,7 +93,8 @@ areas may extend past the visible chip.
 - **ClassSprite**: the stitched, animated idle map sprite (body + the unit's head, see *Assets*).
   It has no background tile on the Roster or Chart, but keeps a tile in the class picker.
 - **SkillIcon** (20–32px) and **SkillCard** (icon over name on the left, description on the right;
-  12px `--ink-2`). The locked personal-skill card uses `--surface-2` fill and no border.
+  12px `--ink-2`). The locked personal-skill card uses `--surface-2` fill and no border, with a 12px
+  `--ink-2` lock inline to the left of the skill name (no "Personal skill" label).
 - **BottomNav**: Roster / Chart / Runs, with icons at 30px and 12px/600 labels. The active item uses
   the filled icon variant and `--accent` colour. The bar is 97px tall with a `--line` top border and
   respects the safe area.
@@ -165,6 +166,12 @@ areas may extend past the visible chip.
   (the class the Partner or Friendship Seal unlocks); for Pair Up it's a **Front / Back**
   Segmented. Children choose their variable parent on the separate Parents tab, which writes the
   fixed parent's S slot.
+- **Corrin's middle column is "A Rank"** (glyph `A`): Corrin can't hold an A+ rank but can Friendship
+  Seal into any same-gender A-rank partner's class. The slot is a multi-select set: the picker toggles
+  partners without closing (Clear / Done), the card shows the first partner as "*Name* +N", and the
+  caption lists every class gained. Only planned partners join Corrin's class pool. The Roster slot
+  shows the first partner with a "+N" corner badge in the slot hue, and the pair-up picker floats
+  them up with an "A rank" badge.
 - **Classes**: the heading with a Base / Advanced / All Segmented on the right, then a pill
   StatLensRail of class-relevant lenses (Base Stats (Class), Max Stats (Effective), Growth Rates
   (Class), Growth Rates (Effective), Pair Up Bonuses (Class), Pair Up Bonuses (Effective)).
@@ -179,9 +186,11 @@ areas may extend past the visible chip.
 
 ### Parents tab — children only
 
-The Parents tab lists first-generation candidates with a Recruit, Name or Chapter sort control.
-Each candidate shows route availability (muted with an explanatory note when it predates the fixed
-parent), the inherited class tree with sprites, inherited stat modifiers and personal growth rates.
+The Parents tab lists the fixed parent's possible spouses (first-generation only, except Kana: Corrin
+can marry into the second generation) with a Recruit, Name or Chapter sort control. Each candidate
+shows route availability (`--ink`; `--ink-2` plus "· available before *fixed parent*" when they join
+earlier), the inherited class tree drawn with **the child's** sprites, and the child's resulting
+stat modifiers and growth rates.
 
 ### Stats tab (`3:5892`)
 
@@ -192,7 +201,9 @@ These are sections of labelled StatTables with `--line` dividers between section
 - **Class**: a pill rail of the unit's classes (defaults to the current class; this selection only
   changes what this section shows), then Base Stats, Class Growth Rates and Class Pair Up Bonuses.
   Class comparisons are limited to the selected class's tier. Every stat lens uses dynamic low /
-  average / high coloring against its available comparison set, applied to the value's text
+  average / high coloring against its available comparison set (`colourReferenceClassIds`: Class
+  lenses against every playable class of the same tier; Effective lenses against the unit's own
+  classes of the shown class's tier; Personal lenses against the army), applied to the value's text
   (bold) — cells keep their neutral fill. `-` placeholders (no value) use `--ink-2`. Mov is a value only in Max Stats and Base Stats; the
   other lenses show `-` there.
 
@@ -290,6 +301,8 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
   the build's support graph: support speed (fast), and "Taken" when the candidate is already in
   another relationship of the same kind (still selectable; confirming shows what gets unlinked).
   Candidates that the graph disallows for this slot are hidden. A "Clear" action is in the header.
+  Order: current S then A+ partners first (pair-up, with an "S rank" / "A+ rank" badge), then recruit
+  order as the Roster shows it: every first-generation unit before any child.
   S and A+ show the "Gains *Class*" line under each candidate.
 - **Class popup**: classes available to the unit, grouped by source (Own, Parent, Partner Seal,
   Friendship Seal, Talent, DLC) as sprite + name rows. The current class has an accent check.

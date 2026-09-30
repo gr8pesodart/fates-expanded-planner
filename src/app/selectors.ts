@@ -21,6 +21,15 @@ export function recruitIndex(dataset: Dataset, run: RunPlan, unit: UnitDef): num
   return dataset.recruitment?.[run.route]?.get(unit.id)?.order ?? 1000 + unit.slot
 }
 
+/**
+ * Recruit order as the Roster shows it: every first-generation unit before any child. The raw
+ * recruitment index puts paralogues just after Chapter 7, which would slot children mid-list.
+ */
+export function compareRecruitOrder(dataset: Dataset, run: RunPlan, a: UnitDef, b: UnitDef): number {
+  const generation = Number(a.fixedParent !== null) - Number(b.fixedParent !== null)
+  return generation || recruitIndex(dataset, run, a) - recruitIndex(dataset, run, b)
+}
+
 export function rosterEntries(dataset: Dataset, run: RunPlan, lens: LensId): RosterEntry[] {
   return armyUnits(dataset, run).flatMap((unit) => {
     const ctx = unitContext(dataset, run, unit.id)
@@ -61,7 +70,7 @@ export interface Candidate {
   fast: boolean
   /** Class the Partner/Friendship Seal grants the chooser (S / A+ only). */
   gains: string | null
-  rankBadge: 'S' | 'A+' | null
+  rankBadge: 'S' | 'A+' | 'A' | null
 }
 
 function sealBranchName(dataset: Dataset, run: RunPlan, owner: UnitDef, donor: UnitDef, kind: 'seal' | 'aplus'): string | null {
@@ -113,13 +122,14 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
       const gains = kind === 's' || kind === 'a' ? sealBranchName(dataset, run, subject, unit, kind === 's' ? 'seal' : 'aplus') : null
       const rankBadge: Candidate['rankBadge'] = kind === 'pair' && run.units[subjectId]?.sPartner === id ? 'S'
         : kind === 'pair' && run.units[subjectId]?.aPlusPartner === id ? 'A+'
-          : null
+          : kind === 'pair' && run.units[subjectId]?.friendshipPartners?.includes(id) ? 'A'
+            : null
       return [{ unit, name: displayName(unit), takenBy: kind === 'a' ? null : takenBy, fast, gains, rankBadge }]
     })
     .sort((a, b) => {
-      const rankOrder = (item: Candidate) => item.rankBadge === 'S' ? 0 : item.rankBadge === 'A+' ? 1 : 2
+      const rankOrder = (item: Candidate) => item.rankBadge === 'S' ? 0 : item.rankBadge ? 1 : 2
       const rankDiff = rankOrder(a) - rankOrder(b)
       if (rankDiff) return rankDiff
-      return recruitIndex(dataset, run, a.unit) - recruitIndex(dataset, run, b.unit)
+      return compareRecruitOrder(dataset, run, a.unit, b.unit)
     })
 }

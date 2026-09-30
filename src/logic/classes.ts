@@ -168,12 +168,16 @@ export function classPool(dataset: Dataset, unit: UnitDef, options: PoolOptions 
   ) => {
     if (!donor) return
     const label = `${prefix}: ${donor.name}`
-    if (donor.isCorrin && options.corrinTalentClassId) {
+    const viaSeal = branch !== 'parent'
+    // A seal can't grant Nohr Prince(ss), so Corrin's seal partners get the talent instead. As a
+    // variable parent (Shigure), Corrin passes the Nohr Prince(ss) tree, never the talent
+    // (Fire Emblem Wiki › Shigure); only Kana, with Corrin as fixed parent, gets the talent.
+    if (viaSeal && donor.isCorrin && options.corrinTalentClassId) {
       if (addBranch(baseOfClass(dataset, options.corrinTalentClassId), branch, label)) return
     }
     const primary = primaryBaseClass(dataset, donor)
     const primaryDef = primary !== null ? dataset.classesById.get(primary) : undefined
-    const sealBlocked = primaryDef ? NON_INHERITABLE_VIA_SEAL.has(classFamily(primaryDef.name)) : false
+    const sealBlocked = viaSeal && primaryDef ? NON_INHERITABLE_VIA_SEAL.has(classFamily(primaryDef.name)) : false
     if (!sealBlocked && addBranch(primary, branch, label)) return
     for (const fallback of secondaryBases(dataset, donor)) {
       if (addBranch(fallback, branch, label)) return

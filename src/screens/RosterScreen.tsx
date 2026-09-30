@@ -59,7 +59,9 @@ const RosterRow = memo(function RosterRow({ entry, signed, active, referenceRows
     ['s', partner(ctx.sPartner)],
     ['pair', partner(ctx.pairPartner)],
   ]
-  if (!ctx.unit.isCorrin) slots.splice(1, 0, ['a', partner(ctx.aPlusPartner)])
+  // Corrin's A slot shows the first planned Friendship Seal partner (Corrin has no A+).
+  slots.splice(1, 0, ['a', partner(ctx.unit.isCorrin ? ctx.friendshipPartners[0] : ctx.aPlusPartner)])
+  const more = ctx.unit.isCorrin ? Math.max(0, ctx.friendshipPartners.length - 1) : 0
   if (ctx.isChild) slots.splice(2, 0, ['parent', partner(ctx.variableParent)])
   const open = () => navigate({ name: 'unit', unitId, tab: 'profile' })
   return (
@@ -75,7 +77,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, active, referenceRows
         </div>
         <div className="roster-actions">
           {slots.map(([kind, value]) => (
-            <RelationSlot key={kind} kind={kind} partner={value} ownerName={name} disabled={readOnly} onClick={() => openPicker({ character: { unitId, kind } })} />
+            <RelationSlot key={kind} kind={kind} partner={value} ownerName={name} corrin={ctx.unit.isCorrin} more={kind === 'a' ? more : 0} disabled={readOnly} onClick={() => openPicker({ character: { unitId, kind } })} />
           ))}
           <EditButton label={`Open ${name}`} onClick={open} />
         </div>

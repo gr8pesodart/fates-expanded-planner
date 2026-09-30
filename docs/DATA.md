@@ -166,10 +166,16 @@ The current planner therefore does not include inherited support rows in child p
   - duplicates fall back to the contributor's next branch; Songstress never inherits (it stays in
     Azura's own set); Nohr
     Prince(ss)/Wolfskin/Kitsune/Villager can only come from parents (not seals)
-  - Corrin's chosen talent joins Corrin's pool; any child whose parent is Corrin inherits the
-    talent's branch in place of Corrin's (Nohr Prince(ss)) primary
-  - Corrin's Friendship Seal is not limited to a chosen A+ partner: every same-gender unit Corrin
-    can reach A with contributes a branch
+  - Corrin's chosen talent joins Corrin's pool. **Kana** (Corrin as fixed parent) inherits the
+    talent's branch; a child with Corrin as the **variable** parent (e.g. Shigure) inherits the Nohr
+    Prince(ss) tree and never the talent (Fire Emblem Wiki › Shigure). Seal partners of Corrin get
+    the talent, since seals can't grant Nohr Prince(ss)
+  - A+ supports are one-way and Corrin can neither give nor take one (Fire Emblem Wiki › Support:
+    "unlike other supports, they are not mutual"; "Units cannot unlock A+ supports with Corrin")
+  - Corrin's Friendship Seal works with any same-gender A-rank partner, not one A+ partner (Fire
+    Emblem Wiki › Friendship Seal). The plan stores the ones the player intends to reach
+    (`UnitPlan.friendshipPartners`, Corrin only); each still-eligible one (same gender, reaches A,
+    on the roster) contributes a branch
   - Nohr Prince(ss) promotes to Nohr Noble on Conquest, Hoshido Noble on Birthright, either on
     Revelation (`progression.ts`)
 - `stats.ts` — `stats = personal bases + class bases`; `growths = personal + class` (personal

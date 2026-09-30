@@ -6,14 +6,14 @@ import { ClassSprite } from '../../components/art'
 import { Rail, Segmented } from '../../components/controls'
 import type { SlotKind } from '../../components/slots'
 import { RelationCard } from '../../components/relations'
-import { SLOT_LABEL } from '../../components/slots'
+import { slotLabel } from '../../components/slots'
 import { SkillCard } from '../../components/SkillCard'
 import { StatTable } from '../../components/StatTable'
 import type { UnitDef } from '../../data/types'
 import type { UnitContext } from '../../logic/army'
 import { displayName, personalSkill } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
-import { CLASS_CARD_LENSES, lensDef, lensRow } from '../../logic/lenses'
+import { CLASS_CARD_LENSES, colourReferenceClassIds, lensDef, lensRow } from '../../logic/lenses'
 import { setPairRole } from '../../logic/relationships'
 import { sealGain, skillView, unitClassIds } from '../../app/unitViews'
 import { emptyUnitPlan, SKILL_SLOTS } from '../../state/model'
@@ -26,9 +26,15 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
   const person = (unit: UnitDef | undefined) => (unit ? { id: unit.id, name: displayName(unit) } : null)
   const role = ctx.plan.pairRole ?? 'front'
 
-  const relations: { kind: SlotKind; partner: ReturnType<typeof person>; caption: ReactNode }[] = [
+  // Corrin can't hold an A+ rank; the A slot lists planned A-rank Friendship Seal partners instead.
+  const friendshipGains = [...new Set(ctx.pool
+    .filter((entry) => entry.branch === 'aplus' && dataset.classesById.get(entry.classId)?.tier === 'base')
+    .map((entry) => classFamily(dataset.classesById.get(entry.classId)!.name)))]
+  const relations: { kind: SlotKind; partner: ReturnType<typeof person>; caption: ReactNode; more?: number }[] = [
     { kind: 's', partner: person(ctx.sPartner), caption: ctx.sPartner ? gainsCaption(sealGain(ctx, dataset, 'seal')) : null },
-    ...(ctx.unit.isCorrin ? [] : [{ kind: 'a' as const, partner: person(ctx.aPlusPartner), caption: ctx.aPlusPartner ? gainsCaption(sealGain(ctx, dataset, 'aplus')) : null }]),
+    ctx.unit.isCorrin
+      ? { kind: 'a', partner: person(ctx.friendshipPartners[0]), more: Math.max(0, ctx.friendshipPartners.length - 1), caption: gainsCaption(friendshipGains.join(', ') || null) }
+      : { kind: 'a', partner: person(ctx.aPlusPartner), caption: ctx.aPlusPartner ? gainsCaption(sealGain(ctx, dataset, 'aplus')) : null },
   ]
   relations.push({
     kind: 'pair',
@@ -63,8 +69,8 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
         <div className="rel-grid" data-count={relations.length}>
           {relations.map((item) => (
             <div key={item.kind} className="rel-col">
-              <h3 className="sub-title">{SLOT_LABEL[item.kind]}</h3>
-              <RelationCard kind={item.kind} partner={item.partner} disabled={readOnly} onClick={() => openPicker({ character: { unitId, kind: item.kind } })} />
+              <h3 className="sub-title">{slotLabel(item.kind, ctx.unit.isCorrin)}</h3>
+              <RelationCard kind={item.kind} partner={item.partner} corrin={ctx.unit.isCorrin} more={item.more} disabled={readOnly} onClick={() => openPicker({ character: { unitId, kind: item.kind } })} />
               <div className="rel-under">{item.caption}</div>
             </div>
           ))}
@@ -105,7 +111,7 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
                   signed={lens.signed}
                   inverse={selected}
                   label={`${def.name} ${lens.label}`}
-                  referenceRows={classIds.filter((candidateId) => dataset.classesById.get(candidateId)?.tier === def.tier).map((candidateId) => lensRow(dataset, run, ctx, lens.id, candidateId))}
+                  referenceRows={colourReferenceClassIds(dataset, run, ctx, lens.id, classId, classIds).map((candidateId) => lensRow(dataset, run, ctx, lens.id, candidateId))}
                 />
               </button>
             )
