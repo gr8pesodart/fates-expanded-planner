@@ -22,6 +22,14 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   stack). **Awaiting owner sign-off** on `docs/screenshots/v3/sprites.png`.
 - A3 splash art done directly after the DS lane stalled (see ASSETS.md › Splash art).
 
+### Backlog
+
+- **Variable hair colour** (map sprites + talk portraits): a child's hair colour comes from their
+  second parent; Corrin's is custom (add a Corrin hair-colour choice to the Avatar tab). Both art sets
+  currently use the FaceData default tint. Needs: per-unit hair masks shipped separately (sprite
+  `0xEE`/`0xFF` bands, portrait hair layer), the parent → colour lookup, and a runtime tint (e.g. a
+  CSS `mix-blend-mode` overlay on the hair layer, matching the game's overlay blend).
+
 ### A — Assets (gated; do first, in parallel with B)
 
 1. **Talk portraits.** Extend `tools/assets/extract_assets.py` to decode `face/face/<name>_st.arc`

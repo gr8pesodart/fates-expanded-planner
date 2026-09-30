@@ -16,10 +16,10 @@ export interface PortraitEntry {
 
 export interface SpriteImage {
   file: string
-  /** Cell size. Layered images are 2-cell strips: [low priority | high priority]. */
+  /** Cell size. Layered images are strips of draw-priority bands, back to front. */
   w: number
   h: number
-  layers?: 2
+  layers?: number
 }
 
 export interface SpriteBody extends SpriteImage {

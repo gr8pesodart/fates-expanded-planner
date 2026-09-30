@@ -74,23 +74,30 @@ ship and the body says which one it needs (`head.variant`).
 
 ## Draw order
 
-Body first, then head, then body pixels that outrank the head. The textures' alpha channel is a
-layer-priority mask the game's map-sprite shader reads (`0x66` = back, `0x88`/`0xEE`/`0xFF` =
-front), not opacity — see the ripper note on The Spriters Resource that "the brighter the shade of
-grey, the closer it is to the front" and that bodies draw first, then heads, then bright body pixels
-(weapons). Higher priority wins, ties go to the head, which resolves to exactly four layers, bottom
-to top:
+The textures' alpha channel is not opacity. It carries two different things:
 
-1. body pixels with priority `0x66`
-2. head pixels with priority `0x66` (back hair: over body-low, under body-high)
-3. body pixels with priority above `0x66`
-4. head pixels with priority above `0x66`
+- **`0x66` / `0x88` — draw priority.** Higher is closer; when a body and a head pixel tie, the head
+  (drawn second) wins. For ordinary heads this keeps the neck/collar (`0x66`) under the armour
+  (`0x88`) while faces (`0x88`) stay visible over mounts.
+- **`0xEE` / `0xFF` on heads — the recolourable-hair mask.** Only Corrin, Kana and the children whose
+  hair follows the second parent use them (24 heads; Shigure and all other first-gen units except
+  Azama don't). The hair is stored grey and tinted at runtime. `0xEE` is long back hair and draws
+  **behind the body** (Corrin (F)'s hair falls behind her `0x66` body in-game); `0xFF` is front hair
+  at normal head level. An earlier reading treated these as "brighter = closer" and drew Corrin's
+  hair over her body — wrong.
 
-`extract_sprites.py` ships that stack as a two-cell horizontal strip per sprite (left cell =
-priority `0x66`, right cell = everything above it), with every kept pixel fully opaque. Bodies
-drawn under a head carry `layers: 2` and a head offset; Unique bodies have no head and ship as one
-flattened opaque image (no `layers`). The manifest does not carry per-value priorities, only the
-binary split.
+Resulting stack, back to front — `extract_sprites.py` ships each image as a strip of these bands
+(fully opaque pixels), and the app interleaves them:
+
+1. head band 0 — `0xEE` back hair
+2. body band 0 — `0x66`
+3. head band 1 — `0x66`
+4. body band 1 — `0x88` (and the 3 stray `0xFF` body pixels)
+5. head band 2 — `0x88` + `0xFF` front hair
+
+Bodies carry `layers: 2`, heads `layers: 3`; Unique bodies have no head and ship as one flattened
+opaque image (no `layers`). Hair pixels are tinted with the unit's default FaceData hair colour at
+extraction (the talk-portrait tint); per-run colours are backlogged.
 
 ## Evidence
 

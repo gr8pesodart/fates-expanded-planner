@@ -16,12 +16,12 @@ the "large" 32x32 cell (0,0) used by foot classes and the "small" 16x16 cell
 (0,32) used by mounted classes; they are separately drawn art, not scales of
 each other, so both are exported where present.
 
-The texture alpha is a layer-priority mask the game composites per pixel
-(0x66 = back, 0x88/0xEE/0xFF = front), so every composited sprite ships as a
-two-cell horizontal strip of opaque pixels: left cell = priority 0x66, right
-cell = everything above it. Bodies drawn under a head carry `layers: 2`; the
-single flattened opaque image is used for Unique bodies (no head) and the
-`unique` set.
+The texture alpha is not opacity: 0x66/0x88 are draw priorities and, on heads
+with recolourable hair, 0xEE/0xFF are the hair mask (see BODY_BANDS/HEAD_BANDS
+and docs/assets/anime-bin.md). Every composited sprite ships as a strip of
+opaque band cells (bodies `layers: 2`, heads `layers: 3`) that the app
+interleaves; hair is tinted with the FaceData default colour. The single
+flattened opaque image is used for Unique bodies (no head) and the `unique` set.
 
 Outputs (paths relative to the site base, mirrored under --out):
 
@@ -58,6 +58,7 @@ from PIL import Image, ImageDraw, ImageFont
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(REPO_ROOT, "tools", "assets"))
 
+import extract_portraits  # noqa: E402  (shared FaceData parser + hair tint)
 import fe_assets  # noqa: E402
 
 DEFAULT_ROMFS = os.path.join(
@@ -163,27 +164,30 @@ def write_webp(image: Image.Image, path: str) -> None:
     image.save(path, "WEBP", lossless=True, quality=100, method=6)
 
 
-LOW_PRIORITY = 0x66
+# Texture alpha on 0x66/0x88 pixels is draw priority: higher is closer, and the head wins ties.
+# On heads with recolourable hair (Corrin, Kana and every child whose hair follows the variable
+# parent) 0xEE and 0xFF are instead the hair mask: 0xEE is long back hair, drawn behind the body
+# (Corrin (F)'s hair falls behind her 0x66 body in-game); 0xFF is front hair at normal head level.
+# Each image is split into bands, back to front, and the app interleaves them:
+#   head[0] (0xEE back hair), body[0] (0x66), head[1] (0x66), body[1] (0x88+), head[2] (0x88, 0xFF)
+BODY_BANDS = (frozenset({0x66}), frozenset({0x88, 0xEE, 0xFF}))
+HEAD_BANDS = (frozenset({0xEE}), frozenset({0x66}), frozenset({0x88, 0xFF}))
 
 
-def layer_masks(image: Image.Image) -> tuple[Image.Image, Image.Image]:
-    """Binary masks for the low (<= 0x66) and high (> 0x66) priority pixels."""
+def layer_strip(image: Image.Image, bands: tuple[frozenset[int], ...]) -> Image.Image:
+    """One opaque cell per band (back to front), laid out left to right."""
     alpha = image.getchannel("A")
-    low = alpha.point(lambda value: 255 if value == LOW_PRIORITY else 0)
-    high = alpha.point(lambda value: 255 if value > LOW_PRIORITY else 0)
-    return low, high
-
-
-def layer_strip(image: Image.Image) -> Image.Image:
-    """Two-cell strip: left = priority 0x66, right = everything above it."""
-    low_mask, high_mask = layer_masks(image)
-    low = image.convert("RGB").convert("RGBA")
-    high = low.copy()
-    low.putalpha(low_mask)
-    high.putalpha(high_mask)
-    strip = Image.new("RGBA", (image.width * 2, image.height), (0, 0, 0, 0))
-    strip.paste(low, (0, 0))
-    strip.paste(high, (image.width, 0))
+    histogram = alpha.histogram()
+    used = {value for value in range(1, 256) if histogram[value]}
+    unknown = used - set().union(*bands)
+    if unknown:
+        raise fe_assets.AssetError(f"unexpected draw priorities {sorted(hex(v) for v in unknown)}")
+    rgb = image.convert("RGB").convert("RGBA")
+    strip = Image.new("RGBA", (image.width * len(bands), image.height), (0, 0, 0, 0))
+    for index, band in enumerate(bands):
+        cell = rgb.copy()
+        cell.putalpha(alpha.point(lambda value, band=band: 255 if value in band else 0))
+        strip.paste(cell, (index * image.width, 0))
     return strip
 
 
@@ -303,7 +307,7 @@ def unit_unique_folder(romfs: str, unit: dict, jid: str) -> str | None:
 
 
 def head_entry(file_name: str, source: str, width: int, height: int) -> dict:
-    return {"file": file_name, "w": width, "h": height, "layers": 2, "source": source}
+    return {"file": file_name, "w": width, "h": height, "layers": len(HEAD_BANDS), "source": source}
 
 
 def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
@@ -328,7 +332,7 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
             }
             if frame.head_w == 16 and frame.head_h == 16:
                 head["variant"] = "small"
-            image = layer_strip(body)
+            image = layer_strip(body, BODY_BANDS)
         else:
             image = flatten(body)
         assert_binary_alpha(image, f"body {class_def['id']}")
@@ -341,7 +345,7 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
             "source": source,
         }
         if head is not None:
-            entry["layers"] = 2
+            entry["layers"] = len(BODY_BANDS)
         entries[str(class_def["id"])] = entry
     return entries, missing
 
@@ -358,12 +362,12 @@ def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: 
     large = image.crop((0, 0, 32, 32))
     small = image.crop((0, 32, 16, 48))
     if large.getbbox() is not None:
-        strip = layer_strip(large)
+        strip = layer_strip(large, HEAD_BANDS)
         assert_binary_alpha(strip, prefix)
         write_webp(strip, f"{dest}.webp")
         entry = head_entry(f"{prefix}.webp", source, 32, 32)
     if small.getbbox() is not None:
-        strip = layer_strip(small)
+        strip = layer_strip(small, HEAD_BANDS)
         assert_binary_alpha(strip, f"{prefix}-small")
         write_webp(strip, f"{dest}-small.webp")
         small_entry = head_entry(f"{prefix}-small.webp", source + " (small)", 16, 16)
@@ -374,16 +378,49 @@ def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: 
     return entry
 
 
+HAIR_MASK = frozenset({0xEE, 0xFF})
+
+
+def tint_hair(image: Image.Image, color: bytes | None) -> Image.Image:
+    """Recolourable hair is stored grey (the game tints it at runtime); apply the FaceData colour."""
+    if not color:
+        return image
+    alpha = image.getchannel("A")
+    mask = alpha.point(lambda value: 255 if value in HAIR_MASK else 0)
+    if mask.getbbox() is None:
+        return image
+    tinted = extract_portraits.tint_overlay(image, color)
+    result = image.copy()
+    result.paste(tinted.convert("RGB"), mask=mask)
+    result.putalpha(alpha)
+    return result
+
+
+def hair_colours(romfs: str, units: list[dict], lz13) -> dict[str, bytes]:
+    """Default hair colour per unit from FaceData (same records the talk portraits use)."""
+    faces = extract_portraits.parse_face_data(romfs, lz13)
+    colours = {}
+    for unit in units:
+        fid = unit.get("fid") or ""
+        info = faces.get(f"FSID_ST_{fid[4:]}") if fid.startswith("FID_") else None
+        if not info and unit.get("isCorrin"):
+            info = faces.get(extract_portraits.AVATAR_FALLBACK_FSID[unit["gender"]])
+        if info:
+            colours[unit["id"]] = info["hair_color"]
+    return colours
+
+
 def extract_heads(romfs: str, out_dir: str, units: list[dict], lz13):
     entries = {}
     missing = []
+    colours = hair_colours(romfs, units, lz13)
     for unit in units:
         folder = unit_head_folder(unit)
         sheet = os.path.join(romfs, "unit", "Head", folder or "", HEAD_FILE)
         if not folder or not os.path.isfile(sheet):
             missing.append((unit["id"], unit["name"], folder))
             continue
-        image = load_display(sheet, lz13)
+        image = tint_hair(load_display(sheet, lz13), colours.get(unit["id"]))
         prefix = f"assets/sprites/heads/{unit['slot']}"
         source = f"unit/Head/{folder}/{HEAD_FILE}"
         entry = export_head_variants(image, out_dir, prefix, source)
@@ -463,19 +500,14 @@ def layer_cell(image: Image.Image, entry: dict, index: int) -> Image.Image:
 
 
 def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) -> Image.Image:
-    """Four-layer priority composite: body-low, head-low, body-high, head-high.
+    """Composite back to front: head[0] (back hair), body[0], head[1], body[1], head[2].
 
-    Higher priority wins, ties go to the head. Flattened bodies (Unique, no
-    head) are already a single opaque image and pass through unchanged.
+    Flattened bodies (Unique, no head) are already a single opaque image and pass through.
     """
     body_image = image_for(out_dir, body_entry["file"])
-    if body_entry.get("layers") != 2 or head_entry is None:
+    if not body_entry.get("layers") or head_entry is None:
         return body_image
     head_image = image_for(out_dir, head_entry["file"])
-    body_low = layer_cell(body_image, body_entry, 0)
-    body_high = layer_cell(body_image, body_entry, 1)
-    head_low = layer_cell(head_image, head_entry, 0)
-    head_high = layer_cell(head_image, head_entry, 1)
     offset_x = body_entry["head"]["x"]
     offset_y = body_entry["head"]["y"]
     left = min(0, offset_x)
@@ -485,10 +517,14 @@ def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) ->
     canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     paste_body = (-left, -top)
     paste_head = (offset_x - left, offset_y - top)
-    canvas.alpha_composite(body_low, paste_body)
-    canvas.alpha_composite(head_low, paste_head)
-    canvas.alpha_composite(body_high, paste_body)
-    canvas.alpha_composite(head_high, paste_head)
+    for image, entry, index, at in (
+        (head_image, head_entry, 0, paste_head),
+        (body_image, body_entry, 0, paste_body),
+        (head_image, head_entry, 1, paste_head),
+        (body_image, body_entry, 1, paste_body),
+        (head_image, head_entry, 2, paste_head),
+    ):
+        canvas.alpha_composite(layer_cell(image, entry, index), at)
     return canvas
 
 

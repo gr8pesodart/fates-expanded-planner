@@ -202,9 +202,10 @@ The animation format is documented in [assets/anime-bin.md](assets/anime-bin.md)
 ### Rendering contract (`src/data/sprites.json`)
 
 The texture alpha is the game's layer-priority mask, not opacity, so every composited sprite is
-binarised into a **two-cell horizontal strip** of fully opaque pixels: left cell = pixels with
-priority `0x66`, right cell = everything above it. `w`/`h` are the cell size (not the strip width)
-and `layers: 2` marks the strip.
+split into a **strip of draw bands** of fully opaque pixels (bodies `[0x66 | 0x88]`, heads
+`[0xEE back hair | 0x66 | 0x88 + 0xFF front hair]`); `w`/`h` are the cell size and `layers` the band
+count. See `docs/assets/anime-bin.md` › Draw order for why `0xEE`/`0xFF` are a hair mask, not
+priority. Recolourable hair is tinted with the FaceData default colour.
 
 - `bodies[classId]`: `{ file, w, h, layers?, head, source }`. `head` is
   `{ x, y, variant? }` or `null` when the body already includes a head (Unique/monsters).
@@ -216,8 +217,7 @@ and `layers: 2` marks the strip.
   which case it is the top-level entry (or omit `small` and use the top-level file).
 - `unique[unitId][classId]`: full-body override (flattened, no `layers`); replaces body + head
   entirely.
-- Composite the 4-layer stack, bottom to top: body-low, head-low, body-high, head-high (higher
-  priority wins, ties go to the head). Draw a box of body `w×h`, body at `(0,0)`, head at `(x, y)`
+- Composite back to front: head band 0, body band 0, head band 1, body band 1, head band 2. Draw a box of body `w×h`, body at `(0,0)`, head at `(x, y)`
   in body pixels. Head cells may overflow the box by a few pixels (`y = −2`, `x = 10`), so don't
   clip to the body bounds.
 
@@ -232,6 +232,6 @@ python tools/assets/extract_sprites.py --help     # --romfs, --fe-tools, --pack,
 ```
 
 `src/data/sprites.test.ts` pins the coverage (bodies and heads ≥ 90%), that every manifest file
-exists on disk, that layered entries are two-cell strips (2× `w`), and that every shipped pixel is
+exists on disk, that layered entries are band strips (`layers` × `w`), and that every shipped pixel is
 either transparent or fully opaque (pixel decode needs a Playwright Chromium; the extractor also
 asserts this while writing). Bodies/heads still render as monograms with `VITE_ASSETS=off`.

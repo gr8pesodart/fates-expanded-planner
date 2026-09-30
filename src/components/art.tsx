@@ -36,11 +36,8 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
   return <span className={`portrait cropped ${className}`} role="img" aria-label={name} style={style} />
 }
 
-/**
- * One cell of a sprite image. Layered images are [low | high] strips of the game's per-pixel
- * draw-priority mask, so a cell is picked with background-position.
- */
-function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: number; y: number; scale: number; cell: 0 | 1 }) {
+/** One band of a layered sprite strip, picked with background-position. */
+function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: number; y: number; scale: number; cell: number }) {
   const style: CSSProperties = {
     position: 'absolute',
     left: x * scale,
@@ -56,9 +53,11 @@ function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: numbe
 
 /**
  * Map sprite: class body with the unit's head stitched on (offsets from unit/Body/<class>/anime.bin).
- * Higher draw priority wins and the head wins ties, which with the game's two body and two head
- * levels is the stack body-low, head-low (back hair), body-high, head-high.
+ * Bodies are [0x66 | 0x88] bands and heads [back hair | 0x66 | 0x88 + front hair] (see
+ * tools/assets/extract_sprites.py); drawing them interleaved reproduces the game's layering.
  */
+const STACK: readonly (readonly ['head' | 'body', number])[] = [['head', 0], ['body', 0], ['head', 1], ['body', 1], ['head', 2]]
+
 export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: { unitId: string | null; classId: number; name: string; size?: number; tile?: boolean }) {
   const layers = spriteLayers(unitId, classId)
   const wrap = (content: ReactNode) => (
@@ -70,14 +69,21 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: 
   const head = layers.kind === 'stitched' ? layers.head : null
   const offset = layers.kind === 'stitched' ? layers.offset : null
   const scale = size / Math.max(body.w, body.h)
-  const cell = (image: SpriteImage, x: number, y: number, level: 0 | 1) =>
-    level === 1 && !image.layers ? null : <SpriteCell image={image} x={x} y={y} scale={scale} cell={level} />
+  if (!head || !offset) {
+    const bands = Array.from({ length: body.layers ?? 1 }, (_, cell) => cell)
+    return wrap(
+      <span className="sprite-stage" style={{ width: body.w * scale, height: body.h * scale }}>
+        {bands.map((cell) => <SpriteCell key={cell} image={body} x={0} y={0} scale={scale} cell={cell} />)}
+      </span>,
+    )
+  }
   return wrap(
     <span className="sprite-stage" style={{ width: body.w * scale, height: body.h * scale }}>
-      {cell(body, 0, 0, 0)}
-      {head && offset ? cell(head, offset.x, offset.y, 0) : null}
-      {cell(body, 0, 0, 1)}
-      {head && offset ? cell(head, offset.x, offset.y, 1) : null}
+      {STACK.map(([part, cell]) => {
+        const image = part === 'head' ? head : body
+        const at = part === 'head' ? offset : { x: 0, y: 0 }
+        return cell < (image.layers ?? 1) ? <SpriteCell key={`${part}${cell}`} image={image} x={at.x} y={at.y} scale={scale} cell={cell} /> : null
+      })}
     </span>,
   )
 }

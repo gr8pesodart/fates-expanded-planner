@@ -93,19 +93,19 @@ describe('stitched sprite manifest', () => {
     }
   })
 
-  it('every unit has a large and small head strip on disk', () => {
+  it('every unit has large and small three-band head strips on disk', () => {
     const entries = Object.values(manifest.heads)
     expect(entries.length).toBe(71)
     for (const entry of entries) {
       expect(entry.w).toBe(32)
       expect(entry.h).toBe(32)
-      expect(entry.layers).toBe(2)
+      expect(entry.layers).toBe(3)
       expect(entry.source.startsWith('unit/Head/')).toBe(true)
-      expect(webpSize(readFileSync(publicPath(entry.file))).width).toBe(entry.w * 2)
+      expect(webpSize(readFileSync(publicPath(entry.file))).width).toBe(entry.w * 3)
       expect(entry.small?.w).toBe(16)
       expect(entry.small?.h).toBe(16)
-      expect(entry.small?.layers).toBe(2)
-      expect(webpSize(readFileSync(publicPath(entry.small!.file))).width).toBe(entry.small!.w * 2)
+      expect(entry.small?.layers).toBe(3)
+      expect(webpSize(readFileSync(publicPath(entry.small!.file))).width).toBe(entry.small!.w * 3)
     }
   })
 
@@ -113,7 +113,7 @@ describe('stitched sprite manifest', () => {
     for (const entry of Object.values(manifest.genericHeads)) {
       for (const head of [entry, ...(entry.small ? [entry.small] : [])]) {
         const size = webpSize(readFileSync(publicPath(head.file)))
-        expect(size.width).toBe(head.w * (head.layers === 2 ? 2 : 1))
+        expect(size.width).toBe(head.w * (head.layers ?? 1))
         expect(size.height).toBe(head.h)
       }
     }
