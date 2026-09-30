@@ -23,7 +23,7 @@ export interface CorrinPlan {
 }
 
 /**
- * Relationships are stored on both sides and kept symmetric by src/logic/relationships.ts.
+ * S and pair-up are stored symmetrically; A+ is a one-way choice by this unit.
  * A child's second parent is never stored: it is the fixed parent's `sPartner`.
  */
 export interface UnitPlan {
@@ -33,15 +33,21 @@ export interface UnitPlan {
   pairRole?: PairRole
   classId?: number
   skills: (number | null)[]
+  /** Skill inherited from the variable parent (Parent B). */
   inheritSkill?: number
+  /** Skill inherited from the fixed parent. */
+  inheritFixedSkill?: number
   reclasses: Reclass[]
   eternalSeals?: number
+  /** Recruitment level for units whose join level depends on when they're recruited. */
+  joinLevel?: number
 }
 
 export interface RunPlan {
   id: string
   name: string
   modpackId: string
+  mods?: string[]
   dlc: boolean
   route: Route
   corrin: CorrinPlan
@@ -60,6 +66,7 @@ export interface PlanDocument {
 export interface RunPatch {
   name?: string
   modpackId?: string
+  mods?: string[]
   dlc?: boolean
   route?: Route
   corrin?: Partial<CorrinPlan>
@@ -80,7 +87,7 @@ export function emptyRun(id = createId()): RunPlan {
     name: 'New run',
     modpackId: 'ugf-2.5.2',
     dlc: true,
-    route: 'revelation',
+    route: 'conquest',
     corrin: { gender: 'female', boon: 'spd', bane: 'lck', talentClassId: null },
     favourites: [],
     units: {},

@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { ClassSprite, Portrait } from '../components/art'
 import { Icon } from '../components/icons'
-import type { IconName } from '../components/icons'
 import type { SlotKind } from '../components/slots'
 import { SLOT_LABEL } from '../components/slots'
 import { Sheet } from '../components/Sheet'
+import { Segmented } from '../components/controls'
+import { SortIcon } from '../components/SortIcon'
 import { SkillCard } from '../components/SkillCard'
-import { STAT_KEYS, STAT_LABELS } from '../data/types'
+import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import { displayName, unitContext } from '../logic/army'
 import { classFamily } from '../logic/classes'
 import { blankColumns } from '../logic/lenses'
 import type { ClassPoolEntry } from '../logic/classes'
 import { buildProgression, dlcClassesFor } from '../logic/progression'
 import type { RosterSort } from '../logic/rosterSort'
-import { skillPool } from '../logic/skills'
+import { directionOfSort } from '../logic/rosterSort'
+import { inheritableSkillPool, skillPool } from '../logic/skills'
 import { SKILL_SLOTS, emptyUnitPlan } from '../state/model'
 import { applyBond, bondOf, usePickers } from './pickerStore'
 import type { SkillTarget } from './pickerStore'
@@ -26,7 +28,7 @@ export function Pickers() {
   if (character) return <CharacterPicker {...character} onClose={close} />
   if (classes) return <ClassPicker unitId={classes} onClose={close} />
   if (skill) return <SkillPicker {...skill} onClose={close} />
-  if (sort) return <SortSheet onClose={close} />
+  if (sort) return <SortSheet target={sort} onClose={close} />
   return null
 }
 
@@ -69,6 +71,7 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
             <span className="pick-name">{item.name}</span>
             {item.gains ? <span className="pick-gains">Gains {item.gains}</span> : null}
             <span className="pick-badges">
+              {item.rankBadge ? <span className="badge rank-badge">{item.rankBadge} rank</span> : null}
               {item.fast ? <span className="badge">Fast</span> : null}
               {item.takenBy ? <span className="badge muted">w/ {item.takenBy}</span> : null}
             </span>
@@ -129,33 +132,47 @@ function SkillPicker({ unitId, slot, onClose }: { unitId: string; slot: SkillTar
   const ctx = unitContext(dataset, run, unitId)
   if (!ctx) return null
   const name = displayName(ctx.unit)
-  const inherit = slot === 'inherit'
-  const donor = inherit ? ctx.variableParent : ctx.unit
+  const plan = run.units[unitId] ?? emptyUnitPlan()
+  const fixedParent = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
+  const inherit = slot === 'inheritFixed' || slot === 'inheritVariable'
+  const field = slot === 'inheritFixed' ? 'inheritFixedSkill' : 'inheritSkill'
+  const donor = slot === 'inheritFixed' ? fixedParent : slot === 'inheritVariable' ? ctx.variableParent : ctx.unit
   const donorCtx = donor ? unitContext(dataset, run, donor.id) : null
-  const pool = donorCtx ? skillPool(dataset, donorCtx.unit, donorCtx.pool, run.route) : []
-  const dlcSkills = run.dlc && donorCtx
-    ? dlcClassesFor(dataset, donorCtx.unit.gender).flatMap((def) => def.skillLearn.map((learn) => ({ skillId: learn.id, label: `${classFamily(def.name)} Lv ${learn.level}`, source: 'dlc' as const })))
-    : []
-  const reached = new Set<number>()
+  // The same skill from both parents is only one skill, so each inherit slot blocks the other's pick.
+  const otherInherited = slot === 'inheritFixed' ? plan.inheritSkill : slot === 'inheritVariable' ? plan.inheritFixedSkill : undefined
+  const inheritedByChild = inherit ? [] : ([[plan.inheritFixedSkill, fixedParent], [plan.inheritSkill, ctx.variableParent]] as const)
+    .flatMap(([skillId, parent]) => skillId !== undefined && parent ? [{ skillId, label: `Inherited from ${displayName(parent)}` }] : [])
+
+  const reached = new Set<number>(inheritedByChild.map((entry) => entry.skillId))
   if (!inherit) {
-    for (const segment of buildProgression(dataset, run, ctx).segments) {
-      for (const row of segment.rows) for (const learned of [...row.startsWith, ...row.learned]) reached.add(learned.skillId)
+    const progression = buildProgression(dataset, run, ctx)
+    for (const learned of progression.startsWith) reached.add(learned.skillId)
+    for (const segment of progression.segments) {
+      for (const row of segment.rows) for (const learned of row.learned) reached.add(learned.skillId)
     }
   }
-  const plan = run.units[unitId] ?? emptyUnitPlan()
-  const current = inherit ? plan.inheritSkill : plan.skills[slot as number]
+  const entries: { skillId: number; label: string }[] = inherit
+    ? donorCtx ? inheritableSkillPool(dataset, donorCtx.unit, donorCtx.pool, run.route) : []
+    : [
+      ...skillPool(dataset, ctx.unit, ctx.pool, run.route).filter((entry) => entry.source !== 'personal'),
+      ...inheritedByChild,
+      ...(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender).flatMap((def) => def.skillLearn.map((learn) => ({ skillId: learn.id, label: `${classFamily(def.name)} Lv ${learn.level}` }))) : []),
+    ]
+  const current = inherit ? plan[field] : plan.skills[slot]
   const equippedElsewhere = new Set(plan.skills.filter((id, index) => id !== null && index !== slot) as number[])
-  const entries = [...pool.filter((entry) => entry.source !== 'personal'), ...dlcSkills]
   const seen = new Set<number>()
   const unique = entries.filter((entry) => (seen.has(entry.skillId) ? false : (seen.add(entry.skillId), true)))
 
   const choose = (skillId: number | null) => {
     mutate((next) => {
       const unitPlan = next.units[unitId] ?? emptyUnitPlan()
-      const updated = inherit
-        ? { ...unitPlan, inheritSkill: skillId ?? undefined }
-        : { ...unitPlan, skills: Array.from({ length: SKILL_SLOTS }, (_, index) => (index === slot ? skillId : unitPlan.skills[index] ?? null)) }
-      if (inherit && skillId === null) delete updated.inheritSkill
+      let updated: typeof unitPlan
+      if (inherit) {
+        const { [field]: _old, ...rest } = unitPlan
+        updated = skillId === null ? rest : { ...rest, [field]: skillId }
+      } else {
+        updated = { ...unitPlan, skills: Array.from({ length: SKILL_SLOTS }, (_, index) => (index === slot ? skillId : unitPlan.skills[index] ?? null)) }
+      }
       return { ...next, units: { ...next.units, [unitId]: updated } }
     })
     onClose()
@@ -163,24 +180,26 @@ function SkillPicker({ unitId, slot, onClose }: { unitId: string; slot: SkillTar
 
   return (
     <Sheet
-      title={inherit ? `Inherited skill for ${name}` : `Skill ${(slot as number) + 1} for ${name}`}
+      title={inherit ? `Inherited from ${donor ? displayName(donor) : 'Parent B'}` : `Skill ${slot + 1} for ${name}`}
       onClose={onClose}
       actions={current != null ? <button type="button" className="text-btn" onClick={() => choose(null)}>Clear</button> : null}
     >
-      {inherit && !donor ? <p className="empty-note">Choose Parent B on the Profile tab first.</p> : null}
+      {inherit && !donor ? <p className="empty-note">Choose a second parent on the Parents tab first.</p> : null}
       <div className="pick-list">
         {unique.map((entry) => {
           const skill = dataset.skillsById.get(entry.skillId)
           if (!skill) return null
           const offRoute = !inherit && !reached.has(entry.skillId)
+          const fromOther = entry.skillId === otherInherited
+          const taken = equippedElsewhere.has(entry.skillId) && !inherit
           return (
             <SkillCard
               key={entry.skillId}
               skill={{ id: skill.id, name: skill.name, description: skill.description }}
               selected={entry.skillId === current}
-              disabled={equippedElsewhere.has(entry.skillId)}
+              disabled={taken || fromOther}
               onClick={() => choose(entry.skillId)}
-              tag={<>{entry.label}{offRoute ? ' · Not on route' : ''}{equippedElsewhere.has(entry.skillId) ? ' · Equipped' : ''}</>}
+              tag={<>{entry.label}{offRoute ? ' · Not on route' : ''}{taken ? ' · Equipped' : ''}{fromOther ? ' · From other parent' : ''}</>}
             />
           )
         })}
@@ -189,43 +208,61 @@ function SkillPicker({ unitId, slot, onClose }: { unitId: string; slot: SkillTar
   )
 }
 
-const SORT_OPTIONS: { sort: RosterSort; label: string; icon: IconName }[] = [
-  { sort: { kind: 'recruit' }, label: 'Recruit order', icon: 'sortRecruit' },
-  { sort: { kind: 'name' }, label: 'Name', icon: 'sortAlpha' },
-]
-
-function SortSheet({ onClose }: { onClose(): void }) {
-  const { rosterSort, setRosterSort } = useUi()
-  const blank = blankColumns(useUi((state) => state.rosterLens))
-  const pick = (sort: RosterSort) => {
-    setRosterSort(sort)
-    onClose()
+function SortSheet({ target, onClose }: { target: 'roster' | 'chart'; onClose(): void }) {
+  const ui = useUi()
+  const [closing, setClosing] = useState(false)
+  const sort = target === 'roster' ? ui.rosterSort : ui.chartSort
+  const setSort = target === 'roster' ? ui.setRosterSort : ui.setChartSort
+  const favouritesFirst = target === 'roster' ? ui.rosterFavouritesFirst : ui.chartFavouritesFirst
+  const linkPairs = target === 'roster' ? ui.rosterLinkPairs : ui.chartLinkPairs
+  const generation = target === 'roster' ? ui.rosterGeneration : ui.chartGeneration
+  const setGeneration = target === 'roster' ? ui.setRosterGeneration : ui.setChartGeneration
+  const blank = blankColumns(ui.rosterLens)
+  const closeAnimated = () => {
+    if (closing) return
+    setClosing(true)
+    window.setTimeout(onClose, 180)
   }
+  const pick = (next: RosterSort) => setSort({ ...next, direction: directionOfSort(next) })
+  const toggleDirection = (direction: 'asc' | 'desc') => setSort({ ...sort, direction })
+  const setFavourites = (value: boolean) => target === 'roster' ? ui.setRosterFavouritesFirst(value) : ui.setChartFavouritesFirst(value)
+  const setLinked = (value: boolean) => target === 'roster' ? ui.setRosterLinkPairs(value) : ui.setChartLinkPairs(value)
+  const sortRows: { sort: RosterSort; label: string }[] = [
+    { sort: { kind: 'recruit' }, label: 'Recruit order' },
+    { sort: { kind: 'name' }, label: 'Name' },
+    ...STAT_TABLE_KEYS.map((key, column) => ({ sort: { kind: 'stat' as const, column }, label: STAT_TABLE_LABELS[key] })),
+  ]
   return (
-    <Sheet title="Sort by" onClose={onClose}>
+    <Sheet title={`Sort ${target === 'roster' ? 'roster' : 'chart'} by`} onClose={closeAnimated} closing={closing}>
       <div className="pick-list">
-        {SORT_OPTIONS.map((option) => (
-          <button key={option.label} type="button" className="sort-row" aria-pressed={rosterSort.kind === option.sort.kind} onClick={() => pick(option.sort)}>
-            <Icon name={option.icon} size={24} />
+        {sortRows.map((option) => {
+          const active = sort.kind === option.sort.kind && (sort.kind !== 'stat' || (option.sort.kind === 'stat' && sort.column === option.sort.column))
+          const disabled = option.sort.kind === 'stat' && blank.includes(option.sort.column)
+          return <button key={option.label} type="button" className="sort-row" aria-pressed={active} disabled={disabled} onClick={() => pick(option.sort)}>
+            <SortIcon sort={{ ...option.sort, direction: directionOfSort(sort) }} size={30} />
             {option.label}
           </button>
-        ))}
+        })}
       </div>
-      <h3 className="sub-title muted sort-stat-title">Stat (current tab, highest first)</h3>
-      <div className="sort-stats">
-        {STAT_KEYS.map((key, column) => (
-          <button
-            key={key}
-            type="button"
-            className="chip"
-            aria-pressed={rosterSort.kind === 'stat' && rosterSort.column === column}
-            disabled={blank.includes(column)}
-            onClick={() => pick({ kind: 'stat', column })}
-          >
-            {STAT_LABELS[key]}
-          </button>
-        ))}
+      <div className="sort-direction">
+        <span className="sub-title">Direction</span>
+        <Segmented label="Sort direction" value={directionOfSort(sort)} options={[{ id: 'asc', label: 'Ascending' }, { id: 'desc', label: 'Descending' }]} onChange={toggleDirection} />
       </div>
+      <div className="sort-direction">
+        <span className="sub-title">Show</span>
+        <Segmented label="Show units" value={generation} options={[{ id: 'all', label: 'All' }, { id: 'first', label: 'First gen' }, { id: 'children', label: 'Children' }]} onChange={setGeneration} />
+      </div>
+      <div className="sort-toggles">
+        <label className="switch-row">
+          <span className="sub-title">Favourites first</span>
+          <input type="checkbox" role="switch" checked={favouritesFirst} onChange={(event) => setFavourites(event.target.checked)} />
+        </label>
+        <label className="switch-row">
+          <span className="sub-title">Link pair-up partners</span>
+          <input type="checkbox" role="switch" checked={linkPairs} onChange={(event) => setLinked(event.target.checked)} />
+        </label>
+      </div>
+      <button type="button" className="btn primary sort-done" onClick={closeAnimated}>Done</button>
     </Sheet>
   )
 }

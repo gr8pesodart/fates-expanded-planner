@@ -40,11 +40,11 @@ function Main({ route, desktop }: { route: AppRoute; desktop: boolean }) {
     case 'new-run':
       return <NewRunScreen />
     case 'unit':
-      if (!desktop) return <CharacterScreen unitId={route.unitId} tab={route.tab} />
+      if (!desktop) return <CharacterScreen key={route.unitId} unitId={route.unitId} tab={route.tab} />
       return (
         <div className="two-pane">
           <RosterScreen activeUnitId={route.unitId} />
-          <CharacterScreen unitId={route.unitId} tab={route.tab} embedded />
+          <CharacterScreen key={route.unitId} unitId={route.unitId} tab={route.tab} embedded />
         </div>
       )
     default:

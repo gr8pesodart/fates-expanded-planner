@@ -4,12 +4,13 @@ import { Icon } from './icons'
 import { useToast } from './toast'
 
 /** Bottom sheet on phones, centred dialog on desktop. Escape and the scrim close it. */
-export function Sheet({ title, onClose, children, actions, wide = false }: {
+export function Sheet({ title, onClose, children, actions, wide = false, closing = false }: {
   title: string
   onClose(): void
   children: ReactNode
   actions?: ReactNode
   wide?: boolean
+  closing?: boolean
 }) {
   const titleId = useId()
   const panel = useRef<HTMLDivElement>(null)
@@ -28,10 +29,10 @@ export function Sheet({ title, onClose, children, actions, wide = false }: {
     }
   }, [onClose])
   return (
-    <div className="sheet-scrim" onClick={onClose}>
+    <div className="sheet-scrim" data-closing={closing || undefined} onClick={onClose}>
       <div
         ref={panel}
-        className={wide ? 'sheet wide' : 'sheet'}
+        className={`${wide ? 'sheet wide' : 'sheet'}${closing ? ' closing' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

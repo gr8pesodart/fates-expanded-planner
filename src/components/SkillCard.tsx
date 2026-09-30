@@ -9,25 +9,29 @@ export interface SkillView {
 }
 
 /** Icon over name on the left, in-game description on the right (Profile skills, pickers). */
-export function SkillCard({ skill, locked = false, onClick, tag, selected = false, disabled }: {
+export function SkillCard({ skill, locked = false, onClick, tag, emptyText = 'Tap to choose a skill.', selected = false, disabled }: {
   skill: SkillView | null
   locked?: boolean
   onClick?: () => void
   tag?: ReactNode
+  /** Description shown while the slot is empty. */
+  emptyText?: ReactNode
   selected?: boolean
   disabled?: boolean
 }) {
   const body = (
     <>
       <span className="skill-card-id">
-        <SkillIcon skillId={skill?.id ?? null} name={skill?.name ?? 'Empty'} size={32} />
+        {skill
+          ? <SkillIcon skillId={skill.id} name={skill.name} size={32} />
+          : <span className="skill-icon" style={{ width: 32, height: 32 }} aria-hidden="true"><Icon name="plus" size={18} /></span>}
+        {locked ? <Icon name="lock" size={16} className="skill-card-lock" /> : null}
         <span className="skill-card-name">{skill?.name ?? 'Empty slot'}</span>
       </span>
       <span className="skill-card-desc">
-        {skill ? skill.description ?? 'No description.' : 'Tap to choose a skill.'}
+        {skill ? skill.description ?? 'No description.' : <span>{emptyText}</span>}
         {tag ? <span className="skill-card-tag">{tag}</span> : null}
       </span>
-      {locked ? <Icon name="lock" size={16} className="skill-card-lock" /> : null}
     </>
   )
   const className = ['skill-card', locked ? 'locked' : '', skill ? '' : 'empty', selected ? 'selected' : ''].filter(Boolean).join(' ')

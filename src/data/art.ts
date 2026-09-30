@@ -16,15 +16,26 @@ export interface PortraitEntry {
 
 export interface SpriteImage {
   file: string
-  /** Cell size. Layered images are strips of draw-priority bands, back to front. */
+  /** Cell size. Strips are frame-major, then draw-priority bands back to front. */
   w: number
   h: number
   layers?: number
+  frameCount?: number
+  animation?: SpriteAnimationFrame[]
 }
+
+export interface SpriteHeadOffset { x: number; y: number; variant?: 'small' | 'large' }
+
+/**
+ * [cell, delay (1/60 s)] or [cell, delay, headX, headY] when the head bobs off the body's rest
+ * offset. The head always shows the same cell as the body (tools/assets/extract_sprites.py ›
+ * compact_animation).
+ */
+export type SpriteAnimationFrame = [cell: number, delay: number, headX?: number, headY?: number]
 
 export interface SpriteBody extends SpriteImage {
   /** Mounted (and some other) classes draw the unit's 16×16 "small" head cell instead of the 32×32 one. */
-  head: { x: number; y: number; variant?: 'small' | 'large' } | null
+  head: SpriteHeadOffset | null
 }
 
 interface SpriteHead extends SpriteImage {
@@ -82,7 +93,7 @@ export function portraitArt(unitId: string, crop: 'face' | 'bust'): PortraitArt 
 }
 
 export type SpriteLayers =
-  | { kind: 'stitched'; body: SpriteImage; head: SpriteImage | null; offset: SpriteBody['head'] }
+  | { kind: 'stitched'; body: SpriteBody; head: SpriteImage | null; smallHead: SpriteImage | null; offset: SpriteBody['head'] }
   | { kind: 'single'; image: SpriteImage }
 
 export function spriteLayers(unitId: string | null, classId: number): SpriteLayers | null {
@@ -93,8 +104,13 @@ export function spriteLayers(unitId: string | null, classId: number): SpriteLaye
     const body = SPRITES.bodies[String(classId)]
     if (body) {
       const heads = (unitId ? SPRITES.heads[unitId] : undefined) ?? SPRITES.genericHeads?.[String(classId)]
-      const head = body.head?.variant === 'small' ? heads?.small : heads
-      return { kind: 'stitched', body: withUrl(body), head: head && body.head ? withUrl(head) : null, offset: body.head }
+      return {
+        kind: 'stitched',
+        body: withUrl(body),
+        head: heads && body.head ? withUrl(heads) : null,
+        smallHead: heads?.small && body.head ? withUrl(heads.small) : null,
+        offset: body.head,
+      }
     }
   }
   const legacy = assetUrl('class', classId)
@@ -109,4 +125,17 @@ export function splashArt(unitId: string): (SplashEntry & { src: string }) | nul
   if (!ASSETS_ENABLED) return null
   const entry = SPLASH?.units[unitId]
   return entry ? { ...entry, src: url(entry.file, SPLASH?.generatedAt) } : null
+}
+
+let warmedSplash: { src: string; image: HTMLImageElement } | null = null
+
+export function preloadSplashArt(unitId: string): void {
+  const art = splashArt(unitId)
+  if (!art || warmedSplash?.src === art.src) return
+  const image = new Image()
+  image.fetchPriority = 'high'
+  image.decoding = 'async'
+  image.src = art.src
+  warmedSplash = { src: art.src, image }
+  void image.decode().catch(() => {})
 }

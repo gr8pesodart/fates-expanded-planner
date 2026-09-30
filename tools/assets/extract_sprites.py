@@ -9,12 +9,10 @@ override under `unit/Unique/<class>_<character>/` (Velouria's wolf forms,
 Kana's nobles, Azura's Songstress dress, monsters).
 
 The animation script's record layout is documented in docs/assets/anime-bin.md.
-The idle/standing frame is animation 0, frame 0; its body source rect is the
-frame the old single-texture class sprites showed, and its head source rect is
-the cell the game draws over it. Head sheets carry two cells per expression:
-the "large" 32x32 cell (0,0) used by foot classes and the "small" 16x16 cell
-(0,32) used by mounted classes; they are separately drawn art, not scales of
-each other, so both are exported where present.
+The idle/standing clip is animation 0: four unique body/head cells plus a timed
+sequence and per-pose head offsets. Head sheets carry four poses for each of
+two sizes: the "large" 32x32 cells used by foot classes and the separately drawn
+"small" 16x16 cells used by mounted classes.
 
 The texture alpha is not opacity: on heads it marks the layer behind the body
 (0x66, 0xEE hair) and the layer in front (0x88, 0xFF hair); 0xEE/0xFF are the
@@ -25,11 +23,11 @@ flattened opaque image is used for Unique bodies (no head) and the `unique` set.
 
 Outputs (paths relative to the site base, mirrored under --out):
 
-  - `assets/sprites/bodies/<classId>.webp`          idle-frame body (strip, or flat when unique)
-  - `assets/sprites/heads/<slot>.webp`              unit large head strip
-  - `assets/sprites/heads/<slot>-small.webp`        unit small head strip
-  - `assets/sprites/generic-heads/<classId>.webp`   class-generic head strip(s)
-  - `assets/sprites/unique/<slot>-<classId>.webp`   unit+class flat body override
+  - `assets/sprites/bodies/<classId>.webp`          four idle body poses (or flat poses when unique)
+  - `assets/sprites/heads/<slot>.webp`              unit large head poses
+  - `assets/sprites/heads/<slot>-small.webp`        unit small head poses
+  - `assets/sprites/generic-heads/<classId>.webp`   class-generic head poses
+  - `assets/sprites/unique/<slot>-<classId>.webp`   unit+class idle pose strip
   - `src/data/sprites.json`                         manifest for the app
   - `docs/screenshots/v3/sprites.png`               gate contact sheet (4x)
 
@@ -228,11 +226,61 @@ def parse_animations(raw: bytes) -> list[Animation]:
     return animations
 
 
-def idle_frame(anime_path: str) -> Frame:
+def idle_animation(anime_path: str) -> Animation:
     animations = parse_animations(open(anime_path, "rb").read())
     if not animations or not animations[0].is_used:
         raise fe_assets.AssetError(f"no idle animation in {anime_path}")
-    return animations[0].frames[0]
+    animation = animations[0]
+    if animation.frame_count < 1:
+        raise fe_assets.AssetError(f"idle animation has no frames in {anime_path}")
+    return animation
+
+
+def unique_idle_frames(animation: Animation, label: str) -> dict[int, Frame]:
+    frames = {}
+    for frame in animation.frames[: animation.frame_count]:
+        frames.setdefault(frame.frame_index, frame)
+    if sorted(frames) != [0, 1, 2, 3]:
+        raise fe_assets.AssetError(f"{label} idle cells are not the expected 0–3: {sorted(frames)}")
+    return frames
+
+
+def animation_contract(animation: Animation) -> list[dict]:
+    contract = []
+    for frame in animation.frames[: animation.frame_count]:
+        if frame.body_x or frame.body_y:
+            raise fe_assets.AssetError("idle body draw offsets are not supported")
+        head = None
+        head_cell = None
+        if frame.head_w and frame.head_h:
+            if frame.head_src_y != (32 if frame.head_w == 16 else 0) or frame.head_src_x != frame.frame_index * frame.head_w:
+                raise fe_assets.AssetError("idle head source does not map to its frame index")
+            head_cell = frame.frame_index
+            head = {"x": frame.head_x - frame.body_x, "y": frame.head_y - frame.body_y}
+            if frame.head_w == 16:
+                head["variant"] = "small"
+        contract.append({"cell": frame.frame_index, "headCell": head_cell, "delay": frame.frame_delay, "head": head})
+    return contract
+
+
+def compact_animation(contract: list[dict], head: dict | None) -> list[list[int]]:
+    """Manifest form: [cell, delay] or [cell, delay, headX, headY] when the head leaves its rest offset.
+
+    Ships in the main bundle, so redundancy is stripped: the head cell always equals the body cell
+    (animation_contract enforces it), and head presence and size variant are fixed per body.
+    """
+    frames = []
+    for frame in contract:
+        if (frame["head"] is None) != (head is None):
+            raise fe_assets.AssetError("idle head appears or vanishes mid-animation")
+        entry = [frame["cell"], frame["delay"]]
+        if head is not None:
+            if frame["head"].get("variant") != head.get("variant"):
+                raise fe_assets.AssetError("idle head changes size mid-animation")
+            if (frame["head"]["x"], frame["head"]["y"]) != (head["x"], head["y"]):
+                entry += [frame["head"]["x"], frame["head"]["y"]]
+        frames.append(entry)
+    return frames
 
 
 def load_display(path: str, lz13) -> Image.Image:
@@ -306,7 +354,7 @@ def unit_unique_folder(romfs: str, unit: dict, jid: str) -> str | None:
 
 
 def head_entry(file_name: str, source: str, width: int, height: int) -> dict:
-    return {"file": file_name, "w": width, "h": height, "layers": len(HEAD_BANDS), "source": source}
+    return {"file": file_name, "w": width, "h": height, "layers": len(HEAD_BANDS), "frameCount": 4, "source": source}
 
 
 def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
@@ -317,23 +365,28 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
         if not sheet:
             missing.append((class_def["id"], class_def["name"], class_def["jid"]))
             continue
-        frame = idle_frame(anime)
-        body = load_display(sheet, lz13).crop(
-            (frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h)
-        )
+        animation = idle_animation(anime)
+        idle_frames = unique_idle_frames(animation, f"class {class_def['id']}")
+        body_sheet = load_display(sheet, lz13)
+        cells = [None] * 4
+        for index, frame in idle_frames.items():
+            if frame.body_w != 32 or frame.body_h != 32 or frame.body_src_y != 0 or frame.body_src_x != index * 32:
+                raise fe_assets.AssetError(f"class {class_def['id']} idle body cell {index} is unexpected")
+            cells[index] = body_sheet.crop((frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h))
+        body = cells[0]
+        animation_data = animation_contract(animation)
         file_name = f"assets/sprites/bodies/{class_def['id']}.webp"
         path = os.path.join(os.path.dirname(out_dir), *file_name.split("/"))
         head = None
-        if not is_unique and frame.head_w and frame.head_h:
-            head = {
-                "x": frame.head_x - frame.body_x,
-                "y": frame.head_y - frame.body_y,
-            }
-            if frame.head_w == 16 and frame.head_h == 16:
-                head["variant"] = "small"
-            image = layer_strip(body, BODY_BANDS)
+        if not is_unique and animation_data[0]["head"]:
+            head = dict(animation_data[0]["head"])
+            image = Image.new("RGBA", (body.width * len(BODY_BANDS) * 4, body.height), (0, 0, 0, 0))
+            for index, cell in enumerate(cells):
+                image.alpha_composite(layer_strip(cell, BODY_BANDS), (index * body.width * len(BODY_BANDS), 0))
         else:
-            image = flatten(body)
+            image = Image.new("RGBA", (body.width * 4, body.height), (0, 0, 0, 0))
+            for index, cell in enumerate(cells):
+                image.alpha_composite(flatten(cell), (index * body.width, 0))
         assert_binary_alpha(image, f"body {class_def['id']}")
         write_webp(image, path)
         entry = {
@@ -342,6 +395,8 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
             "h": body.height,
             "head": head,
             "source": source,
+            "frameCount": 4,
+            "animation": compact_animation(animation_data, head),
         }
         if head is not None:
             entry["layers"] = len(BODY_BANDS)
@@ -350,7 +405,7 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
 
 
 def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: str) -> dict | None:
-    """Export the large 32x32 and small 16x16 idle head cells for `prefix`.
+    """Export the large and small four-pose idle head strips for `prefix`.
 
     `prefix` is site-relative (e.g. "assets/sprites/heads/25"); either cell may
     be absent on class-generic sheets, in which case only the other is written.
@@ -358,17 +413,22 @@ def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: 
     """
     dest = os.path.join(os.path.dirname(out_dir), *prefix.split("/"))
     entry = None
-    large = image.crop((0, 0, 32, 32))
-    small = image.crop((0, 32, 16, 48))
+    def head_strip(width: int, y: int) -> Image.Image:
+        strip = Image.new("RGBA", (width * len(HEAD_BANDS) * 4, width), (0, 0, 0, 0))
+        for frame in range(4):
+            cell = image.crop((frame * width, y, (frame + 1) * width, y + width))
+            strip.alpha_composite(layer_strip(cell, HEAD_BANDS), (frame * width * len(HEAD_BANDS), 0))
+        return strip
+
+    large = head_strip(32, 0)
+    small = head_strip(16, 32)
     if large.getbbox() is not None:
-        strip = layer_strip(large, HEAD_BANDS)
-        assert_binary_alpha(strip, prefix)
-        write_webp(strip, f"{dest}.webp")
+        assert_binary_alpha(large, prefix)
+        write_webp(large, f"{dest}.webp")
         entry = head_entry(f"{prefix}.webp", source, 32, 32)
     if small.getbbox() is not None:
-        strip = layer_strip(small, HEAD_BANDS)
-        assert_binary_alpha(strip, f"{prefix}-small")
-        write_webp(strip, f"{dest}-small.webp")
+        assert_binary_alpha(small, f"{prefix}-small")
+        write_webp(small, f"{dest}-small.webp")
         small_entry = head_entry(f"{prefix}-small.webp", source + " (small)", 16, 16)
         if entry is None:
             entry = small_entry
@@ -464,25 +524,27 @@ def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[di
             if not folder:
                 continue
             directory = os.path.join(romfs, "unit", "Unique", folder)
-            frame = idle_frame(os.path.join(directory, "anime.bin"))
-            body = load_display(os.path.join(directory, HEAD_FILE), lz13).crop(
-                (
-                    frame.body_src_x,
-                    frame.body_src_y,
-                    frame.body_src_x + frame.body_w,
-                    frame.body_src_y + frame.body_h,
-                )
-            )
-            image = flatten(body)
+            animation = idle_animation(os.path.join(directory, "anime.bin"))
+            idle_frames = unique_idle_frames(animation, f"unique {unit['slot']}-{class_def['id']}")
+            body_sheet = load_display(os.path.join(directory, HEAD_FILE), lz13)
+            image = Image.new("RGBA", (32 * 4, 32), (0, 0, 0, 0))
+            for index, frame in idle_frames.items():
+                if frame.body_w != 32 or frame.body_h != 32 or frame.body_src_y != 0 or frame.body_src_x != index * 32:
+                    raise fe_assets.AssetError("unique idle body cell is unexpected")
+                body = body_sheet.crop((frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h))
+                image.alpha_composite(flatten(body), (index * 32, 0))
             label = f"unique {unit['slot']}-{class_def['id']}"
             assert_binary_alpha(image, label)
             file_name = f"assets/sprites/unique/{unit['slot']}-{class_def['id']}.webp"
             write_webp(image, os.path.join(os.path.dirname(out_dir), *file_name.split("/")))
             source = f"unit/Unique/{folder}/{HEAD_FILE} + anime.bin"
+            animation_data = animation_contract(animation)
             per_class[str(class_def["id"])] = {
                 "file": file_name,
-                "w": body.width,
-                "h": body.height,
+                "w": image.width // 4,
+                "h": image.height,
+                "frameCount": 4,
+                "animation": compact_animation(animation_data, None),
                 "source": source,
             }
         if per_class:
@@ -494,8 +556,10 @@ def image_for(out_dir: str, file_name: str) -> Image.Image:
     return Image.open(os.path.join(os.path.dirname(out_dir), *file_name.split("/"))).convert("RGBA")
 
 
-def layer_cell(image: Image.Image, entry: dict, index: int) -> Image.Image:
-    return image.crop((index * entry["w"], 0, (index + 1) * entry["w"], entry["h"]))
+def layer_cell(image: Image.Image, entry: dict, index: int, frame: int = 0) -> Image.Image:
+    layers = entry.get("layers", 1)
+    offset = (frame * layers + index) * entry["w"]
+    return image.crop((offset, 0, offset + entry["w"], entry["h"]))
 
 
 def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) -> Image.Image:
@@ -505,10 +569,12 @@ def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) ->
     """
     body_image = image_for(out_dir, body_entry["file"])
     if not body_entry.get("layers") or head_entry is None:
-        return body_image
+        return layer_cell(body_image, body_entry, 0)
     head_image = image_for(out_dir, head_entry["file"])
-    offset_x = body_entry["head"]["x"]
-    offset_y = body_entry["head"]["y"]
+    head_position = body_entry["head"]
+    head_cell = 0
+    offset_x = head_position["x"]
+    offset_y = head_position["y"]
     left = min(0, offset_x)
     top = min(0, offset_y)
     width = max(body_entry["w"], offset_x + head_entry["w"]) - left
@@ -516,12 +582,12 @@ def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) ->
     canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     paste_body = (-left, -top)
     paste_head = (offset_x - left, offset_y - top)
-    for image, entry, index, at in (
-        (head_image, head_entry, 0, paste_head),
-        (body_image, body_entry, 0, paste_body),
-        (head_image, head_entry, 1, paste_head),
+    for image, entry, index, at, frame_index in (
+        (head_image, head_entry, 0, paste_head, head_cell),
+        (body_image, body_entry, 0, paste_body, 0),
+        (head_image, head_entry, 1, paste_head, head_cell),
     ):
-        canvas.alpha_composite(layer_cell(image, entry, index), at)
+        canvas.alpha_composite(layer_cell(image, entry, index, frame_index), at)
     return canvas
 
 

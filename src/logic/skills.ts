@@ -1,5 +1,6 @@
 import type { Dataset, Route, UnitDef } from '../data/types'
 import type { ClassPoolEntry } from './classes'
+import { classFamily } from './classes'
 
 export type SkillSource = 'personal' | 'class' | 'parent' | 'seal' | 'aplus'
 
@@ -80,4 +81,17 @@ export function skillPool(
   }
 
   return result
+}
+
+/**
+ * What a parent can pass to a child. Fates children inherit one skill from each parent: the lowest
+ * eligible equipped skill (Fire Emblem Wiki › Inheritance, › Kana). Never inherited: personal
+ * skills, DLC skills, and Songstress skills (the class itself is never inherited).
+ */
+export function inheritableSkillPool(dataset: Dataset, parent: UnitDef, pool: ClassPoolEntry[], route: Route): SkillPoolEntry[] {
+  return skillPool(dataset, parent, pool, route).filter((entry) => {
+    if (entry.source === 'personal' || dataset.skillsById.get(entry.skillId)?.dlc) return false
+    const def = entry.classId === undefined ? undefined : dataset.classesById.get(entry.classId)
+    return !def || classFamily(def.name) !== 'Songstress'
+  })
 }

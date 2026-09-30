@@ -61,6 +61,8 @@ p {
 
 .app {
   min-height: 100dvh;
+  /* clip, not hidden: hidden would make .app a scroll container and break the sticky headers. */
+  overflow-x: clip;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
 }
 

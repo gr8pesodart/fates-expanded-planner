@@ -102,6 +102,8 @@ interface PoolOptions {
   sPartner?: UnitDef | null
   /** A+ partner (Friendship Seal classes). */
   aPlusPartner?: UnitDef | null
+  /** Corrin can use a Friendship Seal with any same-gender A-rank partner. */
+  friendshipDonors?: UnitDef[]
   /** Corrin's chosen talent branch (applies to Corrin and their child). */
   corrinTalentClassId?: number | null
   /** Is the fixed parent Corrin? (Kana) */
@@ -127,7 +129,8 @@ export function classPool(dataset: Dataset, unit: UnitDef, options: PoolOptions 
     if (usedBases.has(sexedBase)) return false
     const def = dataset.classesById.get(sexedBase)
     if (!def) return false
-    if (classFamily(def.name) === 'Songstress') return false
+    // Never passed on, but Azura's own set still includes it.
+    if (branch !== 'own' && classFamily(def.name) === 'Songstress') return false
     usedBases.add(sexedBase)
     for (const classId of branchChain(dataset, sexedBase, unit.gender)) {
       entries.push({ classId, branch, sourceLabel })
@@ -165,6 +168,9 @@ export function classPool(dataset: Dataset, unit: UnitDef, options: PoolOptions 
   ) => {
     if (!donor) return
     const label = `${prefix}: ${donor.name}`
+    if (donor.isCorrin && options.corrinTalentClassId) {
+      if (addBranch(baseOfClass(dataset, options.corrinTalentClassId), branch, label)) return
+    }
     const primary = primaryBaseClass(dataset, donor)
     const primaryDef = primary !== null ? dataset.classesById.get(primary) : undefined
     const sealBlocked = primaryDef ? NON_INHERITABLE_VIA_SEAL.has(classFamily(primaryDef.name)) : false
@@ -176,7 +182,11 @@ export function classPool(dataset: Dataset, unit: UnitDef, options: PoolOptions 
 
   addContributor(options.variableParent, 'parent', 'Parent')
   addContributor(options.sPartner, 'seal', 'S Seal')
-  addContributor(options.aPlusPartner, 'aplus', 'A+ Seal')
+  if (unit.isCorrin) {
+    for (const donor of options.friendshipDonors ?? []) addContributor(donor, 'aplus', 'Friendship Seal')
+  } else {
+    addContributor(options.aPlusPartner, 'aplus', 'A+ Seal')
+  }
 
   return entries
 }

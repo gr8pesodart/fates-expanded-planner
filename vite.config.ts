@@ -11,6 +11,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered from src/app/pwa.ts, which also checks for updates on resume (iOS home-screen apps).
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Fates Expanded Planner',
@@ -34,6 +36,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Take over as soon as a new build installs; otherwise it waits for every window of the
+        // app to close, which an iOS home-screen app almost never does.
+        skipWaiting: true,
+        clientsClaim: true,
         // Game assets stay out of the precache: they are lazy-loaded and
         // cached on first use so the app shell stays small.
         globPatterns: ['**/*.{js,css,html,svg,png,json,woff2}'],

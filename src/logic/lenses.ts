@@ -26,18 +26,18 @@ export interface LensDef {
 }
 
 export const LENSES: readonly LensDef[] = [
-  { id: 'statModifiers', label: 'Stat Modifiers', signed: true },
-  { id: 'personalGrowths', label: 'Personal Growth Rates', signed: false },
-  { id: 'effectiveGrowths', label: 'Effective Growth Rates', signed: false },
-  { id: 'maxStats', label: 'Max Stats', signed: false },
-  { id: 'effectivePairUp', label: 'Effective Pair Up Bonuses', signed: true },
-  { id: 'personalPairUp', label: 'Personal Pair Up Bonuses', signed: true },
-  { id: 'baseStats', label: 'Base Stats', signed: false },
-  { id: 'classGrowths', label: 'Class Growth Rates', signed: false },
-  { id: 'classPairUp', label: 'Class Pair Up Bonuses', signed: true },
+  { id: 'statModifiers', label: 'Stat Modifiers (Personal)', signed: true },
+  { id: 'personalGrowths', label: 'Growth Rates (Personal)', signed: false },
+  { id: 'effectiveGrowths', label: 'Growth Rates (Effective)', signed: false },
+  { id: 'maxStats', label: 'Max Stats (Effective)', signed: false },
+  { id: 'effectivePairUp', label: 'Pair Up Bonuses (Effective)', signed: true },
+  { id: 'personalPairUp', label: 'Pair Up Bonuses (Personal)', signed: true },
+  { id: 'baseStats', label: 'Base Stats (Class)', signed: false },
+  { id: 'classGrowths', label: 'Growth Rates (Class)', signed: false },
+  { id: 'classPairUp', label: 'Pair Up Bonuses (Class)', signed: true },
 ]
 
-export const CLASS_CARD_LENSES: readonly LensId[] = ['baseStats', 'maxStats', 'classGrowths', 'effectiveGrowths', 'classPairUp']
+export const CLASS_CARD_LENSES: readonly LensId[] = ['baseStats', 'maxStats', 'classGrowths', 'effectiveGrowths', 'classPairUp', 'effectivePairUp']
 
 export function lensDef(id: LensId): LensDef {
   return LENSES.find((lens) => lens.id === id) ?? LENSES[0]
@@ -55,30 +55,44 @@ const withoutHp = (row: number[]): StatRow => row.map((value, index) => (index =
 export function lensRow(dataset: Dataset, run: RunPlan, ctx: UnitContext, lens: LensId, classId = ctx.currentClassId): StatRow {
   const classDef = dataset.classesById.get(classId)
   const empty = (): StatRow => Array.from({ length: 8 }, () => null)
+  let row: StatRow
   switch (lens) {
     case 'statModifiers':
-      return withoutHp(projectUnit(dataset, ctx.unit, undefined, ctx.projection).caps)
+      row = withoutHp(projectUnit(dataset, ctx.unit, undefined, ctx.projection).caps)
+      break
     case 'personalGrowths':
-      return projectUnit(dataset, ctx.unit, undefined, ctx.projection).growths
+      row = projectUnit(dataset, ctx.unit, undefined, ctx.projection).growths
+      break
     case 'effectiveGrowths':
-      return projectUnit(dataset, ctx.unit, classId, ctx.projection).growths
+      row = projectUnit(dataset, ctx.unit, classId, ctx.projection).growths
+      break
     case 'maxStats':
-      return classDef ? projectUnit(dataset, ctx.unit, classId, ctx.projection).caps : empty()
+      row = classDef ? projectUnit(dataset, ctx.unit, classId, ctx.projection).caps : empty()
+      break
     case 'baseStats':
-      return classDef ? [...classDef.baseStats] : empty()
+      row = classDef ? [...classDef.baseStats] : empty()
+      break
     case 'classGrowths':
-      return classDef ? [...classDef.growths] : empty()
+      row = classDef ? [...classDef.growths] : empty()
+      break
     case 'classPairUp':
-      return classDef ? withoutHp(classDef.pairUp) : empty()
+      row = classDef ? withoutHp(classDef.pairUp) : empty()
+      break
     case 'personalPairUp': {
       const rank = ctx.pairPartner ? pairRank(dataset, run, ctx.unit.id, ctx.pairPartner.id) : 'S'
-      return withoutHp(pairUpBonus(null, ctx.unit.supportBonuses, rank))
+      row = withoutHp(pairUpBonus(null, ctx.unit.supportBonuses, rank))
+      break
     }
     case 'effectivePairUp': {
       const rank = ctx.pairPartner ? pairRank(dataset, run, ctx.unit.id, ctx.pairPartner.id) : null
-      return withoutHp(pairUpBonus(classDef?.pairUp, ctx.unit.supportBonuses, rank))
+      row = withoutHp(pairUpBonus(classDef?.pairUp, ctx.unit.supportBonuses, rank))
+      break
     }
   }
+  // Mov has no growth or personal modifier. Pair-up Mov bonuses exist in-game but the class-table
+  // byte is not decoded yet (docs/DATA.md › Open questions), so those lenses show "-" too.
+  const movement = lens === 'maxStats' || lens === 'baseStats' ? classDef?.movement ?? null : null
+  return [...row, movement]
 }
 
 export function formatCell(value: number | null, signed: boolean): string {

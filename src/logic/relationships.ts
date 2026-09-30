@@ -25,12 +25,14 @@ function withoutBond(plan: UnitPlan, kind: BondKind): UnitPlan {
   return withoutRole
 }
 
-/**
- * Bonds are exclusive and mutual: linking A↔B first unlinks A's and B's previous partners
- * of the same kind. Pair-up keeps A's existing role (front by default) and gives B the other.
- */
+/** S and pair-up are mutual; an A+ selection belongs only to the unit choosing it. */
 export function setBond(run: RunPlan, unitId: string, kind: BondKind, partnerId: string | null): RunPlan {
   const role: PairRole = run.units[unitId]?.pairRole ?? 'front'
+  if (kind === 'aPlusPartner') {
+    let units = edit(run.units, unitId, (plan) => withoutBond(plan, kind))
+    if (partnerId && partnerId !== unitId) units = edit(units, unitId, (plan) => ({ ...plan, aPlusPartner: partnerId }))
+    return { ...run, units }
+  }
   let units = unlink(run.units, unitId, kind)
   if (partnerId && partnerId !== unitId) {
     units = unlink(units, partnerId, kind)

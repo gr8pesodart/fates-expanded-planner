@@ -4,12 +4,21 @@ import { chartCards } from './chart'
 import { setBond, swapPair } from './relationships'
 
 describe('chartCards', () => {
-  it('lists pairs front-first in roster order, then solos', () => {
+  it('anchors linked pairs at the first-listed partner while keeping the front row first', () => {
     let run = setBond(emptyRun('t'), 'b', 'pairPartner', 'c')
     run = swapPair(run, 'b')
     expect(chartCards(['a', 'b', 'c', 'd'], run)).toEqual([
-      { kind: 'pair', front: 'c', back: 'b' },
       { kind: 'solo', unitId: 'a' },
+      { kind: 'pair', front: 'c', back: 'b' },
+      { kind: 'solo', unitId: 'd' },
+    ])
+  })
+
+  it('anchors an unlinked pair at the front character\'s sort position', () => {
+    const run = swapPair(setBond(emptyRun('t'), 'b', 'pairPartner', 'c'), 'b')
+    expect(chartCards(['a', 'b', 'c', 'd'], run, false)).toEqual([
+      { kind: 'solo', unitId: 'a' },
+      { kind: 'pair', front: 'c', back: 'b' },
       { kind: 'solo', unitId: 'd' },
     ])
   })

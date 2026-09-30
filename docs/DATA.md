@@ -14,7 +14,7 @@ and what is still open.
 | Skills (229: names, in-game descriptions, icon index, DLC-only flag) | ✅ `skills.json` |
 | Child rules (fixed parents, growth averaging, cap-mod combination, class inheritance) | ✅ in `src/logic/` |
 | Pair-up bonuses (class bonuses + per-unit C/B/A/S support bonuses) | ✅ in the packs (rule sourced below) |
-| A+ (friendship) exact partner tables | ⚠️ approximated (same-gender A-rank partners) |
+| A+ (friendship) exact partner tables | ⚠️ approximated (platonic edges that reach A; one-way choice) |
 | Current support rank in the saved plan | ⚠️ final S/A+ decisions only; pair-up assumes C when neither is selected |
 | Assets (class sprites, skill icons, face icons) | ✅ `public/assets/` + `src/data/assets.json` (docs/ASSETS.md) |
 
@@ -163,13 +163,24 @@ The current planner therefore does not include inherited support rows in child p
   - first gen: own primary branch + secondary branch
   - second gen: own branch + fixed parent's primary branch + variable parent's primary branch
   - everyone: Partner Seal (S) and Friendship Seal (A+) branches
-  - duplicates fall back to the contributor's next branch; Songstress never inherits; Nohr
+  - duplicates fall back to the contributor's next branch; Songstress never inherits (it stays in
+    Azura's own set); Nohr
     Prince(ss)/Wolfskin/Kitsune/Villager can only come from parents (not seals)
-  - Corrin's chosen talent joins Corrin's pool and Kana's pool
+  - Corrin's chosen talent joins Corrin's pool; any child whose parent is Corrin inherits the
+    talent's branch in place of Corrin's (Nohr Prince(ss)) primary
+  - Corrin's Friendship Seal is not limited to a chosen A+ partner: every same-gender unit Corrin
+    can reach A with contributes a branch
+  - Nohr Prince(ss) promotes to Nohr Noble on Conquest, Hoshido Noble on Birthright, either on
+    Revelation (`progression.ts`)
 - `stats.ts` — `stats = personal bases + class bases`; `growths = personal + class` (personal
   includes boon/bane for Corrin); `caps = class caps + personal cap mods` (HP exempt); children:
   `growths = floor((child + variable parent) / 2)`, `cap mods = fixed + variable (+1 unless the
   variable parent is a child)`.
+- `skills.ts` — inheritable skills (`inheritableSkillPool`, sourced: Fire Emblem Wiki ›
+  Inheritance and › Kana): a child inherits **one skill from each parent**, the lowest eligible
+  equipped skill, so the plan stores two picks (`inheritFixedSkill`, `inheritSkill` = Parent B).
+  Never inherited: personal skills, DLC skills, Songstress skills. Unverified: what the game does
+  when both parents pass the same skill (the planner blocks the duplicate).
 - `skills.ts` — learnable pool with source labels; levels 1/10 (base), 5/15 (promoted),
   1/10/25/35 (special); five equip slots.
 - `family.ts` — children of a pair: units whose fixed parent is either partner (Corrin couples
@@ -179,7 +190,8 @@ The current planner therefore does not include inherited support rows in child p
 
 - **Roster** — units on the run's route (plus DLC Anna when DLC is on), only the Corrin matching the
   chosen gender and that Corrin's Kana. Children are always listed.
-- **Relationships** are exclusive and mutual (S, A+, pair-up). A child's second parent is never
+- **Relationships** — S and pair-up are exclusive and mutual. A+ is a one-way choice: picking
+  Jakob as Ryoma's A+ does not set Jakob's, and several units may pick the same partner. A child's second parent is never
   stored: it *is* the fixed parent's S partner, so the roster/profile "Parent B" slot writes
   through to that S bond. Switching Corrin's gender moves Corrin's and Kana's plans (and every
   reference, favourite and gendered class id) onto the other variant.
@@ -195,9 +207,26 @@ The current planner therefore does not include inherited support rows in child p
   never exceeds the current class's cap (overflow is lost, as in-game). Reclasses: base↔base and
   promoted↔promoted keep the level; Master Seal (Lv ≥ 10) promotes to Lv 1 and starts an "Advanced"
   segment; DLC classes are on the 40-level special track (base Lv ≥ 10 keeps its level, promoted
-  maps to level + 20); special → base (Lv ≤ 20) / promoted (Lv > 20, level − 20). A class change
-  teaches the new class's skills at or below the new level immediately. Eternal Seals add +5 to the
+  maps to level + 20); special → base (Lv ≤ 20) / promoted (Lv > 20, level − 20). Eternal Seals add +5 to the
   final promoted/special segment. Later reclasses made illegal by an earlier edit are dropped.
+- **Recruitment level** — Paralogue, Xenologue, DLC and "or later" recruits join at a level set by
+  when they're recruited, so the plan can override it (`UnitPlan.joinLevel`, clamped to the join
+  class's tier). Everyone else uses the recruitment data.
+- **Class skills** (sourced: Serenes Forest › Fates › Class Skills, both the Hoshidan and Nohrian
+  pages; Fire Emblem Wiki › Reclass › Fates):
+  - Recruitment is the only moment several skills arrive together ("Starts with": every skill of
+    the join class, and its base classes, at or below the join level).
+  - After that, skills come **only on level-up, one per level-up**, "with priority to the earlier
+    skill". A skill whose threshold was already passed (after a reclass) arrives on the next level-up;
+    reclassing or promoting grants nothing by itself. So reclassing into Samurai at 10 teaches
+    Duelist's Blow at 11 and Vantage at 12.
+  - Thresholds compare on one scale: base 1/10, advanced 5/15 counted as 25/35 (promoted level =
+    20 + level), special 1/10/25/35.
+  - An advanced class also offers the skills of every base class **in the unit's pool** that promotes
+    into it; those (≤ 10) always outrank its own. Promote at 11 before Vantage and it arrives at
+    Advanced 2.
+  - Unverified: tie order between two base classes feeding one advanced class (the planner uses
+    class-pool order), and whether a pre-promoted recruit holds its base-class skills (assumed yes).
 - **DLC gender locks (vanilla)** — Dread Fighter, Ballistician, Lodestar, Vanguard, Grandmaster:
   male; Dark Falcon, Witch, Great Lord: female. The class table carries both variants for some.
 - **Talent** — any base class except Nohr Prince(ss); Monk/Wolfskin male-only, Shrine
@@ -229,8 +258,9 @@ Open questions (see also docs/REFERENCES.md):
 2. **Same-sex children.** UGF grants same-sex S supports; the planner allows any romantic partner
    as a second parent. Verify in-game whether same-sex couples recruit children, and narrow the
    candidate list if not.
-3. **A+ partners.** Exact per-character A+ lists are not in the extracted data; v3 offers platonic
-   edges that reach rank A.
+3. **A+ partners.** Exact per-character A+ lists are not in the extracted data, and UGF's A+
+   behaviour is not documented beyond its support graph; v3.1 offers platonic edges that reach
+   rank A and stores the choice one-way (Friendship Seal semantics).
 4. **Child pair-up bonuses.** Children have empty support-bonus rows in the table; the documented
    inheritance rule (father C / mother B / father A / mother S) still needs a mechanics decision.
 5. **Personal-skill slots.** The three personal-skill fields (+116/118/120) are difficulty variants
@@ -238,6 +268,9 @@ Open questions (see also docs/REFERENCES.md):
    the route-keyed shape in the packs is harmless but semantically loose.
 6. **Current support rank.** A plan stores final S/A+ choices, not the active C/B/A support rank.
    v3 pair-up projections use S for spouses and otherwise the pair's highest non-S rank.
+7. **Pair-up Mov.** Some classes grant Mov when paired, but `pairUp` is the eight stats at class
+   record `+60` and `+68` starts the weapon ranks; the Mov bonus byte is not located yet. Pair-up
+   lenses render Mov as `-` until it is decoded.
 
 ## Pack format (v1)
 

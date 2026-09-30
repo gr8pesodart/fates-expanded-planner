@@ -26,7 +26,15 @@ export function displayName(unit: UnitDef): string {
 export interface ClassStart {
   classId: number
   level: number
+  /** Level from the recruitment data, before the plan's override. */
+  defaultLevel: number
+  /** Chapter the unit joins in, when the recruitment data knows it. */
+  chapter: string | null
+  /** Paralogue, Xenologue, DLC and "or later" recruits join at a level set by when they're recruited. */
+  variableLevel: boolean
 }
+
+const VARIABLE_JOIN = /^(Paralogue|Xenologue)|or later/
 
 export interface UnitContext {
   unit: UnitDef
@@ -49,11 +57,14 @@ function partner(dataset: Dataset, id: string | undefined): UnitDef | undefined 
 /** Join class/level from the route's recruitment data, else the unit's own base class at Lv 1. */
 export function classStart(dataset: Dataset, run: RunPlan, unit: UnitDef): ClassStart {
   const joined = dataset.recruitment?.[run.route]?.get(unit.id)
-  if (joined && dataset.classesById.has(joined.joinClassId)) {
-    return { classId: sexedClassId(dataset, joined.joinClassId, unit.gender), level: joined.joinLevel }
-  }
-  const base = primaryBaseClass(dataset, unit) ?? unit.classes[0] ?? 0
-  return { classId: sexedClassId(dataset, base, unit.gender), level: 1 }
+  const known = joined && dataset.classesById.has(joined.joinClassId) ? joined : undefined
+  const classId = sexedClassId(dataset, known?.joinClassId ?? primaryBaseClass(dataset, unit) ?? unit.classes[0] ?? 0, unit.gender)
+  const defaultLevel = known?.joinLevel ?? 1
+  const variableLevel = unit.dlc || !known || VARIABLE_JOIN.test(known.chapter)
+  const override = variableLevel ? run.units[unit.id]?.joinLevel : undefined
+  const cap = dataset.classesById.get(classId)?.tier === 'special' ? 40 : 20
+  const level = override === undefined ? defaultLevel : Math.min(cap, Math.max(1, Math.round(override)))
+  return { classId, level, defaultLevel, chapter: known?.chapter ?? null, variableLevel }
 }
 
 export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): UnitContext | null {
@@ -63,10 +74,20 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
   const variableParent = partner(dataset, variableParentOf(dataset, run, unitId))
   const sPartner = partner(dataset, plan.sPartner)
   const aPlusPartner = partner(dataset, plan.aPlusPartner)
+  const rosterIds = new Set(armyUnits(dataset, run).map((entry) => entry.id))
+  const friendshipDonors = unit.isCorrin
+    ? (dataset.edgesByCharacter.get(unit.id) ?? []).flatMap((edge) => {
+      if (edge.info.ranks.a === null) return []
+      const id = edge.a === unit.id ? edge.b : edge.a
+      const donor = dataset.unitsById.get(id)
+      return donor && donor.gender === unit.gender && rosterIds.has(id) ? [donor] : []
+    })
+    : []
   const pool = classPool(dataset, unit, {
     variableParent,
     sPartner,
     aPlusPartner,
+    friendshipDonors,
     corrinTalentClassId: run.corrin.talentClassId,
     fixedParentIsCorrin: fixedParentIsCorrin(dataset, unit),
   })

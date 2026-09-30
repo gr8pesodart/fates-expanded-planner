@@ -19,9 +19,8 @@ export interface ReclassOption {
 
 export interface LearnedSkill {
   skillId: number
+  /** Class whose learnset supplied the skill (a base class, for skills picked up while advanced). */
   classId: number
-  /** Learned immediately on changing class rather than by levelling. */
-  onReclass: boolean
 }
 
 export interface LevelRow {
@@ -29,8 +28,7 @@ export interface LevelRow {
   level: number
   /** Class held while reaching this level. */
   classId: number
-  /** Skills in hand at the start of the plan (only the very first row). */
-  startsWith: LearnedSkill[]
+  /** At most one skill: only recruitment grants several at once (Progression.startsWith). */
   learned: LearnedSkill[]
   reclass: number | null
   options: ReclassOption[]
@@ -52,6 +50,8 @@ export interface Progression {
   /** Stored reclasses that no longer fit the path (cleared by the store with a notice). */
   dropped: Reclass[]
   eternalSeals: number
+  /** Skills in hand on recruitment. */
+  startsWith: LearnedSkill[]
 }
 
 export const BASE_LEVEL_CAP = 20
@@ -116,7 +116,14 @@ export function reclassOptions(
 
   if (current.tier === 'base' && level >= MASTER_SEAL_MIN_LEVEL) {
     for (const promo of current.promotesTo) {
-      offer({ classId: sexedClassId(dataset, promo, ctx.unit.gender), seal: 'master', level: 1, newSegment: true })
+      const promotedId = sexedClassId(dataset, promo, ctx.unit.gender)
+      const promoted = dataset.classesById.get(promotedId)
+      const family = classFamily(current.name)
+      const allowed = family !== 'Nohr Prince' && family !== 'Nohr Princess'
+        || run.route === 'revelation'
+        || run.route === 'conquest' && promoted && classFamily(promoted.name) === 'Nohr Noble'
+        || run.route === 'birthright' && promoted && classFamily(promoted.name) === 'Hoshido Noble'
+      if (allowed) offer({ classId: promotedId, seal: 'master', level: 1, newSegment: true })
     }
   }
 
@@ -145,14 +152,47 @@ export function reclassOptions(
   return [...options.values()]
 }
 
-function skillsLearnedBetween(def: ClassDef, fromExclusive: number, toInclusive: number, known: Set<number>, onReclass: boolean): LearnedSkill[] {
-  const learned: LearnedSkill[] = []
-  for (const entry of def.skillLearn) {
-    if (entry.level <= fromExclusive || entry.level > toInclusive || known.has(entry.id)) continue
-    known.add(entry.id)
-    learned.push({ skillId: entry.id, classId: def.id, onReclass })
+interface SkillCandidate extends LearnedSkill {
+  threshold: number
+}
+
+/** Skill thresholds compare on one scale: an advanced class's level counts as 20 + level. */
+function effectiveLevel(def: ClassDef, level: number): number {
+  return def.tier === 'promoted' ? BASE_LEVEL_CAP + level : level
+}
+
+/**
+ * Skills learnable while in `def`: its own, plus for an advanced class those of every base class in
+ * the unit's pool that promotes into it (Fire Emblem Wiki › Reclass: a Hero with Dark Mage access
+ * learns Dark Mage and Sorcerer skills as a Sorcerer). Base thresholds (1/10) sit below any advanced
+ * level (21+), so pending base skills come first, matching "priority to the earlier skill".
+ */
+export function skillCandidates(dataset: Dataset, ctx: UnitContext, def: ClassDef): SkillCandidate[] {
+  const own = def.skillLearn.map((entry) => ({ skillId: entry.id, classId: def.id, threshold: effectiveLevel(def, entry.level) }))
+  if (def.tier !== 'promoted') return own
+  const family = classFamily(def.name)
+  const bases = new Map<number, ClassDef>()
+  for (const id of [ctx.start.classId, ...ctx.pool.map((entry) => entry.classId)]) {
+    const base = dataset.classesById.get(id)
+    if (base?.tier !== 'base' || bases.has(base.id)) continue
+    if (base.promotesTo.some((promo) => classFamily(dataset.classesById.get(promo)?.name ?? '') === family)) bases.set(base.id, base)
   }
-  return learned
+  const inherited = [...bases.values()].flatMap((base) => base.skillLearn.map((entry) => ({ skillId: entry.id, classId: base.id, threshold: entry.level })))
+  return [...inherited, ...own].sort((a, b) => a.threshold - b.threshold)
+}
+
+const learnedFrom = ({ skillId, classId }: SkillCandidate): LearnedSkill => ({ skillId, classId })
+
+/**
+ * Fates learns class skills only on level-up, one per level-up, lowest threshold first; a skill whose
+ * threshold was already passed (after a reclass) arrives on the next level-up (Serenes Forest › Fates
+ * › Class Skills). Reclassing or promoting grants nothing by itself.
+ */
+function levelUpSkill(candidates: SkillCandidate[], level: number, known: Set<number>): LearnedSkill[] {
+  const next = candidates.find((candidate) => candidate.threshold <= level && !known.has(candidate.skillId))
+  if (!next) return []
+  known.add(next.skillId)
+  return [learnedFrom(next)]
 }
 
 /**
@@ -169,9 +209,25 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
   const rank = pairPartner ? pairRank(dataset, run, ctx.unit.id, pairPartner.id) : null
 
   let classDef = dataset.classesById.get(ctx.start.classId)
-  if (!classDef) return { segments: [], dropped: events, eternalSeals }
+  if (!classDef) return { segments: [], dropped: events, eternalSeals, startsWith: [] }
 
   const known = new Set<number>()
+  const candidateCache = new Map<number, SkillCandidate[]>()
+  const candidates = (def: ClassDef) => {
+    const cached = candidateCache.get(def.id)
+    if (cached) return cached
+    const list = skillCandidates(dataset, ctx, def)
+    candidateCache.set(def.id, list)
+    return list
+  }
+  // Recruitment is the one moment several skills arrive together.
+  const joinClass = classDef
+  const startsWith = candidates(joinClass)
+    .filter((candidate) => candidate.threshold <= effectiveLevel(joinClass, ctx.start.level) && !known.has(candidate.skillId))
+    .map((candidate) => {
+      known.add(candidate.skillId)
+      return learnedFrom(candidate)
+    })
   const personal = [...ctx.unit.baseStats]
   const clampTo = (def: ClassDef) => {
     const caps = projectUnit(dataset, ctx.unit, def.id, ctx.projection).caps
@@ -196,15 +252,13 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
 
     for (; level <= tierCap(classDef.tier, eternalSeals); level += 1) {
       const def: ClassDef = classDef
-      let startsWith: LearnedSkill[] = []
       let learned: LearnedSkill[] = []
       if (firstRow) {
-        startsWith = skillsLearnedBetween(def, 0, level, known, false)
         firstRow = false
       } else if (!arrivedFromReclass) {
         for (let i = 0; i < personal.length; i += 1) personal[i] += (personalGrowths[i] + def.growths[i]) / 100
         clampTo(def)
-        learned = skillsLearnedBetween(def, level - 1, level, known, false)
+        learned = levelUpSkill(candidates(def), effectiveLevel(def, level), known)
       }
       arrivedFromReclass = false
 
@@ -218,12 +272,11 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
         if (next) {
           reclass = next.id
           clampTo(next)
-          learned = [...learned, ...skillsLearnedBetween(next, 0, option.level, known, true)]
           classDef = next
         }
       }
 
-      segment.rows.push({ segment: segmentIndex, level, classId: def.id, startsWith, learned, reclass, options, ...snapshot(classDef) })
+      segment.rows.push({ segment: segmentIndex, level, classId: def.id, learned, reclass, options, ...snapshot(classDef) })
 
       if (event && option?.newSegment) {
         level = option.level
@@ -236,7 +289,7 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
     if (!changedSegment) break
   }
 
-  return { segments, dropped: events.filter((event) => !used.has(event)), eternalSeals }
+  return { segments, dropped: events.filter((event) => !used.has(event)), eternalSeals, startsWith }
 }
 
 /** The row's info panel values: expected stats plus effective growths/pair-up after this row. */

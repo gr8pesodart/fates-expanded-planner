@@ -2,8 +2,8 @@
 
 Every `unit/Body/<class>/` folder (and most `unit/Unique/<class>_<unit>/` folders) ships an
 `anime.bin`: the script that places the class body cells and the unit head cells for each map
-animation. It is the file that makes a head land on a body, and `extract_sprites.py` reads its
-first frame to emit the idle body/head pair.
+animation. It is the file that makes a head land on a body; `extract_sprites.py` reads the complete
+idle clip to emit its unique body/head cells, frame order, delays and per-pose offsets.
 
 The file is a BinArchive-shaped blob: `u32 size`, `u32 data_size`, `u32 pointer_count`,
 `u32 label_count` at `+0x00`, data at `+0x20` (pointer/label counts are 0 in every dump file). The
@@ -29,8 +29,8 @@ data itself is:
 | `+0x04` | 16 × 24B | frame records, fixed-size slot array (unused slots are zero) |
 
 Animation 0 is the standing/idle clip; each later used clip is one movement set (walk directions
-are separate clips). `frame_count`/`total_frames` are consistent across the dump: e.g. Swordmaster
-idle = 6 keyframes / 40 ticks (8+10+10+10+1+1), Axe Fighter idle = 4 / 62, Pegasus idle = 4 / 52.
+are separate clips). Idle clips have 4–6 keyframes. `frame_delay` is measured in 60 Hz ticks; for
+example, Swordmaster idle has 6 keyframes / 40 ticks (8+10+10+10+1+1), while Paladin idle has 6 / 60.
 
 ## Frame record (24 bytes)
 
@@ -56,19 +56,22 @@ transform the existing class-sprites pipeline applies to `青0.bch.lz`. Animatio
 address the small `青0` sheets; the later clips address the large `青1` sheets (e.g. the Swordmaster
 walk clips source body cells at `x = 0/32/64/96, y = 32..224` of the rotated 128×512 `青1` sheet).
 
-## The idle frame
+## The idle loop
 
-`animation[0].frames[0]` is the standing pose:
+`animation[0]` is the complete standing loop. It references four unique idle cells (body/head cell
+indices 0–3); keyframes can revisit a cell and can hold it for different durations. Swordmaster's
+sequence is `[0,1,2,3,2,1]` with the delays above. The app stores each unique cell once and follows
+the source keyframe sequence rather than repeating its pixels in every exported image.
 
-- Body: source `(0, 0)`, 32×32 — the exact crop the v1/v2 class sprites shipped (the rotated
-  sheet's top-left cell).
-- Head (foot classes): source `(0, 0)`, 32×32 — the head sheet's top-left "large" cell.
-- Head (mounted classes): source `(0, 32)`, 16×16 — the head sheet's bottom-left "small" cell, drawn
-  at an offset such as `(10, 0)` where the rider's neck is.
+- Body cells 0–3: source x `0/32/64/96`, y `0`, each 32×32. Cell 0 is the pose the old v1/v2
+  class sprites shipped.
+- Head (foot classes): source x `0/32/64/96`, y `0`, each 32×32.
+- Head (mounted classes): source x `0/16/32/48`, y `32`, each 16×16, drawn at the frame's own
+  offset near the rider's neck (offsets can shift between poses).
 - Head (Unique overrides): `head_width = head_height = 0`; the body already contains the head.
 
-Every one of the 116 `Body` folders and 34 `Unique` folders has an idle frame whose body source is
-`(0, 0)`; 84 classes use the 32×32 head cell and 31 use the 16×16 cell. The small head is
+Every one of the 116 `Body` folders and 34 `Unique` folders has the same four-cell idle sheet; 84
+classes use the 32×32 head cell and 31 use the 16×16 cell. The small head is
 separately drawn art (Ryoma: 13×17 px large vs 11×15 px small), not a scaled copy, so both variants
 ship and the body says which one it needs (`head.variant`).
 
@@ -90,18 +93,30 @@ per-pixel priorities with head-wins ties still drew Charlotte's, Izana's and Nyx
 over their `0x66` bodies. The sandwich keeps every long-haired infantry unit's hair behind the body
 and every mounted rider's `0x88` face in front of the mount.
 
-`extract_sprites.py` ships bodies as one opaque image (`layers: 1`) and heads as a two-cell
-`[back | front]` strip (`layers: 2`), fully opaque pixels. Unique bodies have no head and ship
-flattened (no `layers`). Recolourable hair is tinted with the unit's default FaceData hair colour at
-extraction (the talk-portrait tint); per-run colours are backlogged.
+`extract_sprites.py` ships four body cells (`frameCount: 4`, `layers: 1`) and four poses of each
+head size (`frameCount: 4`, `layers: 2`), fully opaque pixels. Strips are frame-major, then layer
+bands. Each body entry's `animation` records each keyframe as `[cell, delay]`, adding `headX, headY` only
+when the head leaves the body's rest offset (the head cell always equals the body cell).
+Unique bodies have no head and ship four flattened cells (no `layers`). Recolourable hair is tinted
+with the unit's default FaceData hair colour at extraction (the talk-portrait tint); per-run colours
+are backlogged.
+
+## Directional clips
+
+Animations 1–8 are eight facing-specific movement clips. Each has four frames, usually held for 8
+or 10 ticks; `frame_index < 4` reads the idle sheet `青0`, and movement indices use `青1`. There is no
+clip-name enum in the archive, so diagonal left/right labels are inferred from the art. The planner
+uses only the idle loop: its roster, Chart and character views show standstill tokens and carry no
+map direction or movement state. See [overworld-animation-audit.md](overworld-animation-audit.md)
+for the audit and the reason directional playback is not wired here.
 
 ## Evidence
 
 - Byte-level parse cross-checked on `剣聖男`, `アクスファイター女`, `天馬武者女`, `ソシアルナイト男`,
   `マーナガルム男`, `九尾の狐女`, `ガルー女_ベロア`, `歌姫女_アクア` and `ダークブラッド女_カンナ女`
   (header values, keyframe counts, delay sums and source rectangles all line up).
-- All 125 classes with a body, 13 unit×class Unique overrides and all 71 unit head sheets resolve an
-  idle frame; rendering the contract (body at (0,0), head at its offset) reproduces the in-game
+- All 125 classes with a body, 13 unit×class Unique overrides and all 71 unit head sheets resolve
+  their idle cells; rendering the contract (body at (0,0), head at each pose's offset) reproduces the in-game
   sprite on the 16-combo contact sheet (`docs/screenshots/v3/sprites.png`).
 - Layout confirmed against Paragon's FE14 `Sprite` type definition (thane98, GPL-3.0) as a
   documentation reference only; the parser here is written from the byte-level checks above.

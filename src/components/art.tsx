@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { ASSETS_ENABLED, portraitArt, spriteLayers } from '../data/art'
-import type { SpriteImage } from '../data/art'
+import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
 
 function monogram(label: string): string {
@@ -38,6 +38,7 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
 
 /** One band of a layered sprite strip, picked with background-position. */
 function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: number; y: number; scale: number; cell: number }) {
+  const stripCells = (image.layers ?? 1) * (image.frameCount ?? 1)
   const style: CSSProperties = {
     position: 'absolute',
     left: x * scale,
@@ -45,7 +46,7 @@ function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: numbe
     width: image.w * scale,
     height: image.h * scale,
     backgroundImage: `url("${image.file}")`,
-    backgroundSize: `${(image.layers ?? 1) * image.w * scale}px ${image.h * scale}px`,
+    backgroundSize: `${stripCells * image.w * scale}px ${image.h * scale}px`,
     backgroundPosition: `${-cell * image.w * scale}px 0`,
   }
   return <span className="sprite-cell" style={style} />
@@ -58,22 +59,79 @@ function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: numbe
  */
 const STACK: readonly (readonly ['head' | 'body', number])[] = [['head', 0], ['body', 0], ['head', 1]]
 
+function useInViewport(ref: { current: HTMLSpanElement | null }): boolean {
+  const [visible, setVisible] = useState(() => !('IntersectionObserver' in window))
+  useEffect(() => {
+    const node = ref.current
+    if (!node || !('IntersectionObserver' in window)) return
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { rootMargin: '64px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [ref])
+  return visible
+}
+
+function useAnimationIndex(sequence: SpriteAnimationFrame[] | undefined, enabled: boolean): number {
+  const [index, setIndex] = useState(0)
+  useEffect(() => {
+    if (!enabled || !sequence || sequence.length < 2) return
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (reducedMotion.matches) return
+    let frame = 0
+    let timer = 0
+    const schedule = () => {
+      timer = window.setTimeout(() => {
+        frame = (frame + 1) % sequence.length
+        setIndex(frame)
+        schedule()
+      }, Math.max(1, Math.round(sequence[frame][1] * 1000 / 60)))
+    }
+    const visibility = () => {
+      window.clearTimeout(timer)
+      if (!document.hidden) schedule()
+    }
+    const motion = (event: MediaQueryListEvent) => {
+      window.clearTimeout(timer)
+      if (event.matches) setIndex(0)
+      else if (!document.hidden) schedule()
+    }
+    schedule()
+    document.addEventListener('visibilitychange', visibility)
+    reducedMotion.addEventListener('change', motion)
+    return () => {
+      window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', visibility)
+      reducedMotion.removeEventListener('change', motion)
+    }
+  }, [enabled, sequence])
+  return sequence?.length ? index % sequence.length : 0
+}
+
 export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: { unitId: string | null; classId: number; name: string; size?: number; tile?: boolean }) {
   const layers = spriteLayers(unitId, classId)
+  const spriteRef = useRef<HTMLSpanElement | null>(null)
+  const visible = useInViewport(spriteRef)
+  const animation = layers?.kind === 'stitched' ? layers.body.animation : layers?.kind === 'single' ? layers.image.animation : undefined
+  const animationIndex = useAnimationIndex(animation, visible)
+  const frame = animation?.[animationIndex]
   const wrap = (content: ReactNode) => (
-    <span className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
+    <span ref={spriteRef} className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
   )
   if (!layers) return wrap(<span className="sprite-mono">{monogram(name)}</span>)
-  if (layers.kind === 'single' && !layers.image.layers) return wrap(<img className="sprite-single" src={layers.image.file} alt="" draggable={false} />)
+  if (layers.kind === 'single' && !layers.image.layers && !layers.image.frameCount) return wrap(<img className="sprite-single" src={layers.image.file} alt="" draggable={false} />)
   const body = layers.kind === 'single' ? layers.image : layers.body
-  const head = layers.kind === 'stitched' ? layers.head : null
-  const offset = layers.kind === 'stitched' ? layers.offset : null
+  const head = layers.kind === 'stitched'
+    ? layers.offset?.variant === 'small' ? layers.smallHead ?? layers.head : layers.head
+    : null
+  const offset = layers.kind !== 'stitched' ? null
+    : frame?.[2] !== undefined && frame[3] !== undefined ? { x: frame[2], y: frame[3] } : layers.offset
+  const bodyCell = frame?.[0] ?? 0
   const scale = size / Math.max(body.w, body.h)
   if (!head || !offset) {
     const bands = Array.from({ length: body.layers ?? 1 }, (_, cell) => cell)
     return wrap(
       <span className="sprite-stage" style={{ width: body.w * scale, height: body.h * scale }}>
-        {bands.map((cell) => <SpriteCell key={cell} image={body} x={0} y={0} scale={scale} cell={cell} />)}
+        {bands.map((cell) => <SpriteCell key={cell} image={body} x={0} y={0} scale={scale} cell={bodyCell * (body.layers ?? 1) + cell} />)}
       </span>,
     )
   }
@@ -82,7 +140,7 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: 
       {STACK.map(([part, cell]) => {
         const image = part === 'head' ? head : body
         const at = part === 'head' ? offset : { x: 0, y: 0 }
-        return cell < (image.layers ?? 1) ? <SpriteCell key={`${part}${cell}`} image={image} x={at.x} y={at.y} scale={scale} cell={cell} /> : null
+        return cell < (image.layers ?? 1) ? <SpriteCell key={`${part}${cell}`} image={image} x={at.x} y={at.y} scale={scale} cell={bodyCell * (image.layers ?? 1) + cell} /> : null
       })}
     </span>,
   )

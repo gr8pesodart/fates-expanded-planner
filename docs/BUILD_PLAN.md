@@ -21,8 +21,21 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
 - A2 stitched sprites merged (DS lane; Opus review fixed texture alpha → 4-layer draw-priority
   stack). **Awaiting owner sign-off** on `docs/screenshots/v3/sprites.png`.
 - A3 splash art done directly after the DS lane stalled (see ASSETS.md › Splash art).
+- v3.1 notes pass: sort sheet (stat sorts + icons, direction, favourites / pair-link toggles) on
+  Roster and Chart independently; Mov column; sticky roster and character headers; Parents tab for
+  children; mods checklist (UGF required); Conquest default; stat renames and dynamic colouring;
+  one-way A+; Corrin Friendship Seal / talent inheritance; Nohr Prince(ss) route promotions; animated
+  idle map sprites (game timing, paused offscreen and under reduced motion).
+
+- PWA updates: the service worker uses `skipWaiting` + `clientsClaim`, and `src/app/pwa.ts`
+  re-checks for a new build whenever the app returns to the foreground (and hourly), then reloads.
+  iOS home-screen apps resume rather than relaunch, so without this they sat on old builds. Verified
+  end to end (build A → rebuild → `visibilitychange` → page reloads onto build B).
 
 ### Backlog
+
+- **Directional map animations** (walk cycles): the ROM has eight-direction move clips alongside
+  idle (docs/assets/overworld-animation-audit.md); v3.1 ships idle only to keep strips small.
 
 - **Variable hair colour** (map sprites + talk portraits): a child's hair colour comes from their
   second parent; Corrin's is custom (add a Corrin hair-colour choice to the Avatar tab). Both art sets
@@ -69,8 +82,10 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
    growth / pair-up at each level. Reuse `classRoute.ts` rules. Tests: Corrin Nohr Princess → Samurai
    @10 → Swordmaster @12 → Master of Arms @A15 matches the mock's skills (Dragon Fang, Duelist's
    Blow, Vantage, Astra, Swordfaire…); an illegal promotion is not offered.
-4. **Sort** `src/logic/rosterSort.ts` (done, tested): favourites first → chosen sort → recruit
-   order tiebreak; children trail first-gen; a stat sort on a `-` column resets to recruit order.
+4. **Sort** `src/logic/rosterSort.ts` (done, tested): optional favourites first → chosen sort
+   (recruit / name / any stat incl. Mov, ascending or descending) → recruit order tiebreak; children
+   trail first-gen only under recruit order; a stat sort on a `-` column resets to recruit order.
+   Optional pair linking lifts the lower-ranked partner up to the higher one, front unit first.
    Recruitment data must give optional recruits (Mozu, Izana, Fuga…) the index of their chapter.
 
 ### C — State (`schema: 4`, fresh key; v2 was never released, so no migration)
@@ -78,9 +93,10 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
 `RunPlan` gains `favourites: string[]`. `UnitPlan` keeps `sPartner`, `aPlusPartner`,
 `variableParent`, `classId`, `skills`, `inheritSkill`, `combatPartner` and `combatRole`, and
 replaces `classRoute` with `reclasses: { segment: number; level: number; classId: number }[]`.
-Relationship writes are **symmetric** (S and A+ both ways, pair-up partner and roles both ways,
-child "Parent B" ↔ parent's S). The store owns that, with tests. UI state (non-persisted, or
-persisted separately): roster lens, sort, open info panel.
+Relationship writes are **symmetric** (S both ways, pair-up partner and roles both ways,
+child "Parent B" ↔ parent's S); v3.1 makes A+ a one-way choice (docs/DATA.md › v3 planner rules).
+The store owns that, with tests. UI state (non-persisted, or persisted separately): roster lens,
+Roster and Chart sorts (independent), open info panel.
 
 ### D — Screens (after A-gate for sprites; portraits/splash can use monograms until ready)
 

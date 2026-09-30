@@ -17,8 +17,12 @@ export function Rail<T extends string | number>({ items, active, onSelect, varia
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const node = ref.current?.querySelector<HTMLElement>('[aria-selected="true"]')
-    node?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+    const rail = ref.current
+    const node = rail?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!rail || !node) return
+    // Scroll the rail only: scrollIntoView would also scroll the page to a rail below the fold.
+    const offset = node.getBoundingClientRect().left - rail.getBoundingClientRect().left
+    rail.scrollTo({ left: rail.scrollLeft + offset - (rail.clientWidth - node.offsetWidth) / 2, behavior: 'smooth' })
   }, [active])
   return (
     <div ref={ref} className={`rail rail-${variant}`} role="tablist" aria-label={label}>

@@ -16,6 +16,7 @@ function isOptionalString(value: unknown): boolean {
 function isRunPlan(value: unknown): value is RunPlan {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') return false
   if (typeof value.modpackId !== 'string' || typeof value.dlc !== 'boolean') return false
+  if (value.mods !== undefined && (!Array.isArray(value.mods) || !value.mods.every((id) => typeof id === 'string'))) return false
   if (typeof value.route !== 'string' || !ROUTE_IDS.has(value.route)) return false
   if (typeof value.createdAt !== 'string' || typeof value.updatedAt !== 'string') return false
   if (!isRecord(value.corrin) || !isRecord(value.units)) return false
@@ -39,7 +40,9 @@ function isRunPlan(value: unknown): value is RunPlan {
       !isOptionalString(unit.pairPartner)) return false
     if (unit.classId !== undefined && typeof unit.classId !== 'number') return false
     if (unit.inheritSkill !== undefined && typeof unit.inheritSkill !== 'number') return false
+    if (unit.inheritFixedSkill !== undefined && typeof unit.inheritFixedSkill !== 'number') return false
     if (unit.eternalSeals !== undefined && typeof unit.eternalSeals !== 'number') return false
+    if (unit.joinLevel !== undefined && typeof unit.joinLevel !== 'number') return false
     if (unit.pairRole !== undefined && unit.pairRole !== 'front' && unit.pairRole !== 'back') return false
   }
 

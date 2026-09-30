@@ -47,10 +47,13 @@ active or selected state uses the route accent.** "Darkened when selected" becom
 | `--rel-pair` | `#5eb761` | pair-up slot (`#69d06d`) |
 | `--good` / `--good-soft` | `#5eb761` / `#9ed2a0` | boon fill / boon outline |
 | `--bad` / `--bad-soft` | `#be5555` / `#f5adad` | bane fill / bane outline |
+| `--stat-low` / `--stat-mid` / `--stat-high` | `#842334` / `#8a6a00` / `#12803f` | dynamic stat colouring (text colour, not fill; each stop ≥ 4.5:1 on `--surface-2`) |
 
 Relationship hues are **semantic** (which slot this is), not selection, so they stay fixed on every
 route. `--rel-s` (dusty rose) was checked against the Birthright vermilion accent: the two are
 distinguishable, but never put S-slot borders on an accent background.
+Route cards use a standard 1px border tinted with the route accent. A route-colored left border is
+not used.
 
 Type: **Inter** (self-host 400/500/600/700 as woff2, `font-display: swap`). The type scale is taken
 from the mock:
@@ -72,10 +75,12 @@ areas may extend past the visible chip.
 
 ## Shared components
 
-- **StatTable**: 8 columns (HP…Res). A header row of `--surface-3` cells and a value row of
+- **StatTable**: 9 columns (HP…Res, Mov). A header row of `--surface-3` cells and a value row of
   `--surface-2` cells, both 12px/600, 2px gaps, `--r-xs`. A value can be a number, a signed number
   (`+2`, for modifiers), a percentage for growths, or **`-` meaning not applicable** (HP has no cap
-  modifier and no pair-up bonus). Optional per-cell tone for positive/negative values.
+  modifier and no pair-up bonus). Dynamic stat lenses colour the value text low/average/high
+  (`--stat-low` → `--stat-mid` → `--stat-high`), compared to the relevant army or same-tier class
+  options; cells keep their neutral fill.
 - **StatLensRail**: a horizontal scroller of lens tabs. On the Roster it uses an underline tab style
   (active = `--ink` text + 2px `--accent` underline). In class cards it uses a pill style (active =
   `--accent-strong` fill, white text; inactive = `--line-strong` outline, `--ink-2` text).
@@ -85,8 +90,8 @@ areas may extend past the visible chip.
   Sizes are 32 (roster name), 28 (relationship slots in a row) and 24 (chart).
 - **RelationSlot** (28px): when empty, a dashed border in the slot hue with the glyph (`S`, `A+`,
   crossed swords) at 50% hue. When filled, a PortraitChip with a 1px solid border in the slot hue.
-- **ClassSprite**: the stitched map sprite (body + the unit's head, see *Assets*). It renders on a
-  `--surface-3` tile in lists and has no tile in the talent cards.
+- **ClassSprite**: the stitched, animated idle map sprite (body + the unit's head, see *Assets*).
+  It has no background tile on the Roster or Chart, but keeps a tile in the class picker.
 - **SkillIcon** (20–32px) and **SkillCard** (icon over name on the left, description on the right;
   12px `--ink-2`). The locked personal-skill card uses `--surface-2` fill and no border.
 - **BottomNav**: Roster / Chart / Runs, with icons at 30px and 12px/600 labels. The active item uses
@@ -96,23 +101,24 @@ areas may extend past the visible chip.
 
 ## Roster (`3:970`)
 
-- Header: "Roster" title, with the **sort button** top-right. The icon reflects the active sort.
-  Sorts are *Recruit order* (default, per route; `mdi:sort-clock-ascending-outline`), *Name*
-  (`mdi:sort-alphabetical-ascending`) and *Stat* (sort by one column of the current lens, descending;
-  `mdi:sort-numeric-descending`). Tapping opens a small sheet. The Stat sort needs a column pick:
-  HP…Res chips. **Favourites always sort first**, then the chosen sort, then recruit order as the
-  tiebreak. Recruit order puts optional recruits at their chapter (e.g. Mozu at her paralogue's
-  place) and pushes **all children to the end** (in paralogue order). `-` cells cannot be sorted:
-  columns showing `-` are not offered in the Stat pick, and switching the lens rail to a lens that
-  blanks the sorted column resets the sort to Recruit order (`reconcileRosterSort`).
+- Sticky header: "Roster" title, lens rail and **sort button** top-right. The icon reflects the active
+  sort and direction. The sheet presents Recruit order, Name and each stat with its own icon; `-`
+  columns are disabled. Direction is selectable. A **Show** segmented control filters to All / First
+  gen / Children (a filtered-out pair partner leaves the other unit unlinked). Favourites-first and
+  Link pair-up partners are independent toggles. Linked partners occupy the earlier partner's sorted position; the pair's
+  front member still displays first. Name/stat ties use recruit order. The Chart has its own sort
+  state and the same controls. If changing the lens makes the chosen stat blank, sort resets to
+  Recruit order (`reconcileRosterSort`).
+- **Recruit order** is route-specific. Optional recruits sit at their chapter (e.g. Mozu at her
+  paralogue's place), and all children sort after first-generation units in paralogue order.
 - **Lens rail** under the title: every lens from the Stats tab, in this order: Stat Modifiers,
   Personal Growth Rates, Effective Growth Rates, Max Stats, Effective Pair Up Bonuses, Personal
   Pair Up Bonuses, Base Stats, Class Growth Rates, Class Pair Up Bonuses. The choice persists in UI
   state, not in the run.
-- **Row** (padding 12/10, `--line` bottom border). Left side: PortraitChip 32, name, and a favourite
-  star (filled `--ink` / outline `--ink-3`; tap toggles). Right side, gap 6: ClassSprite (tap opens
-  the **class popup** listing every class available to the unit, grouped Base / Advanced; picking
-  one sets the current class), then the S, A+ and pair-up RelationSlots (**child rows get a fourth
+- **Row** (padding 12/10, `--line` bottom border). Left side: PortraitChip 32, ClassSprite, name,
+  and a favourite star (filled `--ink` / outline `--ink-3`; tap toggles). The sprite has no chip
+  background and opens the class popup. Right side, gap 6: the S, A+ and pair-up RelationSlots
+  (**child rows get a fourth
   "Parent B" slot**, in `--ink-2` outline, synced with that parent's S slot; each opens the
   **character picker** for that slot), then the edit button (dark circle + arrow, opens the
   Character page). Below: a StatTable for the active lens.
@@ -128,9 +134,12 @@ areas may extend past the visible chip.
   originating screen (Roster or Chart; use history). Bottom-left: the name (38/700, white) and the
   favourite star (white variant). Below that are the **tab pills**. The active tab is white fill with
   `--ink` text; inactive tabs are `rgb(0 0 0 / .45)` fill with white text. The tabs are
-  **Avatar** (Corrin only), **Profile**, **Stats** and **Progression**; the default is Profile.
+  **Avatar** (Corrin only), **Profile**, **Stats** and **Progression**; second-generation units also
+  have a **Parents** tab. The default is Profile.
 - **Panel**: white, with a `--r-sheet` top radius, overlapping the splash by about 78px. Tab
-  contents scroll inside the page (the whole page scrolls; the header is not sticky).
+  contents scroll inside the page (the whole page scrolls). A sticky white header repeats the name
+  and tab buttons; switching tabs preserves scroll. Opening another character starts at the top and
+  slides the page in.
 
 ### Avatar tab (`3:5890`) — Corrin only
 
@@ -154,17 +163,25 @@ areas may extend past the visible chip.
   bottom-centre (white, 14/700, shadow) and a 1px border in the slot hue. Empty cards show the slot
   glyph on `--surface-2`. The caption below is italic 12px `--ink-2`: "Gains *Class*" for S and A+
   (the class the Partner or Friendship Seal unlocks); for Pair Up it's a **Front / Back**
-  Segmented. **Child units get a fourth "Parent B" slot**, which is the variable parent and stays
-  in sync with that parent's S slot (setting either side writes both).
+  Segmented. Children choose their variable parent on the separate Parents tab, which writes the
+  fixed parent's S slot.
 - **Classes**: the heading with a Base / Advanced / All Segmented on the right, then a pill
-  StatLensRail of class-relevant lenses (Base Stats, Max Stats, Class Growth Rates, Effective Growth
-  Rates, Class Pair Up Bonuses). **Class cards** (`--r-md`, `--line` border) show the sprite, class
+  StatLensRail of class-relevant lenses (Base Stats (Class), Max Stats (Effective), Growth Rates
+  (Class), Growth Rates (Effective), Pair Up Bonuses (Class), Pair Up Bonuses (Effective)).
+  Category labels appear on the rail; section headings omit the category. **Class cards** (`--r-md`,
+  `--line` border) show the sprite, class
   name (14/700) and StatTable. Tapping a card selects it: `--accent-strong` fill, white text and a
   "SELECTED" tag. Selection sets the unit's current class (the same field as the Roster class
   popup).
 - **Skills**: the personal skill first (locked card), then five equip slots. Tapping a slot opens
   the **skill picker** (the unit's reachable skill pool plus inheritable skills; each row shows the
-  source and learn level). An empty slot shows a dashed placeholder and "Empty slot".
+  source and learn level). An empty slot shows a dashed placeholder, a `+` icon in the round icon well, and "Empty slot".
+
+### Parents tab — children only
+
+The Parents tab lists first-generation candidates with a Recruit, Name or Chapter sort control.
+Each candidate shows route availability (muted with an explanatory note when it predates the fixed
+parent), the inherited class tree with sprites, inherited stat modifiers and personal growth rates.
 
 ### Stats tab (`3:5892`)
 
@@ -174,6 +191,10 @@ These are sections of labelled StatTables with `--line` dividers between section
 - **Personal**: Stat Modifiers, Personal Growth Rates, Personal Pair Up Bonuses.
 - **Class**: a pill rail of the unit's classes (defaults to the current class; this selection only
   changes what this section shows), then Base Stats, Class Growth Rates and Class Pair Up Bonuses.
+  Class comparisons are limited to the selected class's tier. Every stat lens uses dynamic low /
+  average / high coloring against its available comparison set, applied to the value's text
+  (bold) — cells keep their neutral fill. `-` placeholders (no value) use `--ink-2`. Mov is a value only in Max Stats and Base Stats; the
+  other lenses show `-` there.
 
 Lens definitions (the single source for the Roster rail too; implement in `src/logic/lenses.ts`):
 
@@ -191,17 +212,27 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
 
 ### Progression tab (`3:10133`)
 
-- For **children**, an **Inherited skill** card sits at the top (SkillCard style, opens the skill
-  picker limited to the variable parent's equipped/learnable skills).
+- A **Recruitment** section comes first: join chapter and class, the join level, and "Starts with"
+  skill chips (the only place several skills arrive at once). Paralogue, Xenologue, DLC and "or
+  later" recruits get a numeric **Lv** field (16px text, commits on blur/Enter) because their join
+  level depends on when they're recruited; others show the fixed level in `--ink-2`.
+- For **children**, an **Inherited Skills** section sits after it: two SkillCards, one per parent,
+  side by side from 720px. Empty: "Tap to choose a skill from *Parent*" (`--ink-2`, with only the
+  parent's name in the tag token: 600, `--accent-strong`; "Parent B" until one is chosen). Filled:
+  the description plus "From *Parent*" styled the same way.
+  Each opens the skill picker limited to that parent's inheritable skills; a skill already taken by
+  the other slot is disabled ("From other parent"). Inherited skills also appear in the child's
+  equip-slot picker ("Inherited from *parent*").
 - The page is split into **segments**, one per class tier the route passes through: Base (1–20),
   Advanced (1–20), Special (1–40), plus Eternal Seal extensions (+5 each). A segment only
   exists while the route needs it. Each segment has a 21/700 heading, then **one row per level**:
-  the level number (14/700), the skills learned at that level ("Learns ◆ *Skill*", italic `--ink-2`
-  label with icon; level 1 of the starting class shows "Starts with" and the personal skill), a
+  the level number (14/700), the skill learned at that level ("Learns ◆ *Skill*", italic `--ink-2`
+  label with icon; at most one per level-up), a
   dotted leader line, an **info button**, and a **reclass dropdown** (`--surface-3`, `--r-xs`, 12px;
   the placeholder is italic "No reclass").
 - A reclass chosen at level *n* takes effect from level *n*. The rest of that segment recomputes
-  (skills learned, levels remaining). Choosing a promoted class **ends the segment** and starts the
+  (skills learned, levels remaining). A class change grants no skills itself: its skills arrive on
+  later level-ups (docs/DATA.md › Progression). Choosing a promoted class **ends the segment** and starts the
   Advanced one at 1. Base↔base and promoted↔promoted keep the level. Special-class and DLC rules
   come from `src/logic/classRoute.ts` (Master Seal ≥ 10, level carry/convert, Eternal Seal +5).
   Invalid picks are not offered, and later rows made invalid by an earlier change are cleared with
@@ -210,37 +241,43 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   pointing to the button. It shows *Expected Stats* (average stats at that level on this path),
   *Effective Growth Rate* (for the class at that level) and *Effective Pair Up Bonuses*. The
   StatTables use inverted tones (white headings). Only one panel is open at a time.
-- The first-gen start level comes from the recruitment data (join level and class per route).
-  Children start from their paralogue level only if that's cheap; otherwise start at Base 1 and note
-  it.
+- The start level comes from the recruitment data (join level and class per route), overridden by
+  the plan's recruitment level for variable-level recruits.
 
 ## Chart (`3:10134`)
 
 - The "Chart" title, then a list of cards (`--line` border, `--r-lg`, gap 20, padding 10).
+- A sort button opens its own Recruit / Name / Stat sheet with direction, a **Show** filter (All /
+  First gen / Children), Favourites-first and Link pair-up partners; these settings do not share state with the Roster. Class sprites have no chip
+  background and sit between the portrait and name.
 - A **pair card** has two rows, front on top. Each row has a ClassSprite chip (24), name (21/400),
   a favourite star, the unit's **five equipped skill icons** (20px, gap 5) and an edit arrow (20px)
   that opens the Character page. A **swap button** (`charm:swap-vertical`, on a white knockout
   over the divider) swaps front and back, which rewrites both units' pair-up roles.
 - A **solo card** is a single row for any in-army unit with no pair-up partner.
-- Order: pairs in the roster's current sort order of their front unit, then solos.
+- Order follows the Chart sort. Linked pairs are positioned at the first partner in sort order,
+  while the front member remains the top row.
 - Desktop: two-column grid of cards.
 
 ## Screens not in Figma (intuited — owner notes 1–2)
 
 ### Runs (bottom-nav tab)
 
-- The "Runs" title, then a list of run cards. Each card has a left accent stripe in the run's route
-  hue, the run name (21/400), a subline "Revelation · UGF 2.5.2 · DLC on · 34 units", and a "More"
+- The "Runs" title, then a list of run cards. Each card uses a standard 1px border tinted with the
+  route accent (never a left border stripe), the run name (21/400), a subline "Revelation · 5 mods ·
+  DLC on · 34 units", and a "More"
   menu (Duplicate, Export JSON, Share link, Delete with confirm). The active run shows an
   `--accent-strong` "ACTIVE" tag; tapping another run switches to it.
 - Footer actions: **New run** (primary, `--accent-strong`) and **Import** (outline).
-- **Game build** dropdown per run: the only mod-list surface (AGENTS.md rule).
+- Per-run **Mods** checklist: UGF is mandatory until a vanilla dataset is integrated; optional
+  installed mods can be toggled and saved with the run.
 
 ### New-run setup (full-screen flow, three steps with a progress bar)
 
-1. **Name + game build**: a text field and the build dropdown.
-2. **Route**: three large cards (Birthright / Conquest / Revelation) with the route hue as the card
-   fill when selected, plus a **DLC** switch. Selecting a route immediately previews the accent
+1. **Name + mods**: a text field and the Mods checklist (UGF required).
+2. **Route**: three large cards (Birthright / Conquest / Revelation) with a standard border tinted
+   with the route hue; selected state uses the route accent. Conquest is the default. Includes a
+   **DLC** switch. Selecting a route immediately previews the accent
    across the flow.
 3. **Your Corrin**: the Avatar tab component reused as-is (gender, boon, bane, talent).
 
@@ -282,6 +319,7 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
 | Stitched map sprites (body + unit head) | ClassSprite everywhere | romfs `unit/Body/<class>/青0.bch.lz` + `unit/Head/<unit>/青0.bch.lz`, with offsets from `unit/Body/<class>/anime.bin`; `unit/Unique/` overrides (Velouria, Keaton, Kana dragon…). Stitched **at runtime** from body frame + head frame + offsets. |
 | Skill icons | as today | unchanged |
 | UI icons | nav, sort, info, swap, star, edit | `docs/design/figma/icons/` → `src/components/icons/` |
+| Sort icons | glyph + shared arrow (down = ascending) | Figma clock (recruit) and `mdi:sort-alphabetical` letters (name) kept from the originals; stat glyphs (owner-chosen): `material-symbols:favorite` HP, `material-symbols:swords` Str, `material-symbols:magic-button` Mag, `ri:target-fill` Skl, `game-icons:fluffy-wing` Spd, `ph:clover-fill` Lck, `material-symbols:shield` Def, `ph:flower-lotus-fill` Res, `griddy-icons:steps-filled` (mirrored) Mov — `src/components/SortIcon.tsx`, licences in docs/ASSETS.md |
 
 Everything must still render with `VITE_ASSETS=off`: monograms for portraits and sprites, a
 route-hue gradient for splash.

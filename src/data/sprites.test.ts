@@ -9,6 +9,7 @@ interface SpriteHead {
   w: number
   h: number
   layers: number
+  frameCount: number
   source: string
   small?: SpriteHead
 }
@@ -19,6 +20,8 @@ interface BodyEntry {
   h: number
   head: { x: number; y: number; variant?: 'small' | 'large' } | null
   layers?: number
+  frameCount: number
+  animation: number[][]
   source: string
 }
 
@@ -26,6 +29,8 @@ interface FlatEntry {
   file: string
   w: number
   h: number
+  frameCount: number
+  animation: [number, number][]
   source: string
 }
 
@@ -73,22 +78,26 @@ describe('stitched sprite manifest', () => {
     expect(manifest.coverage.heads.total).toBe(71)
   })
 
-  it('every body entry is a single cell with a file and provenance', () => {
+  it('every body entry contains the four unique idle poses with timing and provenance', () => {
     expect(Object.keys(manifest.bodies).length).toBeGreaterThan(0)
     for (const entry of Object.values(manifest.bodies)) {
       expect(entry.source).toContain('anime.bin')
       expect(entry.w).toBe(32)
       expect(entry.h).toBe(32)
+      expect(entry.frameCount).toBe(4)
+      expect(entry.animation.length).toBeGreaterThanOrEqual(4)
+      expect(entry.animation.length).toBeLessThanOrEqual(6)
+      expect(entry.animation.every(([cell, delay]) => cell >= 0 && cell < 4 && delay >= 0)).toBe(true)
+      expect(entry.animation.every((frame) => frame.length === 2 || (frame.length === 4 && entry.head !== null))).toBe(true)
       const size = webpSize(readFileSync(publicPath(entry.file)))
       expect(size.height).toBe(entry.h)
+      expect(size.width).toBe(entry.w * entry.frameCount * (entry.layers ?? 1))
       if (entry.head) {
         expect(entry.layers).toBe(1)
-        expect(size.width).toBe(entry.w)
         expect(Number.isFinite(entry.head.x)).toBe(true)
         expect(Number.isFinite(entry.head.y)).toBe(true)
       } else {
         expect(entry.layers).toBeUndefined()
-        expect(size.width).toBe(entry.w)
       }
     }
   })
@@ -100,12 +109,14 @@ describe('stitched sprite manifest', () => {
       expect(entry.w).toBe(32)
       expect(entry.h).toBe(32)
       expect(entry.layers).toBe(2)
+      expect(entry.frameCount).toBe(4)
       expect(entry.source.startsWith('unit/Head/')).toBe(true)
-      expect(webpSize(readFileSync(publicPath(entry.file))).width).toBe(entry.w * 2)
+      expect(webpSize(readFileSync(publicPath(entry.file))).width).toBe(entry.w * entry.layers * entry.frameCount)
       expect(entry.small?.w).toBe(16)
       expect(entry.small?.h).toBe(16)
       expect(entry.small?.layers).toBe(2)
-      expect(webpSize(readFileSync(publicPath(entry.small!.file))).width).toBe(entry.small!.w * 2)
+      expect(entry.small?.frameCount).toBe(4)
+      expect(webpSize(readFileSync(publicPath(entry.small!.file))).width).toBe(entry.small!.w * entry.small!.layers * entry.small!.frameCount)
     }
   })
 
@@ -113,7 +124,7 @@ describe('stitched sprite manifest', () => {
     for (const entry of Object.values(manifest.genericHeads)) {
       for (const head of [entry, ...(entry.small ? [entry.small] : [])]) {
         const size = webpSize(readFileSync(publicPath(head.file)))
-        expect(size.width).toBe(head.w * (head.layers ?? 1))
+        expect(size.width).toBe(head.w * (head.layers ?? 1) * (head.frameCount ?? 1))
         expect(size.height).toBe(head.h)
       }
     }
@@ -122,7 +133,7 @@ describe('stitched sprite manifest', () => {
     for (const entry of uniqueEntries) {
       expect(entry.source.startsWith('unit/Unique/')).toBe(true)
       const size = webpSize(readFileSync(publicPath(entry.file)))
-      expect(size.width).toBe(entry.w)
+      expect(size.width).toBe(entry.w * (entry.frameCount ?? 1))
       expect(size.height).toBe(entry.h)
     }
   })

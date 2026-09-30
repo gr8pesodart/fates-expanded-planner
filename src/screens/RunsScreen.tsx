@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { Icon } from '../components/icons'
 import { useToast } from '../components/toast'
-import { BUILD_PROFILES, getBuildProfile } from '../data/modProfiles'
+import { selectedModIds } from '../data/modProfiles'
+import { ModChecklist } from '../components/ModChecklist'
 import { ROUTES } from '../data/types'
 import { navigate } from '../lib/router'
 import type { RunPlan } from '../state/model'
@@ -67,7 +68,7 @@ function RunCard({ run, active, onSelect, deletable }: { run: RunPlan; active: b
     <li className="run-card" data-route={run.route} aria-current={active || undefined}>
       <button type="button" className="run-main" onClick={onSelect} aria-label={`${active ? 'Active run' : 'Switch to'} ${run.name}`}>
         <span className="run-name">{run.name}</span>
-        <span className="run-meta muted">{route?.label} · {getBuildProfile(run.modpackId).short} · DLC {run.dlc ? 'on' : 'off'} · {paired} couple{paired === 1 ? '' : 's'}</span>
+        <span className="run-meta muted">{route?.label} · {selectedModIds(run.modpackId, run.mods).length} mods · DLC {run.dlc ? 'on' : 'off'} · {paired} couple{paired === 1 ? '' : 's'}</span>
         {active ? <span className="run-tag">Active</span> : null}
       </button>
       <button type="button" className="icon-btn" aria-label={`More for ${run.name}`} aria-expanded={menu} onClick={() => setMenu((open) => !open)}>
@@ -79,12 +80,7 @@ function RunCard({ run, active, onSelect, deletable }: { run: RunPlan; active: b
             <span className="sub-title">Name</span>
             <input value={run.name} onChange={(event) => updateRun(run.id, { name: event.target.value })} />
           </label>
-          <label className="field">
-            <span className="sub-title">Game build</span>
-            <select value={run.modpackId} onChange={(event) => updateRun(run.id, { modpackId: event.target.value })}>
-              {BUILD_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
-            </select>
-          </label>
+          <ModChecklist profileId={run.modpackId} value={run.mods} onChange={(mods) => updateRun(run.id, { mods })} />
           <div className="run-menu-actions">
             <button type="button" className="text-btn" onClick={() => void share()}><Icon name="share" size={18} />Share link</button>
             <button type="button" className="text-btn" onClick={() => duplicateRun(run.id)}>Duplicate</button>

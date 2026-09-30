@@ -4,6 +4,7 @@ import type { Dataset } from '../data/types'
 import type { RunPlan } from '../state/model'
 import { emptyRun, emptyUnitPlan } from '../state/model'
 import { unitContext } from './army'
+import type { LearnedSkill, Progression } from './progression'
 import { buildProgression, findRow, tierCap } from './progression'
 
 let dataset: Dataset
@@ -25,6 +26,14 @@ function corrinRun(reclasses: RunPlan['units'][string]['reclasses']): RunPlan {
   }
 }
 
+function skillNames(skills: LearnedSkill[]) {
+  return skills.map((learned) => dataset.skillsById.get(learned.skillId)?.name)
+}
+
+function learnedAt(progression: Progression, segment: number, level: number) {
+  return skillNames(findRow(progression, segment, level)!.learned)
+}
+
 function progressionFor(run: RunPlan) {
   const ctx = unitContext(dataset, run, CORRIN_F)!
   return buildProgression(dataset, run, ctx)
@@ -42,15 +51,57 @@ describe('buildProgression', () => {
     expect(progression.segments[0].rows.at(-1)?.level).toBe(12)
     expect(progression.segments[1].rows.map((row) => row.level)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1))
 
-    const names = (segment: number, level: number) => {
-      const row = findRow(progression, segment, level)!
-      return [...row.startsWith, ...row.learned].map((learned) => dataset.skillsById.get(learned.skillId)?.name)
-    }
-    expect(names(0, 1)).toEqual(['Nobility'])
-    expect(names(0, 10)).toEqual(['Dragon Fang', "Duelist's Blow", 'Vantage'])
-    expect(names(1, 5)).toEqual(['Astra'])
-    expect(names(1, 15)).toEqual(['Swordfaire', 'Seal Strength', 'Life and Death'])
+    expect(skillNames(progression.startsWith)).toEqual(['Nobility'])
+    expect(learnedAt(progression, 0, 1)).toEqual([])
+    expect(learnedAt(progression, 0, 10)).toEqual(['Dragon Fang'])
+    expect(learnedAt(progression, 0, 11)).toEqual(["Duelist's Blow"])
+    expect(learnedAt(progression, 0, 12)).toEqual(['Vantage'])
+    expect(learnedAt(progression, 1, 5)).toEqual(['Astra'])
+    expect(learnedAt(progression, 1, 15)).toEqual(['Swordfaire'])
+    expect(learnedAt(progression, 1, 16)).toEqual(['Seal Strength'])
+    expect(learnedAt(progression, 1, 17)).toEqual(['Life and Death'])
     expect(findRow(progression, 1, 16)?.classId).toBe(classId('Master of Arms (F)'))
+  })
+
+  it('learns at most one skill per level-up; only recruitment grants several', () => {
+    const progression = progressionFor(corrinRun([
+      { segment: 0, level: 10, classId: classId('Samurai (F)') },
+      { segment: 0, level: 12, classId: classId('Swordmaster (F)') },
+      { segment: 1, level: 15, classId: classId('Master of Arms (F)') },
+    ]))
+    for (const segment of progression.segments) for (const row of segment.rows) expect(row.learned.length).toBeLessThanOrEqual(1)
+  })
+
+  it("learns a reclassed base class's skills on the next level-ups, never on the reclass", () => {
+    const progression = progressionFor(corrinRun([{ segment: 0, level: 10, classId: classId('Samurai (F)') }]))
+    expect(learnedAt(progression, 0, 10)).toEqual(['Dragon Fang'])
+    expect(learnedAt(progression, 0, 11)).toEqual(["Duelist's Blow"])
+    expect(learnedAt(progression, 0, 12)).toEqual(['Vantage'])
+  })
+
+  it('picks up missed base-class skills after promoting, one per level-up', () => {
+    const progression = progressionFor(corrinRun([
+      { segment: 0, level: 10, classId: classId('Samurai (F)') },
+      { segment: 0, level: 11, classId: classId('Swordmaster (F)') },
+    ]))
+    expect(learnedAt(progression, 0, 11)).toEqual(["Duelist's Blow"])
+    expect(learnedAt(progression, 1, 1)).toEqual([])
+    expect(learnedAt(progression, 1, 2)).toEqual(['Vantage'])
+    expect(learnedAt(progression, 1, 5)).toEqual(['Astra'])
+  })
+
+  it('starts from the planned recruitment level for variable-level recruits only', () => {
+    const run = corrinRun([])
+    const kana = dataset.units.find((unit) => unit.fixedParent === CORRIN_F)!
+    const jakob = dataset.units.find((unit) => unit.name === 'Jakob')!
+    const planned = { ...run, units: { ...run.units, [kana.id]: { ...emptyUnitPlan(), joinLevel: 14 }, [jakob.id]: { ...emptyUnitPlan(), joinLevel: 14 } } }
+    const kanaCtx = unitContext(dataset, planned, kana.id)!
+    expect(kanaCtx.start.variableLevel).toBe(true)
+    expect(kanaCtx.start.level).toBe(14)
+    expect(buildProgression(dataset, planned, kanaCtx).segments[0].rows[0].level).toBe(14)
+    const jakobCtx = unitContext(dataset, planned, jakob.id)!
+    expect(jakobCtx.start.variableLevel).toBe(false)
+    expect(jakobCtx.start.level).toBe(jakobCtx.start.defaultLevel)
   })
 
   it('never offers a promotion below Lv 10', () => {
@@ -59,6 +110,20 @@ describe('buildProgression', () => {
     expect(offered(9)).not.toContain(classId('Swordmaster (F)'))
     expect(offered(9)).toContain(classId('Samurai (F)'))
     expect(offered(10)).toContain(classId('Nohr Noble (F)'))
+  })
+
+  it('keeps Nohr Princess promotions route-specific', () => {
+    const offered = (route: RunPlan['route']) => {
+      const run = { ...corrinRun([]), route }
+      const ctx = unitContext(dataset, run, CORRIN_F)!
+      return findRow(buildProgression(dataset, run, ctx), 0, 10)!.options.map((option) => dataset.classesById.get(option.classId)?.name)
+    }
+    expect(offered('birthright')).toContain('Hoshido Noble (F)')
+    expect(offered('birthright')).not.toContain('Nohr Noble (F)')
+    expect(offered('conquest')).toContain('Nohr Noble (F)')
+    expect(offered('conquest')).not.toContain('Hoshido Noble (F)')
+    expect(offered('revelation')).toContain('Nohr Noble (F)')
+    expect(offered('revelation')).toContain('Hoshido Noble (F)')
   })
 
   it('drops reclasses that an earlier change made illegal', () => {

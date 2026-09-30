@@ -28,12 +28,8 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
 
   const relations: { kind: SlotKind; partner: ReturnType<typeof person>; caption: ReactNode }[] = [
     { kind: 's', partner: person(ctx.sPartner), caption: ctx.sPartner ? gainsCaption(sealGain(ctx, dataset, 'seal')) : null },
-    { kind: 'a', partner: person(ctx.aPlusPartner), caption: ctx.aPlusPartner ? gainsCaption(sealGain(ctx, dataset, 'aplus')) : null },
+    ...(ctx.unit.isCorrin ? [] : [{ kind: 'a' as const, partner: person(ctx.aPlusPartner), caption: ctx.aPlusPartner ? gainsCaption(sealGain(ctx, dataset, 'aplus')) : null }]),
   ]
-  if (ctx.isChild) {
-    const fixed = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
-    relations.push({ kind: 'parent', partner: person(ctx.variableParent), caption: fixed ? <span className="rel-caption">with {displayName(fixed)}</span> : null })
-  }
   relations.push({
     kind: 'pair',
     partner: person(ctx.pairPartner),
@@ -93,7 +89,7 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
           onSelect={setClassLens}
         />
         <div className="class-cards">
-          {classIds.map((classId) => {
+        {classIds.map((classId) => {
             const def = dataset.classesById.get(classId)
             if (!def) return null
             const selected = classId === ctx.currentClassId
@@ -104,7 +100,13 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
                   <span className="class-card-name">{classFamily(def.name)}</span>
                   {selected ? <span className="class-card-tag">Selected</span> : null}
                 </span>
-                <StatTable row={lensRow(dataset, run, ctx, lens.id, classId)} signed={lens.signed} inverse={selected} label={`${def.name} ${lens.label}`} />
+                <StatTable
+                  row={lensRow(dataset, run, ctx, lens.id, classId)}
+                  signed={lens.signed}
+                  inverse={selected}
+                  label={`${def.name} ${lens.label}`}
+                  referenceRows={classIds.filter((candidateId) => dataset.classesById.get(candidateId)?.tier === def.tier).map((candidateId) => lensRow(dataset, run, ctx, lens.id, candidateId))}
+                />
               </button>
             )
           })}
@@ -114,7 +116,7 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
       <section className="panel-section" aria-labelledby="skill-title">
         <h2 id="skill-title" className="section-title">Skills</h2>
         <div className="skill-list">
-          <SkillCard skill={skillView(dataset, personal)} locked tag="Personal skill" />
+          <SkillCard skill={skillView(dataset, personal)} locked />
           {Array.from({ length: SKILL_SLOTS }, (_, slot) => (
             <SkillCard
               key={slot}

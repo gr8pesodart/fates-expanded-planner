@@ -19,6 +19,9 @@ export type StatKey = 'hp' | 'str' | 'mag' | 'skl' | 'spd' | 'lck' | 'def' | 're
 
 export const STAT_KEYS: readonly StatKey[] = ['hp', 'str', 'mag', 'skl', 'spd', 'lck', 'def', 'res']
 
+export type StatTableKey = StatKey | 'mov'
+export const STAT_TABLE_KEYS: readonly StatTableKey[] = [...STAT_KEYS, 'mov']
+
 export const STAT_LABELS: Record<StatKey, string> = {
   hp: 'HP',
   str: 'Str',
@@ -40,6 +43,8 @@ export const STAT_LABELS_LONG: Record<StatKey, string> = {
   def: 'Defense',
   res: 'Resistance',
 }
+
+export const STAT_TABLE_LABELS: Record<StatTableKey, string> = { ...STAT_LABELS, mov: 'Mov' }
 
 /** One character row from a dataset pack. */
 export interface CharacterDef {

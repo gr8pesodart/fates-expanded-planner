@@ -8,7 +8,7 @@ import { StatTable } from '../../components/StatTable'
 import { useToast } from '../../components/toast'
 import type { Dataset } from '../../data/types'
 import type { UnitContext } from '../../logic/army'
-import { unitContext } from '../../logic/army'
+import { displayName, unitContext } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
 import type { LearnedSkill, LevelRow, ReclassSeal } from '../../logic/progression'
 import { buildProgression, tierCap, withReclass } from '../../logic/progression'
@@ -38,15 +38,24 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const progression = useMemo(() => buildProgression(dataset, run, ctx), [dataset, run, ctx])
   const unitId = ctx.unit.id
 
-  const setReclass = (row: LevelRow, classId: number | null) => {
-    const reclasses = withReclass(ctx.plan.reclasses, row.segment, row.level, classId)
-    const nextRun = withUnitPlan(run, unitId, (plan) => ({ ...plan, reclasses }))
+  /** Applies a plan change, then removes reclasses the new path can no longer reach. */
+  const commit = (update: (plan: RunPlan['units'][string]) => RunPlan['units'][string]) => {
+    const nextRun = withUnitPlan(run, unitId, update)
     const nextCtx = unitContext(dataset, nextRun, unitId)
     const dropped = nextCtx ? buildProgression(dataset, nextRun, nextCtx).dropped : []
-    const kept: Reclass[] = reclasses.filter((item) => !dropped.includes(item))
-    mutate((current) => withUnitPlan(current, unitId, (plan) => ({ ...plan, reclasses: kept })))
+    mutate((current) => withUnitPlan(current, unitId, (plan) => {
+      const next = update(plan)
+      const kept: Reclass[] = next.reclasses.filter((item) => !dropped.some((gone) => gone.segment === item.segment && gone.level === item.level && gone.classId === item.classId))
+      return { ...next, reclasses: kept }
+    }))
     if (dropped.length) showToast(`Removed ${dropped.length} later reclass${dropped.length === 1 ? '' : 'es'} that no longer fit.`)
   }
+
+  const setReclass = (row: LevelRow, classId: number | null) => commit((plan) => ({ ...plan, reclasses: withReclass(plan.reclasses, row.segment, row.level, classId) }))
+
+  const setJoinLevel = (level: number) => commit(({ joinLevel: _old, ...plan }) => (
+    level === ctx.start.defaultLevel ? plan : { ...plan, joinLevel: level }
+  ))
 
   const setEternal = (count: number) => mutate((current) => withUnitPlan(current, unitId, ({ eternalSeals: _old, ...plan }) => (
     count > 0 ? { ...plan, eternalSeals: count } : plan
@@ -55,18 +64,46 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const last = progression.segments.at(-1)
   const lastRow = last?.rows.at(-1)
   const canEternal = last && last.tier !== 'base' && lastRow?.level === tierCap(last.tier, progression.eternalSeals)
+  const joinClass = dataset.classesById.get(ctx.start.classId)
+  const fixedParent = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
+  const joinCap = joinClass ? tierCap(joinClass.tier) : 20
 
   return (
     <>
+      <section className="panel-section join-section" aria-labelledby="join-title">
+        <h2 id="join-title" className="section-title">Recruitment</h2>
+        <div className="join-line">
+          <span>{ctx.start.chapter ? `${ctx.start.chapter} · ` : ''}{classFamily(joinClass?.name ?? '?')}</span>
+          {ctx.start.variableLevel ? (
+            <JoinLevelField key={ctx.start.level} level={ctx.start.level} cap={joinCap} disabled={readOnly} onCommit={setJoinLevel} />
+          ) : <span className="join-level-fixed">Lv {ctx.start.level}</span>}
+        </div>
+        {progression.startsWith.length ? (
+          <div className="starts-with">
+            <h3 className="sub-title">Starts with</h3>
+            <SkillChips dataset={dataset} skills={progression.startsWith} />
+          </div>
+        ) : null}
+      </section>
       {ctx.isChild ? (
         <section className="panel-section" aria-labelledby="inherit-title">
-          <h2 id="inherit-title" className="section-title">Inherited Skill</h2>
-          <SkillCard
-            skill={skillView(dataset, ctx.plan.inheritSkill)}
-            disabled={readOnly}
-            tag={ctx.variableParent ? `From ${ctx.variableParent.name.replace(/\s*\((M|F)\)$/, '')}` : 'Needs Parent B'}
-            onClick={() => openPicker({ skill: { unitId, slot: 'inherit' } })}
-          />
+          <h2 id="inherit-title" className="section-title">Inherited Skills</h2>
+          <div className="inherit-cards">
+            <InheritCard
+              dataset={dataset}
+              skillId={ctx.plan.inheritFixedSkill}
+              parent={fixedParent ? displayName(fixedParent) : null}
+              disabled={readOnly || !fixedParent}
+              onClick={() => openPicker({ skill: { unitId, slot: 'inheritFixed' } })}
+            />
+            <InheritCard
+              dataset={dataset}
+              skillId={ctx.plan.inheritSkill}
+              parent={ctx.variableParent ? displayName(ctx.variableParent) : null}
+              disabled={readOnly}
+              onClick={() => openPicker({ skill: { unitId, slot: 'inheritVariable' } })}
+            />
+          </div>
         </section>
       ) : null}
       {progression.segments.map((segment, segmentIndex) => (
@@ -116,31 +153,69 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   )
 }
 
+/** Only the parent's name carries the strong tag token; the rest of the line stays muted. */
+function InheritCard({ dataset, skillId, parent, disabled, onClick }: { dataset: Dataset; skillId: number | undefined; parent: string | null; disabled: boolean; onClick(): void }) {
+  const name = <strong className="skill-card-parent">{parent ?? 'Parent B'}</strong>
+  return (
+    <SkillCard
+      skill={skillView(dataset, skillId)}
+      disabled={disabled}
+      emptyText={<>Tap to choose a skill from {name}</>}
+      tag={skillId !== undefined ? <span className="skill-card-from">From {name}</span> : undefined}
+      onClick={onClick}
+    />
+  )
+}
+
+function SkillChips({ dataset, skills }: { dataset: Dataset; skills: LearnedSkill[] }) {
+  return skills.map((item) => {
+    const name = dataset.skillsById.get(item.skillId)?.name ?? '?'
+    return (
+      <span key={item.skillId} className="learned-skill">
+        <SkillIcon skillId={item.skillId} name={name} size={16} />
+        {name}
+      </span>
+    )
+  })
+}
+
 function LearnedLine({ dataset, row }: { dataset: Dataset; row: LevelRow }) {
-  const groups: [string, LearnedSkill[]][] = []
-  if (row.startsWith.length) groups.push(['Starts with', row.startsWith])
-  const levelled = row.learned.filter((item) => !item.onReclass)
-  const onReclass = row.learned.filter((item) => item.onReclass)
-  if (levelled.length) groups.push(['Learns', levelled])
-  if (onReclass.length) groups.push([levelled.length ? '+' : 'Learns', onReclass])
-  if (!groups.length) return <span className="level-learned" />
+  if (!row.learned.length) return <span className="level-learned" />
   return (
     <span className="level-learned">
-      {groups.map(([label, skills]) => (
-        <Fragment key={label}>
-          <em className="muted">{label}</em>
-          {skills.map((item) => {
-            const name = dataset.skillsById.get(item.skillId)?.name ?? '?'
-            return (
-              <span key={item.skillId} className="learned-skill">
-                <SkillIcon skillId={item.skillId} name={name} size={16} />
-                {name}
-              </span>
-            )
-          })}
-        </Fragment>
-      ))}
+      <em className="muted">Learns</em>
+      <SkillChips dataset={dataset} skills={row.learned} />
     </span>
+  )
+}
+
+/**
+ * Commits on blur/Enter, not per keystroke: a commit re-keys the field (keyed on the level), which
+ * would remount it mid-typing. Out-of-range drafts snap back to the committed level.
+ */
+function JoinLevelField({ level, cap, disabled, onCommit }: { level: number; cap: number; disabled: boolean; onCommit(level: number): void }) {
+  const [draft, setDraft] = useState(String(level))
+  const commit = () => {
+    const value = Number(draft)
+    if (Number.isInteger(value) && value >= 1 && value <= cap && value !== level) onCommit(value)
+    else setDraft(String(level))
+  }
+  return (
+    <label className="join-level">
+      <span>Lv</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={cap}
+        value={draft}
+        disabled={disabled}
+        aria-label="Recruitment level"
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur() }}
+      />
+    </label>
   )
 }
 

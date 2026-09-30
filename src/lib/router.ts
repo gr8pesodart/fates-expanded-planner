@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-export type CharacterTab = 'avatar' | 'profile' | 'stats' | 'progression'
+export type CharacterTab = 'avatar' | 'profile' | 'stats' | 'progression' | 'parents'
 
-export const CHARACTER_TABS: readonly CharacterTab[] = ['avatar', 'profile', 'stats', 'progression']
+export const CHARACTER_TABS: readonly CharacterTab[] = ['avatar', 'profile', 'stats', 'progression', 'parents']
 
 export type AppRoute =
   | { name: 'roster' }

@@ -186,36 +186,44 @@ writes native-pixel WebP plus `src/data/sprites.json`:
 
 | Set | Source in the dump | Files | Coverage |
 |---|---|---|---|
-| Bodies | `unit/Body/<class>/青0.bch.lz` at the idle frame's body source rect (`anime.bin` animation 0, frame 0) | `public/assets/sprites/bodies/<classId>.webp` | **125/129 (96.9%)** |
-| Unit heads | `unit/Head/<fid or avatar>/青0.bch.lz` — the "large" 32×32 cell at (0,0) plus the "small" 16×16 cell at (0,32) | `public/assets/sprites/heads/<slot>.webp`, `…-small.webp` | **71/71 (100%)** |
-| Generic heads | `unit/Head/<class folder>/青0.bch.lz` (class-generic art, whichever cells the sheet carries) | `public/assets/sprites/generic-heads/<classId>.webp` | 113/129 |
-| Unique overrides | `unit/Unique/<class>_<unit>/青0.bch.lz` idle frame; the body already includes the head | `public/assets/sprites/unique/<slot>-<classId>.webp` | 13 unit×class pairs |
+| Bodies | `unit/Body/<class>/青0.bch.lz` — the four unique body cells referenced by idle clip 0 | `public/assets/sprites/bodies/<classId>.webp` | **125/129 (96.9%)** |
+| Unit heads | `unit/Head/<fid or avatar>/青0.bch.lz` — four large 32×32 poses and four small 16×16 mounted poses | `public/assets/sprites/heads/<slot>.webp`, `…-small.webp` | **71/71 (100%)** |
+| Generic heads | `unit/Head/<class folder>/青0.bch.lz` (four class-generic poses, whichever sizes the sheet carries) | `public/assets/sprites/generic-heads/<classId>.webp` | 113/129 |
+| Unique overrides | `unit/Unique/<class>_<unit>/青0.bch.lz` — four idle cells; the body already includes the head | `public/assets/sprites/unique/<slot>-<classId>.webp` | 13 unit×class pairs |
 
 The four body misses are the non-recruitable `None`, the two `Silent Dragon` slots and
 `Outrealm Class` — the same gaps the old class-sprites set had. Songstress, monsters and other
 body-less classes fall back to their `Unique/<class>_<class>` folder (head `null`). Knights have an
 empty generic head sheet in the dump, so they fall back to monograms for the generic art only.
 
-The animation format is documented in [assets/anime-bin.md](assets/anime-bin.md). The idle frame is
-`anime.bin` animation 0 / frame 0; the old single-texture class sprites were exactly its body cell.
+The animation format is documented in [assets/anime-bin.md](assets/anime-bin.md). The app plays the
+game-authored idle sequence from `anime.bin` animation 0, including its uneven 60 Hz frame delays
+and the head's per-pose offset. Each image strip stores the four unique cells; the manifest sequence
+can revisit a cell without duplicating its pixels. Offscreen sprites pause, and the browser's
+reduced-motion preference leaves them on the first pose. The other eight directional clips are
+documented but not played because the planner has no map movement or facing state.
 
 ### Rendering contract (`src/data/sprites.json`)
 
 The texture alpha is the game's layer-priority mask, not opacity, so every composited sprite is
-opaque: bodies are one image (`layers: 1`), heads a `[back | front]` strip (`layers: 2`; back =
-`0x66` + `0xEE` hair, front = `0x88` + `0xFF` hair); `w`/`h` are the cell size. See `docs/assets/anime-bin.md` › Draw order for why `0xEE`/`0xFF` are a hair mask, not
-priority. Recolourable hair is tinted with the FaceData default colour.
+opaque: bodies have one layer (`layers: 1`), heads have `[back | front]` bands (`layers: 2`; back =
+`0x66` + `0xEE` hair, front = `0x88` + `0xFF` hair). Strips are frame-major, then layer-major;
+`w`/`h` are one cell's size and `frameCount` is four. See `docs/assets/anime-bin.md` › Draw order
+for why `0xEE`/`0xFF` are a hair mask, not priority. Recolourable hair is tinted with the FaceData
+default colour.
 
-- `bodies[classId]`: `{ file, w, h, layers?, head, source }`. `head` is
-  `{ x, y, variant? }` or `null` when the body already includes a head (Unique/monsters).
-  `variant: "small"` means the body places a 16×16 head cell; otherwise the default 32×32 cell is
-  used. Bodies with `head: null` are flattened single opaque images without `layers`.
-- `heads[unitId]`: `{ file, w, h, layers, source, small? }` — top-level is the large head; `small`
-  is the separately drawn mounted-class variant (never rescale one into the other).
+- `bodies[classId]`: `{ file, w, h, layers?, frameCount, animation, head, source }`. `animation`
+  lists the idle keyframes as `[cell, delay]`, or `[cell, delay, headX, headY]` when the head bobs
+  off its rest offset. `head` is the rest offset plus size variant, or `null` for full-body art; the
+  head always shows the body's cell. The manifest ships in the main bundle, so the extractor
+  (`compact_animation`) strips those redundancies and fails if they stop holding. `frameCount` counts four unique source cells.
+  Bodies with no stitched head are flattened strips without `layers`.
+- `heads[unitId]`: `{ file, w, h, layers, frameCount, source, small? }` — top-level is the large
+  head; `small` is the separately drawn mounted-class variant (never rescale one into the other).
 - `genericHeads[classId]`: same shape; a mounted class-generic sheet may carry only `small`, in
   which case it is the top-level entry (or omit `small` and use the top-level file).
-- `unique[unitId][classId]`: full-body override (flattened, no `layers`); replaces body + head
-  entirely.
+- `unique[unitId][classId]`: full-body override (flattened, no `layers`) with its idle timing;
+  replaces body + head entirely.
 - Composite back to front: head back layer, body, head front layer. Draw a box of body `w×h`, body at `(0,0)`, head at `(x, y)`
   in body pixels. Head cells may overflow the box by a few pixels (`y = −2`, `x = 10`), so don't
   clip to the body bounds.
@@ -231,6 +239,30 @@ python tools/assets/extract_sprites.py --help     # --romfs, --fe-tools, --pack,
 ```
 
 `src/data/sprites.test.ts` pins the coverage (bodies and heads ≥ 90%), that every manifest file
-exists on disk, that layered entries are band strips (`layers` × `w`), and that every shipped pixel is
-either transparent or fully opaque (pixel decode needs a Playwright Chromium; the extractor also
-asserts this while writing). Bodies/heads still render as monograms with `VITE_ASSETS=off`.
+exists on disk, that idle strips contain the expected four cells and valid frame timing, and that
+every shipped pixel is either transparent or fully opaque (the extractor asserts this while
+writing). Bodies/heads still render as monograms with `VITE_ASSETS=off`.
+
+### Skill icon resolution check
+
+The owner's `icon/Icon.bch.lz` sheet stores skills in native 24×24 cells, matching the current
+20px UI size without enlargement. I checked the linked icons on [Serenes Forest's Fates skills
+list](https://serenesforest.net/fire-emblem-fates/miscellaneous/skills/); it exposes icon images but
+no verified complete higher-resolution set. The app keeps the complete, consistent set from the
+owner's dump rather than mixing in partial redraws.
+
+## UI icons — sort glyphs (third-party, vector)
+
+Inlined as SVG path data in `src/components/SortIcon.tsx`, fetched from the Iconify API
+(`https://api.iconify.design/<set>.json?icons=…`, 2026-09-30). Owner-chosen stat glyphs:
+
+| Stat | Icon | Set licence |
+|---|---|---|
+| HP / Str / Mag / Def | `material-symbols:favorite` / `swords` / `magic-button` / `shield` | Apache 2.0 (Google, Material Symbols) |
+| Skl | `ri:target-fill` | Apache 2.0 (Remix Design, Remix Icon) |
+| Spd | `game-icons:fluffy-wing` | **CC BY 3.0 — attribution required:** "Fluffy wing" by Lorc, https://game-icons.net/1x1/lorc/fluffy-wing.html |
+| Lck / Res | `ph:clover-fill` / `ph:flower-lotus-fill` | MIT (Phosphor Icons) |
+| Mov | `griddy-icons:steps-filled`, mirrored horizontally | MIT (Zuzana Benova, Griddy Icons) |
+
+The recruit-order clock and the direction arrow come from the Figma `sortRecruit` export; the name
+letters from `mdi:sort-alphabetical-ascending` (Apache 2.0, Pictogrammers).

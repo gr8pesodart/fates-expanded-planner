@@ -5,12 +5,14 @@
  */
 
 export interface ModEntry {
+  id: string
   name: string
   version?: string
   /** What it changes, in planner-relevant terms. */
   effect: string
   /** True when it changes gameplay; false for purely cosmetic/audio mods. */
   gameplay: boolean
+  required?: boolean
   url?: string
 }
 
@@ -52,14 +54,17 @@ const UGF_BUILD: BuildProfile = {
   },
   mods: [
     {
+      id: 'ugf',
       name: 'Unofficial Gay Fates',
       version: '2.5.2',
       effect:
         'Expands the support graph: same-sex S supports, new conversation sets, extra Corrin / child / sibling supports, adjusted support routes.',
       gameplay: true,
+      required: true,
       url: 'https://gamebanana.com/mods/51420',
     },
     {
+      id: 'free-renown',
       name: 'Free Renown Rewards',
       version: '1.0',
       effect: 'All 160 minimum BP/VP requirements zeroed — every renown reward is obtainable immediately.',
@@ -67,6 +72,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/472394',
     },
     {
+      id: 'free-visit-rewards',
       name: 'Free battle and visitation rewards',
       version: '1.0',
       effect: 'Same GameData edit as Free Renown Rewards (verified identical values) — no grind for battle/visit rewards.',
@@ -74,6 +80,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/485063',
     },
     {
+      id: 'accessory-shop',
       name: "Tru's Accessory Shop",
       version: 'v2',
       effect: 'Full accessory catalog sold in the shop; models/textures from Texture Compilation.',
@@ -81,6 +88,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/480913',
     },
     {
+      id: 'free-accessory-prices',
       name: "Tru's Free Accessory Prices",
       version: 'addon',
       effect: 'AcceShop data replaced so accessories cost no meaningful gold.',
@@ -88,6 +96,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/480913',
     },
     {
+      id: 'unit-select-voice',
       name: 'Unit Select Voice',
       version: '1.3.4',
       effect: 'Choose any voiced unit’s voice lines for a character; adds the missing Corrin voice strings.',
@@ -95,6 +104,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/51423',
     },
     {
+      id: 'fates-icon-project',
       name: 'Fates Icon Project (regular)',
       version: '1.0',
       effect: 'Menu / skill / item icon replacements.',
@@ -102,6 +112,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/34160',
     },
     {
+      id: 'texture-compilation',
       name: 'Fire Emblem Fates Texture Compilation',
       version: '6.7',
       effect: 'Large class/outfit texture pack (bundles the Gold faceless fix).',
@@ -109,6 +120,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/388979',
     },
     {
+      id: 'furry-fates',
       name: 'Furry Fates',
       version: '2.2',
       effect: 'Model/texture swaps.',
@@ -116,6 +128,7 @@ const UGF_BUILD: BuildProfile = {
       url: 'https://gamebanana.com/mods/663124',
     },
     {
+      id: 'dragon-hare-corrin',
       name: 'Dragon-Hare Corrin',
       version: '5.0',
       effect: 'Corrin model replacement (Male+Female variant installed).',
@@ -145,12 +158,18 @@ const VANILLA: BuildProfile = {
   mods: [],
   notes: [
     'Vanilla-data extraction is planned: diff the clean GameData against the modded one (docs/DATA.md).',
-    'Plans can target vanilla today, but support/inheritance data falls back to the modded pack or stays empty.',
+    'Legacy runs marked vanilla use the installed UGF dataset until a vanilla pack is available.',
   ],
 }
 
 export const BUILD_PROFILES: readonly BuildProfile[] = [UGF_BUILD, VANILLA]
 
-export function getBuildProfile(id: string): BuildProfile {
-  return BUILD_PROFILES.find((p) => p.id === id) ?? UGF_BUILD
+export function getBuildProfile(_id: string): BuildProfile {
+  return UGF_BUILD
+}
+
+export function selectedModIds(_profileId: string, saved?: readonly string[]): string[] {
+  const profile = UGF_BUILD
+  const chosen = new Set(saved ?? profile.mods.map((mod) => mod.id))
+  return profile.mods.filter((mod) => mod.required || chosen.has(mod.id)).map((mod) => mod.id)
 }

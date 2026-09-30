@@ -6,7 +6,7 @@ import { armyUnits, displayName, unitContext } from '../logic/army'
 import { classFamily, classPool } from '../logic/classes'
 import type { LensId } from '../logic/lenses'
 import { lensRow } from '../logic/lenses'
-import type { RosterSort, RosterSortEntry } from '../logic/rosterSort'
+import type { RosterSort, RosterSortEntry, SortOptions } from '../logic/rosterSort'
 import { reconcileRosterSort, sortRoster } from '../logic/rosterSort'
 import type { SlotKind } from '../components/slots'
 import type { RunPlan } from '../state/model'
@@ -32,18 +32,25 @@ export function rosterEntries(dataset: Dataset, run: RunPlan, lens: LensId): Ros
       recruitIndex: recruitIndex(dataset, run, unit),
       fixedParent: unit.fixedParent,
       lensRow: lensRow(dataset, run, ctx, lens),
+      pairPartner: ctx.plan.pairPartner,
+      pairRole: ctx.plan.pairRole ?? 'front',
       ctx,
     }]
   })
 }
 
-export function useSortedRoster(lens: LensId, sort: RosterSort): { entries: RosterEntry[]; sort: RosterSort } {
+export function useSortedRoster(
+  lens: LensId,
+  sort: RosterSort,
+  options: SortOptions = {},
+): { entries: RosterEntry[]; sort: RosterSort } {
   const { dataset, run } = usePlanner()
+  const { favouritesFirst, linkPairs, generation } = options
   return useMemo(() => {
     const entries = rosterEntries(dataset, run, lens)
     const effective = reconcileRosterSort(sort, entries)
-    return { entries: sortRoster(entries, effective) as RosterEntry[], sort: effective }
-  }, [dataset, run, lens, sort])
+    return { entries: sortRoster(entries, effective, { favouritesFirst, linkPairs, generation }) as RosterEntry[], sort: effective }
+  }, [dataset, run, lens, sort, favouritesFirst, linkPairs, generation])
 }
 
 export interface Candidate {
@@ -54,12 +61,14 @@ export interface Candidate {
   fast: boolean
   /** Class the Partner/Friendship Seal grants the chooser (S / A+ only). */
   gains: string | null
+  rankBadge: 'S' | 'A+' | null
 }
 
 function sealBranchName(dataset: Dataset, run: RunPlan, owner: UnitDef, donor: UnitDef, kind: 'seal' | 'aplus'): string | null {
   const pool = classPool(dataset, owner, {
     sPartner: kind === 'seal' ? donor : null,
     aPlusPartner: kind === 'aplus' ? donor : null,
+    friendshipDonors: owner.isCorrin && kind === 'aplus' ? [donor] : undefined,
     corrinTalentClassId: run.corrin.talentClassId,
     fixedParentIsCorrin: fixedParentIsCorrin(dataset, owner),
   })
@@ -83,8 +92,14 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
   if (kind === 'pair') {
     pool = army.filter((unit) => unit.id !== ownerId).map((unit) => ({ id: unit.id, fast: false }))
   } else {
-    const edges = supportPartners(dataset, subjectId, kind === 'a' ? 'platonic' : 'romantic')
-      .filter((edge) => kind !== 'a' || edge.info.ranks.a !== null)
+    const edges = supportPartners(dataset, subjectId, kind === 'a' && !subject.isCorrin ? 'platonic' : kind === 'a' ? 'a-rank' : 'romantic')
+      .filter((edge) => {
+        if (kind !== 'a') return true
+        if (edge.info.ranks.a === null) return false
+        if (!subject.isCorrin) return true
+        const id = edgePartner(edge, subjectId)
+        return dataset.unitsById.get(id)?.gender === subject.gender
+      })
     pool = edges.map((edge) => ({ id: edgePartner(edge, subjectId), fast: edge.info.fast }))
   }
 
@@ -96,7 +111,15 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
       const holder = run.units[id]?.[bond]
       const takenBy = holder && holder !== subjectId ? displayName(dataset.unitsById.get(holder) ?? unit) : null
       const gains = kind === 's' || kind === 'a' ? sealBranchName(dataset, run, subject, unit, kind === 's' ? 'seal' : 'aplus') : null
-      return [{ unit, name: displayName(unit), takenBy, fast, gains }]
+      const rankBadge: Candidate['rankBadge'] = kind === 'pair' && run.units[subjectId]?.sPartner === id ? 'S'
+        : kind === 'pair' && run.units[subjectId]?.aPlusPartner === id ? 'A+'
+          : null
+      return [{ unit, name: displayName(unit), takenBy: kind === 'a' ? null : takenBy, fast, gains, rankBadge }]
     })
-    .sort((a, b) => recruitIndex(dataset, run, a.unit) - recruitIndex(dataset, run, b.unit))
+    .sort((a, b) => {
+      const rankOrder = (item: Candidate) => item.rankBadge === 'S' ? 0 : item.rankBadge === 'A+' ? 1 : 2
+      const rankDiff = rankOrder(a) - rankOrder(b)
+      if (rankDiff) return rankDiff
+      return recruitIndex(dataset, run, a.unit) - recruitIndex(dataset, run, b.unit)
+    })
 }

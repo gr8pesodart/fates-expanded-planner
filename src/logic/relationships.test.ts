@@ -27,6 +27,19 @@ describe('relationships', () => {
     expect(run.units[CORRIN_F].sPartner).toBeUndefined()
   })
 
+  it('stores the A+ choice on the selecting unit only', () => {
+    const run = setBond(emptyRun('t'), RYOMA, 'aPlusPartner', ANNA)
+    expect(run.units[RYOMA].aPlusPartner).toBe(ANNA)
+    expect(run.units[ANNA]?.aPlusPartner).toBeUndefined()
+  })
+
+  it('keeps each unit\'s one-way A+ choice independent', () => {
+    let run = setBond(emptyRun('t'), ANNA, 'aPlusPartner', JAKOB)
+    run = setBond(run, RYOMA, 'aPlusPartner', ANNA)
+    expect(run.units[ANNA].aPlusPartner).toBe(JAKOB)
+    expect(run.units[RYOMA].aPlusPartner).toBe(ANNA)
+  })
+
   it('treats a child\'s Parent B as the fixed parent\'s S partner', () => {
     let run = setVariableParent(dataset, emptyRun('t'), KANA_M, ANNA)
     expect(run.units[CORRIN_F].sPartner).toBe(ANNA)
@@ -53,7 +66,7 @@ describe('relationships', () => {
     expect(run.units[CORRIN_M].sPartner).toBe(RYOMA)
     expect(run.units[RYOMA].sPartner).toBe(CORRIN_M)
     expect(run.units[KANA_F].aPlusPartner).toBe(JAKOB)
-    expect(run.units[JAKOB].aPlusPartner).toBe(KANA_F)
+    expect(run.units[JAKOB]?.aPlusPartner).toBeUndefined()
     expect(run.favourites).toEqual([CORRIN_M])
   })
 })

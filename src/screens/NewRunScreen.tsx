@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../components/icons'
-import { BUILD_PROFILES } from '../data/modProfiles'
+import { ModChecklist } from '../components/ModChecklist'
 import { ROUTES } from '../data/types'
 import { goBack, navigate } from '../lib/router'
 import { emptyRun } from '../state/model'
@@ -16,7 +16,7 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
   const [step, setStep] = useState(0)
   const update = setDraft
   const finish = () => {
-    createRun({ name: draft.name.trim() || 'New run', modpackId: draft.modpackId, dlc: draft.dlc, route: draft.route, corrin: draft.corrin })
+    createRun({ name: draft.name.trim() || 'New run', modpackId: draft.modpackId, mods: draft.mods, dlc: draft.dlc, route: draft.route, corrin: draft.corrin })
     navigate({ name: 'roster' }, { replace: true })
   }
   return (
@@ -38,12 +38,7 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
               <span className="sub-title">Run name</span>
               <input value={draft.name} onChange={(event) => update({ ...draft, name: event.target.value })} autoFocus />
             </label>
-            <label className="field">
-              <span className="sub-title">Game build</span>
-              <select value={draft.modpackId} onChange={(event) => update({ ...draft, modpackId: event.target.value })}>
-                {BUILD_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.label}</option>)}
-              </select>
-            </label>
+            <ModChecklist profileId={draft.modpackId} value={draft.mods} onChange={(mods) => update({ ...draft, mods })} />
           </>
         ) : null}
 

@@ -19,7 +19,8 @@ describe('lenses', () => {
     const ctx = unitContext(dataset, run, RYOMA)!
     expect(lensRow(dataset, run, ctx, 'statModifiers')[0]).toBeNull()
     expect(lensRow(dataset, run, ctx, 'classPairUp')[0]).toBeNull()
-    expect(lensRow(dataset, run, ctx, 'personalGrowths')).toEqual([50, 45, 0, 50, 45, 40, 35, 25])
+    expect(lensRow(dataset, run, ctx, 'personalGrowths')).toEqual([50, 45, 0, 50, 45, 40, 35, 25, null])
+    expect(lensRow(dataset, run, ctx, 'baseStats')[8]).toBe(dataset.classesById.get(ctx.currentClassId)?.movement)
   })
 
   it('formats signed and blank cells', () => {

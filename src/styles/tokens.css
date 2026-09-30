@@ -24,6 +24,9 @@
   --good-soft: #9ed2a0;
   --bad: #be5555;
   --bad-soft: #f5adad;
+  --stat-low: #842334;
+  --stat-mid: #8a6a00;
+  --stat-high: #12803f;
 
   --f-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --t-title: 700 38px/1.1 var(--f-ui);
