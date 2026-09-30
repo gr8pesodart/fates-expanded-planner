@@ -73,7 +73,7 @@ describe('stitched sprite manifest', () => {
     expect(manifest.coverage.heads.total).toBe(71)
   })
 
-  it('every body entry has a file and provenance; layered bodies split in two cells', () => {
+  it('every body entry is a single cell with a file and provenance', () => {
     expect(Object.keys(manifest.bodies).length).toBeGreaterThan(0)
     for (const entry of Object.values(manifest.bodies)) {
       expect(entry.source).toContain('anime.bin')
@@ -82,8 +82,8 @@ describe('stitched sprite manifest', () => {
       const size = webpSize(readFileSync(publicPath(entry.file)))
       expect(size.height).toBe(entry.h)
       if (entry.head) {
-        expect(entry.layers).toBe(2)
-        expect(size.width).toBe(entry.w * 2)
+        expect(entry.layers).toBe(1)
+        expect(size.width).toBe(entry.w)
         expect(Number.isFinite(entry.head.x)).toBe(true)
         expect(Number.isFinite(entry.head.y)).toBe(true)
       } else {
@@ -93,19 +93,19 @@ describe('stitched sprite manifest', () => {
     }
   })
 
-  it('every unit has large and small three-band head strips on disk', () => {
+  it('every unit has large and small [back | front] head strips on disk', () => {
     const entries = Object.values(manifest.heads)
     expect(entries.length).toBe(71)
     for (const entry of entries) {
       expect(entry.w).toBe(32)
       expect(entry.h).toBe(32)
-      expect(entry.layers).toBe(3)
+      expect(entry.layers).toBe(2)
       expect(entry.source.startsWith('unit/Head/')).toBe(true)
-      expect(webpSize(readFileSync(publicPath(entry.file))).width).toBe(entry.w * 3)
+      expect(webpSize(readFileSync(publicPath(entry.file))).width).toBe(entry.w * 2)
       expect(entry.small?.w).toBe(16)
       expect(entry.small?.h).toBe(16)
-      expect(entry.small?.layers).toBe(3)
-      expect(webpSize(readFileSync(publicPath(entry.small!.file))).width).toBe(entry.small!.w * 3)
+      expect(entry.small?.layers).toBe(2)
+      expect(webpSize(readFileSync(publicPath(entry.small!.file))).width).toBe(entry.small!.w * 2)
     }
   })
 
@@ -129,7 +129,7 @@ describe('stitched sprite manifest', () => {
 
   it('marks mounted bodies as using the small head variant', () => {
     expect(manifest.bodies['7'].head?.variant).toBe('small')
-    expect(manifest.bodies['7'].layers).toBe(2)
+    expect(manifest.bodies['7'].layers).toBe(1)
     expect(manifest.bodies['31'].head?.variant).toBeUndefined()
     expect(manifest.bodies['103'].head).toBeNull()
     expect(manifest.bodies['103'].layers).toBeUndefined()

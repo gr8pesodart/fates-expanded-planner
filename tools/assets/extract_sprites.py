@@ -16,11 +16,11 @@ the "large" 32x32 cell (0,0) used by foot classes and the "small" 16x16 cell
 (0,32) used by mounted classes; they are separately drawn art, not scales of
 each other, so both are exported where present.
 
-The texture alpha is not opacity: 0x66/0x88 are draw priorities and, on heads
-with recolourable hair, 0xEE/0xFF are the hair mask (see BODY_BANDS/HEAD_BANDS
-and docs/assets/anime-bin.md). Every composited sprite ships as a strip of
-opaque band cells (bodies `layers: 2`, heads `layers: 3`) that the app
-interleaves; hair is tinted with the FaceData default colour. The single
+The texture alpha is not opacity: on heads it marks the layer behind the body
+(0x66, 0xEE hair) and the layer in front (0x88, 0xFF hair); 0xEE/0xFF are the
+recolourable-hair mask (see HEAD_BANDS and docs/assets/anime-bin.md). Bodies
+ship as one opaque image (`layers: 1`), heads as a 2-cell [back | front] strip,
+drawn head-back, body, head-front; hair is tinted with the FaceData default. The single
 flattened opaque image is used for Unique bodies (no head) and the `unique` set.
 
 Outputs (paths relative to the site base, mirrored under --out):
@@ -164,14 +164,13 @@ def write_webp(image: Image.Image, path: str) -> None:
     image.save(path, "WEBP", lossless=True, quality=100, method=6)
 
 
-# Texture alpha on 0x66/0x88 pixels is draw priority: higher is closer, and the head wins ties.
-# On heads with recolourable hair (Corrin, Kana and every child whose hair follows the variable
-# parent) 0xEE and 0xFF are instead the hair mask: 0xEE is long back hair, drawn behind the body
-# (Corrin (F)'s hair falls behind her 0x66 body in-game); 0xFF is front hair at normal head level.
-# Each image is split into bands, back to front, and the app interleaves them:
-#   head[0] (0xEE back hair), body[0] (0x66), head[1] (0x66), body[1] (0x88+), head[2] (0x88, 0xFF)
-BODY_BANDS = (frozenset({0x66}), frozenset({0x88, 0xEE, 0xFF}))
-HEAD_BANDS = (frozenset({0xEE}), frozenset({0x66}), frozenset({0x88, 0xFF}))
+# Head texture alpha splits the head into the layer behind the body and the layer in front of it:
+# 0x66 (plus 0xEE, recolourable long hair) is back hair, 0x88 (plus 0xFF, recolourable front hair)
+# is the face and front hair. The body draws whole between them. Verified on long-haired infantry
+# (Charlotte, Izana, Nyx, Corrin (F)) whose 0x66 hair must fall behind their 0x66 bodies, and on
+# mounted riders whose 0x88 faces stay in front of the mount.
+BODY_BANDS = (frozenset({0x66, 0x88, 0xEE, 0xFF}),)
+HEAD_BANDS = (frozenset({0x66, 0xEE}), frozenset({0x88, 0xFF}))
 
 
 def layer_strip(image: Image.Image, bands: tuple[frozenset[int], ...]) -> Image.Image:
@@ -500,7 +499,7 @@ def layer_cell(image: Image.Image, entry: dict, index: int) -> Image.Image:
 
 
 def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) -> Image.Image:
-    """Composite back to front: head[0] (back hair), body[0], head[1], body[1], head[2].
+    """Composite back to front: head back layer, body, head front layer.
 
     Flattened bodies (Unique, no head) are already a single opaque image and pass through.
     """
@@ -521,8 +520,6 @@ def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) ->
         (head_image, head_entry, 0, paste_head),
         (body_image, body_entry, 0, paste_body),
         (head_image, head_entry, 1, paste_head),
-        (body_image, body_entry, 1, paste_body),
-        (head_image, head_entry, 2, paste_head),
     ):
         canvas.alpha_composite(layer_cell(image, entry, index), at)
     return canvas

@@ -202,9 +202,8 @@ The animation format is documented in [assets/anime-bin.md](assets/anime-bin.md)
 ### Rendering contract (`src/data/sprites.json`)
 
 The texture alpha is the game's layer-priority mask, not opacity, so every composited sprite is
-split into a **strip of draw bands** of fully opaque pixels (bodies `[0x66 | 0x88]`, heads
-`[0xEE back hair | 0x66 | 0x88 + 0xFF front hair]`); `w`/`h` are the cell size and `layers` the band
-count. See `docs/assets/anime-bin.md` › Draw order for why `0xEE`/`0xFF` are a hair mask, not
+opaque: bodies are one image (`layers: 1`), heads a `[back | front]` strip (`layers: 2`; back =
+`0x66` + `0xEE` hair, front = `0x88` + `0xFF` hair); `w`/`h` are the cell size. See `docs/assets/anime-bin.md` › Draw order for why `0xEE`/`0xFF` are a hair mask, not
 priority. Recolourable hair is tinted with the FaceData default colour.
 
 - `bodies[classId]`: `{ file, w, h, layers?, head, source }`. `head` is
@@ -217,7 +216,7 @@ priority. Recolourable hair is tinted with the FaceData default colour.
   which case it is the top-level entry (or omit `small` and use the top-level file).
 - `unique[unitId][classId]`: full-body override (flattened, no `layers`); replaces body + head
   entirely.
-- Composite back to front: head band 0, body band 0, head band 1, body band 1, head band 2. Draw a box of body `w×h`, body at `(0,0)`, head at `(x, y)`
+- Composite back to front: head back layer, body, head front layer. Draw a box of body `w×h`, body at `(0,0)`, head at `(x, y)`
   in body pixels. Head cells may overflow the box by a few pixels (`y = −2`, `x = 10`), so don't
   clip to the body bounds.
 

@@ -53,10 +53,10 @@ function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: numbe
 
 /**
  * Map sprite: class body with the unit's head stitched on (offsets from unit/Body/<class>/anime.bin).
- * Bodies are [0x66 | 0x88] bands and heads [back hair | 0x66 | 0x88 + front hair] (see
- * tools/assets/extract_sprites.py); drawing them interleaved reproduces the game's layering.
+ * Heads are [back layer | front layer] strips; the body sits between them, so long hair falls behind
+ * it while faces stay in front (tools/assets/extract_sprites.py › HEAD_BANDS).
  */
-const STACK: readonly (readonly ['head' | 'body', number])[] = [['head', 0], ['body', 0], ['head', 1], ['body', 1], ['head', 2]]
+const STACK: readonly (readonly ['head' | 'body', number])[] = [['head', 0], ['body', 0], ['head', 1]]
 
 export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: { unitId: string | null; classId: number; name: string; size?: number; tile?: boolean }) {
   const layers = spriteLayers(unitId, classId)
