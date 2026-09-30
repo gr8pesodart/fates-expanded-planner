@@ -265,7 +265,6 @@
 .rail-tabs {
   gap: 4px;
   padding: 10px var(--s3) 0;
-  border-bottom: 1px solid var(--line);
 }
 
 .rail-tabs .rail-item {
@@ -573,12 +572,40 @@
   padding: 0;
 }
 
-.roster-sticky-head {
+.sticky-sentinel {
+  display: block;
+  height: 0;
+}
+
+.roster-sticky-head,
+.chart-sticky-head {
   position: sticky;
   top: 0;
   z-index: 12;
   background: var(--surface);
-  box-shadow: 0 3px 8px rgb(0 0 0 / 0.08);
+}
+
+.roster-sticky-head::after,
+.chart-sticky-head::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: var(--line);
+  opacity: 0;
+  transition: opacity 150ms var(--ease);
+}
+
+.roster-sticky-head[data-scrolled="true"]::after,
+.chart-sticky-head[data-scrolled="true"]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roster-sticky-head::after,
+  .chart-sticky-head::after {
+    transition: none;
+  }
 }
 
 .roster-row {
@@ -588,6 +615,11 @@
   border-bottom: 1px solid var(--line);
   content-visibility: auto;
   contain-intrinsic-size: auto 105px;
+}
+
+.roster-swap {
+  position: relative;
+  height: 0;
 }
 
 .roster-row[aria-current="true"] {

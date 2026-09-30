@@ -5,29 +5,34 @@ import type { RosterEntry } from '../app/selectors'
 import { useSortedRoster } from '../app/selectors'
 import { ClassSprite, Portrait, SkillIcon } from '../components/art'
 import { EditButton, StarButton } from '../components/controls'
-import { Icon } from '../components/icons'
+import { SwapButton } from '../components/SwapButton'
 import { preloadSplashArt } from '../data/art'
 import { SortIcon } from '../components/SortIcon'
 import { chartCards } from '../logic/chart'
-import { swapPair, toggleFavourite } from '../logic/relationships'
+import { toggleFavourite } from '../logic/relationships'
 import { navigate } from '../lib/router'
+import { useScrolled } from '../lib/useScrolled'
 
 export function ChartScreen() {
   const { rosterLens, chartSort, chartFavouritesFirst, chartLinkPairs, chartGeneration } = useUi()
-  const { run, readOnly, mutate } = usePlanner()
+  const { run, readOnly } = usePlanner()
   const openPicker = usePickers((state) => state.open)
   const { entries, sort } = useSortedRoster(rosterLens, chartSort, { favouritesFirst: chartFavouritesFirst, linkPairs: chartLinkPairs, generation: chartGeneration })
+  const { sentinelRef, scrolled } = useScrolled()
   const byId = new Map(entries.map((entry) => [entry.unitId, entry]))
   const cards = chartCards(entries.map((entry) => entry.unitId), run, chartLinkPairs)
   return (
     <section className="screen chart" aria-labelledby="chart-title">
-      <div className="screen-head">
-        <h1 id="chart-title" className="screen-title">Chart</h1>
-        <div className="chart-head-actions">
-          {readOnly ? <span className="badge">Shared · read-only</span> : null}
-          <button type="button" className="icon-btn sort-btn" aria-label={`Sort: ${sort.kind}. Change chart sort`} onClick={() => openPicker({ sort: 'chart' })}>
-            <SortIcon sort={sort} size={34} />
-          </button>
+      <span ref={sentinelRef} className="sticky-sentinel" aria-hidden="true" />
+      <div className="chart-sticky-head" data-scrolled={scrolled}>
+        <div className="screen-head">
+          <h1 id="chart-title" className="screen-title">Chart</h1>
+          <div className="chart-head-actions">
+            {readOnly ? <span className="badge">Shared · read-only</span> : null}
+            <button type="button" className="icon-btn sort-btn" aria-label={`Sort: ${sort.kind}. Change chart sort`} onClick={() => openPicker({ sort: 'chart' })}>
+              <SortIcon sort={sort} size={34} />
+            </button>
+          </div>
         </div>
       </div>
       <ul className="chart-list">
@@ -42,15 +47,7 @@ export function ChartScreen() {
           return (
             <li key={`${card.front}+${card.back}`} className="chart-card pair">
               <ChartRow entry={front} />
-              <button
-                type="button"
-                className="swap-btn"
-                aria-label={`Swap ${front.name} and ${back.name}`}
-                disabled={readOnly}
-                onClick={() => mutate((next) => swapPair(next, card.front))}
-              >
-                <Icon name="swap" size={20} />
-              </button>
+              <SwapButton unitId={card.front} frontName={front.name} backName={back.name} />
               <ChartRow entry={back} />
             </li>
           )
