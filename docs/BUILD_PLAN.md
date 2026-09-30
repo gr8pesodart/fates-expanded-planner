@@ -18,9 +18,9 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
 - Done on `v3`: spec + tokens; B1 recruitment (DS lane, merged), B2 lenses, B3 progression engine,
   B4 sort; C schema 4 store with symmetric relationships; D1–D6 all screens incl. Runs/new-run and
   desktop; A1 talk portraits (DS lane, merged); `npm run shots` → `docs/screenshots/v3/`.
-- In flight (DS lanes): A2 stitched sprites (gate pending owner sign-off), A3 splash art.
-- Until A2/A3 merge, the app falls back to body-only class sprites and a route-hue splash with the
-  talk portrait — `src/data/art.ts` picks up `sprites.json` / `splash.json` automatically.
+- A2 stitched sprites merged (DS lane; Opus review fixed texture alpha → 4-layer draw-priority
+  stack). **Awaiting owner sign-off** on `docs/screenshots/v3/sprites.png`.
+- A3 splash art done directly after the DS lane stalled (see ASSETS.md › Splash art).
 
 ### A — Assets (gated; do first, in parallel with B)
 
