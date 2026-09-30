@@ -74,12 +74,23 @@ ship and the body says which one it needs (`head.variant`).
 
 ## Draw order
 
-Body first, then head. The textures' alpha channel is a layer/priority mask the game's map-sprite
-shader uses (`0x66` = back, `0x88` = mid, `0xEE`/`0xFF` = front), not opacity — see the ripper note
-on The Spriters Resource that "the brighter the shade of grey, the closer it is to the front" and
-that bodies draw first, then heads, then bright body pixels (weapons). For the idle frame the head
-cells are the top layer, so `head.behind = false` everywhere; the door is left open in the manifest
-in case a future frame needs the inverse.
+Body first, then head, then body pixels that outrank the head. The textures' alpha channel is a
+layer-priority mask the game's map-sprite shader reads (`0x66` = back, `0x88`/`0xEE`/`0xFF` =
+front), not opacity — see the ripper note on The Spriters Resource that "the brighter the shade of
+grey, the closer it is to the front" and that bodies draw first, then heads, then bright body pixels
+(weapons). Higher priority wins, ties go to the head, which resolves to exactly four layers, bottom
+to top:
+
+1. body pixels with priority `0x66`
+2. head pixels with priority `0x66` (back hair: over body-low, under body-high)
+3. body pixels with priority above `0x66`
+4. head pixels with priority above `0x66`
+
+`extract_sprites.py` ships that stack as a two-cell horizontal strip per sprite (left cell =
+priority `0x66`, right cell = everything above it), with every kept pixel fully opaque. Bodies
+drawn under a head carry `layers: 2` and a head offset; Unique bodies have no head and ship as one
+flattened opaque image (no `layers`). The manifest does not carry per-value priorities, only the
+binary split.
 
 ## Evidence
 

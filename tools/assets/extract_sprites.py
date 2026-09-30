@@ -16,13 +16,20 @@ the "large" 32x32 cell (0,0) used by foot classes and the "small" 16x16 cell
 (0,32) used by mounted classes; they are separately drawn art, not scales of
 each other, so both are exported where present.
 
+The texture alpha is a layer-priority mask the game composites per pixel
+(0x66 = back, 0x88/0xEE/0xFF = front), so every composited sprite ships as a
+two-cell horizontal strip of opaque pixels: left cell = priority 0x66, right
+cell = everything above it. Bodies drawn under a head carry `layers: 2`; the
+single flattened opaque image is used for Unique bodies (no head) and the
+`unique` set.
+
 Outputs (paths relative to the site base, mirrored under --out):
 
-  - `assets/sprites/bodies/<classId>.webp`          idle-frame body cell
-  - `assets/sprites/heads/<slot>.webp`              unit large head cell
-  - `assets/sprites/heads/<slot>-small.webp`        unit small head cell
-  - `assets/sprites/generic-heads/<classId>.webp`   class-generic head(s)
-  - `assets/sprites/unique/<slot>-<classId>.webp`   unit+class body override
+  - `assets/sprites/bodies/<classId>.webp`          idle-frame body (strip, or flat when unique)
+  - `assets/sprites/heads/<slot>.webp`              unit large head strip
+  - `assets/sprites/heads/<slot>-small.webp`        unit small head strip
+  - `assets/sprites/generic-heads/<classId>.webp`   class-generic head strip(s)
+  - `assets/sprites/unique/<slot>-<classId>.webp`   unit+class flat body override
   - `src/data/sprites.json`                         manifest for the app
   - `docs/screenshots/v3/sprites.png`               gate contact sheet (4x)
 
@@ -156,6 +163,45 @@ def write_webp(image: Image.Image, path: str) -> None:
     image.save(path, "WEBP", lossless=True, quality=100, method=6)
 
 
+LOW_PRIORITY = 0x66
+
+
+def layer_masks(image: Image.Image) -> tuple[Image.Image, Image.Image]:
+    """Binary masks for the low (<= 0x66) and high (> 0x66) priority pixels."""
+    alpha = image.getchannel("A")
+    low = alpha.point(lambda value: 255 if value == LOW_PRIORITY else 0)
+    high = alpha.point(lambda value: 255 if value > LOW_PRIORITY else 0)
+    return low, high
+
+
+def layer_strip(image: Image.Image) -> Image.Image:
+    """Two-cell strip: left = priority 0x66, right = everything above it."""
+    low_mask, high_mask = layer_masks(image)
+    low = image.convert("RGB").convert("RGBA")
+    high = low.copy()
+    low.putalpha(low_mask)
+    high.putalpha(high_mask)
+    strip = Image.new("RGBA", (image.width * 2, image.height), (0, 0, 0, 0))
+    strip.paste(low, (0, 0))
+    strip.paste(high, (image.width, 0))
+    return strip
+
+
+def flatten(image: Image.Image) -> Image.Image:
+    """Single opaque image: every pixel with priority > 0 becomes fully opaque."""
+    mask = image.getchannel("A").point(lambda value: 255 if value else 0)
+    flat = image.convert("RGB").convert("RGBA")
+    flat.putalpha(mask)
+    return flat
+
+
+def assert_binary_alpha(image: Image.Image, label: str) -> None:
+    histogram = image.getchannel("A").histogram()
+    levels = [value for value in range(256) if value not in (0, 255) and histogram[value]]
+    if levels:
+        raise fe_assets.AssetError(f"{label} has non-binary alpha: {levels}")
+
+
 def parse_animations(raw: bytes) -> list[Animation]:
     data = raw[0x20:]
     if len(data) < ARCHIVE_HEADER_SIZE:
@@ -257,7 +303,7 @@ def unit_unique_folder(romfs: str, unit: dict, jid: str) -> str | None:
 
 
 def head_entry(file_name: str, source: str, width: int, height: int) -> dict:
-    return {"file": file_name, "w": width, "h": height, "source": source}
+    return {"file": file_name, "w": width, "h": height, "layers": 2, "source": source}
 
 
 def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
@@ -273,23 +319,30 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
             (frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h)
         )
         file_name = f"assets/sprites/bodies/{class_def['id']}.webp"
-        write_webp(body, os.path.join(os.path.dirname(out_dir), *file_name.split("/")))
+        path = os.path.join(os.path.dirname(out_dir), *file_name.split("/"))
         head = None
         if not is_unique and frame.head_w and frame.head_h:
             head = {
                 "x": frame.head_x - frame.body_x,
                 "y": frame.head_y - frame.body_y,
-                "behind": False,
             }
             if frame.head_w == 16 and frame.head_h == 16:
                 head["variant"] = "small"
-        entries[str(class_def["id"])] = {
+            image = layer_strip(body)
+        else:
+            image = flatten(body)
+        assert_binary_alpha(image, f"body {class_def['id']}")
+        write_webp(image, path)
+        entry = {
             "file": file_name,
             "w": body.width,
             "h": body.height,
             "head": head,
             "source": source,
         }
+        if head is not None:
+            entry["layers"] = 2
+        entries[str(class_def["id"])] = entry
     return entries, missing
 
 
@@ -298,16 +351,21 @@ def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: 
 
     `prefix` is site-relative (e.g. "assets/sprites/heads/25"); either cell may
     be absent on class-generic sheets, in which case only the other is written.
+    Each cell ships as a two-layer priority strip.
     """
     dest = os.path.join(os.path.dirname(out_dir), *prefix.split("/"))
     entry = None
     large = image.crop((0, 0, 32, 32))
     small = image.crop((0, 32, 16, 48))
     if large.getbbox() is not None:
-        write_webp(large, f"{dest}.webp")
+        strip = layer_strip(large)
+        assert_binary_alpha(strip, prefix)
+        write_webp(strip, f"{dest}.webp")
         entry = head_entry(f"{prefix}.webp", source, 32, 32)
     if small.getbbox() is not None:
-        write_webp(small, f"{dest}-small.webp")
+        strip = layer_strip(small)
+        assert_binary_alpha(strip, f"{prefix}-small")
+        write_webp(strip, f"{dest}-small.webp")
         small_entry = head_entry(f"{prefix}-small.webp", source + " (small)", 16, 16)
         if entry is None:
             entry = small_entry
@@ -379,8 +437,11 @@ def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[di
                     frame.body_src_y + frame.body_h,
                 )
             )
+            image = flatten(body)
+            label = f"unique {unit['slot']}-{class_def['id']}"
+            assert_binary_alpha(image, label)
             file_name = f"assets/sprites/unique/{unit['slot']}-{class_def['id']}.webp"
-            write_webp(body, os.path.join(os.path.dirname(out_dir), *file_name.split("/")))
+            write_webp(image, os.path.join(os.path.dirname(out_dir), *file_name.split("/")))
             source = f"unit/Unique/{folder}/{HEAD_FILE} + anime.bin"
             per_class[str(class_def["id"])] = {
                 "file": file_name,
@@ -397,32 +458,37 @@ def image_for(out_dir: str, file_name: str) -> Image.Image:
     return Image.open(os.path.join(os.path.dirname(out_dir), *file_name.split("/"))).convert("RGBA")
 
 
+def layer_cell(image: Image.Image, entry: dict, index: int) -> Image.Image:
+    return image.crop((index * entry["w"], 0, (index + 1) * entry["w"], entry["h"]))
+
+
 def compose_contract(out_dir: str, body_entry: dict, head_entry: dict | None) -> Image.Image:
-    body = image_for(out_dir, body_entry["file"])
-    head = None
-    if head_entry is not None:
-        head = image_for(out_dir, head_entry["file"])
-    left = 0
-    top = 0
-    if head_entry is not None:
-        left = min(0, body_entry["head"]["x"])
-        top = min(0, body_entry["head"]["y"])
-    width = body.width + abs(left)
-    height = body.height + abs(top)
-    if head is not None:
-        width = max(width, body_entry["head"]["x"] - left + head.width)
-        height = max(height, body_entry["head"]["y"] - top + head.height)
+    """Four-layer priority composite: body-low, head-low, body-high, head-high.
+
+    Higher priority wins, ties go to the head. Flattened bodies (Unique, no
+    head) are already a single opaque image and pass through unchanged.
+    """
+    body_image = image_for(out_dir, body_entry["file"])
+    if body_entry.get("layers") != 2 or head_entry is None:
+        return body_image
+    head_image = image_for(out_dir, head_entry["file"])
+    body_low = layer_cell(body_image, body_entry, 0)
+    body_high = layer_cell(body_image, body_entry, 1)
+    head_low = layer_cell(head_image, head_entry, 0)
+    head_high = layer_cell(head_image, head_entry, 1)
+    offset_x = body_entry["head"]["x"]
+    offset_y = body_entry["head"]["y"]
+    left = min(0, offset_x)
+    top = min(0, offset_y)
+    width = max(body_entry["w"], offset_x + head_entry["w"]) - left
+    height = max(body_entry["h"], offset_y + head_entry["h"]) - top
     canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    if head is None:
-        canvas.alpha_composite(body, (-left, -top))
-        return canvas
-    paste = (body_entry["head"]["x"] - left, body_entry["head"]["y"] - top)
-    if body_entry["head"].get("behind"):
-        canvas.alpha_composite(head, paste)
-        canvas.alpha_composite(body, (-left, -top))
-    else:
-        canvas.alpha_composite(body, (-left, -top))
-        canvas.alpha_composite(head, paste)
+    paste_body = (-left, -top)
+    paste_head = (offset_x - left, offset_y - top)
+    canvas.alpha_composite(body_low, paste_body)
+    canvas.alpha_composite(head_low, paste_head)
+    canvas.alpha_composite(body_high, paste_body)
+    canvas.alpha_composite(head_high, paste_head)
     return canvas
 
 
