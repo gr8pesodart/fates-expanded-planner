@@ -162,7 +162,8 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: 
   const offset = layers.kind !== 'stitched' ? null
     : frame?.[2] !== undefined && frame[3] !== undefined ? { x: frame[2], y: frame[3] } : layers.offset
   const bodyCell = frame?.[0] ?? 0
-  const scale = size / Math.max(body.w, body.h)
+  // Pixel art: only integer scales stay crisp, so round down (never below 1x) instead of fitting.
+  const scale = Math.max(1, Math.floor(size / Math.max(body.w, body.h)))
   if (!head || !offset) {
     const bands = Array.from({ length: body.layers ?? 1 }, (_, cell) => cell)
     return wrap(
