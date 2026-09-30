@@ -71,28 +71,30 @@ function RunCard({ run, active, onSelect, deletable }: { run: RunPlan; active: b
         <span className="run-meta muted">{route?.label} · {selectedModIds(run.modpackId, run.mods).length} mods · DLC {run.dlc ? 'on' : 'off'} · {paired} couple{paired === 1 ? '' : 's'}</span>
         {active ? <span className="run-tag">Active</span> : null}
       </button>
-      <button type="button" className="icon-btn" aria-label={`More for ${run.name}`} aria-expanded={menu} onClick={() => setMenu((open) => !open)}>
-        <Icon name="more" size={24} />
+      <button type="button" className="icon-btn run-toggle" aria-label={`Settings for ${run.name}`} aria-expanded={menu} onClick={() => setMenu((open) => !open)}>
+        <Icon name="chevronDown" size={24} />
       </button>
-      {menu ? (
-        <div className="run-menu">
-          <label className="field">
-            <span className="sub-title">Name</span>
-            <input value={run.name} onChange={(event) => updateRun(run.id, { name: event.target.value })} />
-          </label>
-          <ModChecklist profileId={run.modpackId} value={run.mods} onChange={(mods) => updateRun(run.id, { mods })} />
-          <div className="run-menu-actions">
-            <button type="button" className="text-btn" onClick={() => void share()}><Icon name="share" size={18} />Share link</button>
-            <button type="button" className="text-btn" onClick={() => duplicateRun(run.id)}>Duplicate</button>
-            <button type="button" className="text-btn" onClick={() => download(`${run.name}.json`, JSON.stringify(run, null, 2))}>Export</button>
-            {deletable ? (
-              <button type="button" className="text-btn danger" onClick={() => {
-                if (window.confirm(`Delete “${run.name}”? This can't be undone.`)) deleteRun(run.id)
-              }}>Delete</button>
-            ) : null}
+      <div className="run-menu-wrap" data-open={menu || undefined}>
+        <div className="run-menu-inner" inert={!menu}>
+          <div className="run-menu">
+            <label className="field">
+              <span className="sub-title">Name</span>
+              <input value={run.name} onChange={(event) => updateRun(run.id, { name: event.target.value })} />
+            </label>
+            <ModChecklist profileId={run.modpackId} value={run.mods} onChange={(mods) => updateRun(run.id, { mods })} />
+            <div className="run-menu-actions">
+              <button type="button" className="text-btn" onClick={() => void share()}><Icon name="share" size={18} />Share link</button>
+              <button type="button" className="text-btn" onClick={() => duplicateRun(run.id)}>Duplicate</button>
+              <button type="button" className="text-btn" onClick={() => download(`${run.name}.json`, JSON.stringify(run, null, 2))}>Export</button>
+              {deletable ? (
+                <button type="button" className="text-btn danger" onClick={() => {
+                  if (window.confirm(`Delete “${run.name}”? This can't be undone.`)) deleteRun(run.id)
+                }}>Delete</button>
+              ) : null}
+            </div>
           </div>
         </div>
-      ) : null}
+      </div>
     </li>
   )
 }
