@@ -17,7 +17,6 @@ import { lensDef, LENSES } from '../logic/lenses'
 import { toggleFavourite } from '../logic/relationships'
 import { navigate } from '../lib/router'
 import { useSwipePager } from '../lib/swipe'
-import { useScrolled } from '../lib/useScrolled'
 
 const SORT_LABEL = { recruit: 'Recruit order', name: 'Name', stat: 'Stat' } as const
 
@@ -25,15 +24,13 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
   const { rosterLens, rosterSort, rosterFavouritesFirst, rosterLinkPairs, rosterGeneration, setRosterLens } = useUi()
   const { entries, sort } = useSortedRoster(rosterLens, rosterSort, { favouritesFirst: rosterFavouritesFirst, linkPairs: rosterLinkPairs, generation: rosterGeneration })
   const openPicker = usePickers((state) => state.open)
-  const { sentinelRef, scrolled } = useScrolled()
   const lens = lensDef(rosterLens)
   const lensIndex = LENSES.findIndex((item) => item.id === rosterLens)
   const listRef = useRef<HTMLUListElement | null>(null)
   useSwipePager(listRef, lensIndex, LENSES.length, (next) => setRosterLens(LENSES[next].id))
   return (
     <section className="screen roster" aria-labelledby="roster-title">
-      <span ref={sentinelRef} className="sticky-sentinel" aria-hidden="true" />
-      <div className="roster-sticky-head" data-scrolled={scrolled}>
+      <div className="roster-sticky-head">
         <div className="screen-head">
           <h1 id="roster-title" className="screen-title">Roster</h1>
           <button type="button" className="icon-btn sort-btn" aria-label={`Sort: ${SORT_LABEL[sort.kind]}. Change sort`} onClick={() => openPicker({ sort: 'roster' })}>

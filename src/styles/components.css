@@ -592,17 +592,19 @@
   inset: auto 0 0;
   height: 1px;
   background: var(--line);
+}
+
+/* Owner choice: the Roster's border (under the lens rail) is permanent; the Chart's fades in once scrolled. */
+.chart-sticky-head::after {
   opacity: 0;
   transition: opacity 150ms var(--ease);
 }
 
-.roster-sticky-head[data-scrolled="true"]::after,
 .chart-sticky-head[data-scrolled="true"]::after {
   opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .roster-sticky-head::after,
   .chart-sticky-head::after {
     transition: none;
   }

@@ -31,8 +31,23 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   re-checks for a new build whenever the app returns to the foreground (and hourly), then reloads.
   iOS home-screen apps resume rather than relaunch, so without this they sat on old builds. Verified
   end to end (build A → rebuild → `visibilitychange` → page reloads onto build B).
+- v3.1.1 / audit: Fates skill learning (one per level-up), recruitment-level field, two inherited
+  skills per child, Corrin's planned A-rank (Friendship Seal) set, fixes from validating the v3.1 pass.
+- v3.2 (live 2026-10-01): pair-up Mov decoded; children's pair-up rows; route-locked Nobles;
+  Jakob/Felicia order by Corrin gender; mobile character layer (no pop after swipe-back); swipe +
+  slide between Roster lenses and character tabs; reworked sticky header; relationship open buttons,
+  Corrin A-rank grid, family links; Parents page per Figma 15:1542; sprite head/body load sync and
+  whole-number scaling; Chart sticky header. Agent knowledge captured in `.claude/skills/` (see
+  AGENTS.md).
 
 ### Backlog
+
+- **Roster name clipping (iOS, unconfirmed fixed):** owner saw names clipped at the right edge, worse
+  further down. Not reproducible in desktop Chromium/WebKit; `content-visibility: auto` was removed
+  from rows as the likely cause (Safari repaint bugs) and the name got glyph-overhang padding. Ask the
+  owner whether it persists.
+- **Splash load speed:** reported slow even when cached; measured 1–9 ms from cache on desktop. Needs
+  an on-device report (first open vs relaunch) before more work.
 
 - **Directional map animations** (walk cycles): the ROM has eight-direction move clips alongside
   idle (docs/assets/overworld-animation-audit.md); v3.1 ships idle only to keep strips small.

@@ -110,6 +110,13 @@ unexpected alpha value.
   when the head leaves the body's rest offset (`compact_animation` strips redundancy because the
   manifest ships in the main bundle, and fails if its invariants break). `ClassSprite` plays it only
   while on screen and stops under `prefers-reduced-motion` / a hidden tab.
+- **Whole-number scales only** (owner rule, v3.2): `ClassSprite` uses
+  `scale = max(1, floor(size / 32))`, so pass sizes that are multiples of 32 (32 = 1×). Roster and
+  Chart use 32; a 24/28 size would round to 1× and overflow its box.
+- **Head and body appear together** (v3.2): `ClassSprite` decodes every image a sprite needs
+  (`useImagesReady` / `decodeImage`, a module-level cache) and renders an empty, size-holding box
+  until all are decoded, so a headless body or floating head never flashes in. Cached sprites render
+  immediately.
 - `VITE_ASSETS=off` must still render monograms.
 
 ## Extraction gotchas

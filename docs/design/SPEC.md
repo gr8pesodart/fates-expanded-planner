@@ -102,7 +102,8 @@ areas may extend past the visible chip.
 
 ## Roster (`3:970`)
 
-- Sticky header (no shadow; the bottom border fades in only after scrolling): "Roster" title, lens
+- Sticky header (no shadow; a permanent 1px `--line` bottom border under the lens rail — unlike the
+  Chart's, which only fades in after scrolling): "Roster" title, lens
   rail and **sort button** top-right. With Link pair-up partners on, linked pairs sit together with
   the Chart's swap button on the line between them. The icon reflects the active
   sort and direction. The sheet presents Recruit order, Name and each stat with its own icon; `-`
