@@ -30,12 +30,18 @@ npm run build     # tsc -b && vite build; also warns if the main chunk exceeds 5
 npm test          # vitest; only src/**/*.test.ts is collected (vitest.config.ts)
 ```
 
+- `npm run audit:skills` (vitest with `vitest.audit.config.ts`, files `tools/audit/*.audit.ts`) holds
+  slow exhaustive checks kept out of `npm test`; run it when touching class pools or skill access.
 - Throwaway probe tests must live under `src/` (e.g. `src/zz-probe.test.ts`, imports `./data/loader`)
   or vitest won't find them. Delete them afterwards.
 - Throwaway Playwright scripts in `scripts/_*.mjs` are linted by oxlint (unused imports warn) —
   delete them before the final lint.
 - The main bundle sits near the 500 kB warning; `src/data/sprites.json` is in it. Keep manifest data
-  compact (see `fates-sprites` › compact animation).
+  compact (see `fates-sprites` › compact animation). v3.3 moved `app/pickers.tsx` and `RunsScreen`
+  into lazy chunks (`App.tsx`) to get back under it (486 kB); split more screens the same way if it
+  creeps up again.
+- `scripts/shots.mjs` seeds a **schema 5** run (`corrin.builds`); seeding a schema 4 doc is a quick
+  way to exercise the migration in the browser.
 
 ## The Vite stale-module trap (cost several debugging rounds)
 
@@ -113,6 +119,8 @@ extractor or curated source and rerun, e.g. `python tools/extract/build_recruitm
   design/debug work → the orchestrator. Review and merge delegated branches yourself.
 - Give delegated agents exact file pointers and the gates; tell them not to push/merge and which
   ports to avoid.
+- If DS fails with HTTP 402 "Insufficient account funds", the opencode account is empty — GLM shares
+  it, so fall back to Luna (codex) and tell the owner (happened 2026-10-01).
 - Research claims must carry quotes + URLs; record outcomes in `docs/DATA.md` and pin them in tests.
 
 ## Owner preferences learned

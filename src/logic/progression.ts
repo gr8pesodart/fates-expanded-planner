@@ -77,9 +77,13 @@ const DLC_GENDER: Record<string, 'male' | 'female'> = {
 
 const SEGMENT_LABEL: Record<ClassTier, string> = { base: 'Base', promoted: 'Advanced', special: 'Special' }
 
-export function tierCap(tier: ClassTier, eternalSeals = 0): number {
+/**
+ * Level cap of a segment. `unitLevelCap` is the character's own cap (GameData +134): Jakob and
+ * Felicia join promoted (Butler / Maid) with a cap of 40 — as if four Eternal Seals were built in.
+ */
+export function tierCap(tier: ClassTier, eternalSeals = 0, unitLevelCap: number | null = null): number {
   if (tier === 'base') return BASE_LEVEL_CAP
-  const cap = tier === 'special' ? SPECIAL_LEVEL_CAP : BASE_LEVEL_CAP
+  const cap = tier === 'special' ? SPECIAL_LEVEL_CAP : Math.max(BASE_LEVEL_CAP, unitLevelCap ?? 0)
   return cap + eternalSeals * ETERNAL_SEAL_LEVEL_INCREASE
 }
 
@@ -248,7 +252,7 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
     segments.push(segment)
     let changedSegment = false
 
-    for (; level <= tierCap(classDef.tier, eternalSeals); level += 1) {
+    for (; level <= tierCap(classDef.tier, eternalSeals, ctx.unit.levelCap); level += 1) {
       const def: ClassDef = classDef
       let learned: LearnedSkill[] = []
       if (firstRow) {
@@ -288,6 +292,34 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
   }
 
   return { segments, dropped: events.filter((event) => !used.has(event)), eternalSeals, startsWith }
+}
+
+/**
+ * Average stats at the end of the planned path, plus Mov of the class held there. With no reclasses
+ * the path is the join class up to Lv 20 (or 40 on the special track). `base` flags a path that never
+ * leaves a base class, which the Roster mutes.
+ */
+export function expectedFinal(dataset: Dataset, run: RunPlan, ctx: UnitContext): { row: (number | null)[]; base: boolean } {
+  const progression = buildProgression(dataset, run, ctx)
+  const last = progression.segments.at(-1)?.rows.at(-1)
+  const def = dataset.classesById.get(finalClass(progression) ?? ctx.currentClassId)
+  if (!last) return { row: Array.from({ length: 9 }, () => null), base: true }
+  return { row: [...last.expected, def?.movement ?? null], base: def?.tier === 'base' }
+}
+
+export interface RouteStep {
+  /** Level at which the class is taken (the join level for the first step). */
+  level: number
+  classId: number
+}
+
+/** The planned path in brief: join class, then each class change that still fits, in order. */
+export function routeSteps(progression: Progression, start: { level: number; classId: number }): RouteStep[] {
+  const steps: RouteStep[] = [{ level: start.level, classId: start.classId }]
+  for (const segment of progression.segments) {
+    for (const row of segment.rows) if (row.reclass !== null) steps.push({ level: row.level, classId: row.reclass })
+  }
+  return steps
 }
 
 /** The row's info panel values: expected stats plus effective growths/pair-up after this row. */

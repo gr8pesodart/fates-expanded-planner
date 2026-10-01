@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { usePlanner } from '../../app/plannerContext'
 import { Rail } from '../../components/controls'
 import { StatTable } from '../../components/StatTable'
@@ -8,6 +8,8 @@ import type { LensId } from '../../logic/lenses'
 import { colourReferenceClassIds, lensDef, lensRow } from '../../logic/lenses'
 import { unitClassIds } from '../../app/unitViews'
 import { armyUnits, unitContext } from '../../logic/army'
+import { favouriteClassesFirst } from '../../logic/relationships'
+import { Icon } from '../../components/icons'
 
 const GROUPS: { title: string; lenses: LensId[]; perClass?: boolean }[] = [
   { title: 'Effective', lenses: ['maxStats', 'effectiveGrowths', 'effectivePairUp'] },
@@ -18,12 +20,13 @@ const GROUPS: { title: string; lenses: LensId[]; perClass?: boolean }[] = [
 export function StatsTab({ ctx }: { ctx: UnitContext }) {
   const { dataset, run } = usePlanner()
   const [picked, setPicked] = useState<number | null>(null)
-  const classIds = unitClassIds(dataset, ctx, run.dlc)
+  const favouriteClasses = ctx.plan.favouriteClasses ?? []
+  const classIds = favouriteClassesFirst(unitClassIds(dataset, ctx, run.dlc), favouriteClasses)
   const classId = picked !== null && classIds.includes(picked) ? picked : ctx.currentClassId
-  const rosterContexts = armyUnits(dataset, run).flatMap((unit) => {
+  const rosterContexts = useMemo(() => armyUnits(dataset, run).flatMap((unit) => {
     const unitCtx = unitContext(dataset, run, unit.id)
     return unitCtx ? [unitCtx] : []
-  })
+  }), [dataset, run])
   return (
     <>
       {GROUPS.map((group) => (
@@ -33,7 +36,11 @@ export function StatsTab({ ctx }: { ctx: UnitContext }) {
             <Rail<number>
               variant="pills"
               label="Class"
-              items={classIds.map((id) => ({ id, label: classFamily(dataset.classesById.get(id)?.name ?? '?') }))}
+              items={classIds.map((id) => ({
+                id,
+                label: classFamily(dataset.classesById.get(id)?.name ?? '?'),
+                icon: favouriteClasses.includes(id) ? <Icon name="star" size={14} className="rail-star" /> : undefined,
+              }))}
               active={classId}
               onSelect={setPicked}
             />

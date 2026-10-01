@@ -4,8 +4,10 @@ import type { StatRow } from '../logic/lenses'
 import { formatCell } from '../logic/lenses'
 import { SlideSwap } from './SlideSwap'
 
-export function StatTable({ row, signed = false, inverse = false, label, referenceRows, mov = true, slideIndex }: {
+export function StatTable({ row, signed = false, inverse = false, muted = false, label, referenceRows, mov = true, slideIndex }: {
   row: StatRow
+  /** Greyed values without colouring (e.g. an expected final row that never leaves a base class). */
+  muted?: boolean
   signed?: boolean
   inverse?: boolean
   label?: string
@@ -18,7 +20,7 @@ export function StatTable({ row, signed = false, inverse = false, label, referen
   const keys = mov ? STAT_TABLE_KEYS : STAT_TABLE_KEYS.filter((key) => key !== 'mov')
   const columns: CSSProperties | undefined = mov ? undefined : { gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }
   const table = (
-    <div className={inverse ? 'stat-table inverse' : 'stat-table'} role="table" aria-label={label}>
+    <div className={['stat-table', inverse ? 'inverse' : '', muted ? 'muted' : ''].filter(Boolean).join(' ')} role="table" aria-label={label}>
       <div className="stat-row" role="row" style={columns}>
         {keys.map((key) => (
           <span key={key} className="stat-head" role="columnheader">{STAT_TABLE_LABELS[key]}</span>
@@ -29,7 +31,7 @@ export function StatTable({ row, signed = false, inverse = false, label, referen
           const value = row[index] ?? null
           const tone = signed && value !== null && value !== 0 ? (value > 0 ? 'up' : 'down') : undefined
           const reference = referenceRows?.map((candidate) => candidate[index]).filter((item): item is number => item !== null && item !== undefined) ?? []
-          const colors = value === null || reference.length < 2 ? undefined : statTone(value, reference)
+          const colors = muted || value === null || reference.length < 2 ? undefined : statTone(value, reference)
           return <span key={key} className={`stat-val${colors ? ' colorized' : ''}${value === null ? ' empty' : ''}`} data-tone={tone} style={colors} role="cell">{formatCell(value, signed)}</span>
         })}
       </div>

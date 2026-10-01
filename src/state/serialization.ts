@@ -1,6 +1,6 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
 import { ROUTES, STAT_KEYS } from '../data/types'
-import type { PlanDocument, RunPlan } from './model'
+import type { CorrinBuild, PlanDocument, RunPlan } from './model'
 import { PLAN_SCHEMA, SKILL_SLOTS } from './model'
 
 const ROUTE_IDS = new Set<string>(ROUTES.map((route) => route.id))
@@ -13,6 +13,17 @@ function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string'
 }
 
+function isNumberList(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) => typeof item === 'number')
+}
+
+function isCorrinBuild(value: unknown): value is CorrinBuild {
+  if (!isRecord(value)) return false
+  if (!STAT_KEYS.includes(value.boon as (typeof STAT_KEYS)[number])) return false
+  if (!STAT_KEYS.includes(value.bane as (typeof STAT_KEYS)[number])) return false
+  return value.talentClassId === null || typeof value.talentClassId === 'number'
+}
+
 function isRunPlan(value: unknown): value is RunPlan {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') return false
   if (typeof value.modpackId !== 'string' || typeof value.dlc !== 'boolean') return false
@@ -23,9 +34,9 @@ function isRunPlan(value: unknown): value is RunPlan {
 
   const corrin = value.corrin
   if (corrin.gender !== 'male' && corrin.gender !== 'female') return false
-  if (!STAT_KEYS.includes(corrin.boon as (typeof STAT_KEYS)[number])) return false
-  if (!STAT_KEYS.includes(corrin.bane as (typeof STAT_KEYS)[number])) return false
-  if (corrin.talentClassId !== null && typeof corrin.talentClassId !== 'number') return false
+  if (!isRecord(corrin.builds) || !isCorrinBuild(corrin.builds.male) || !isCorrinBuild(corrin.builds.female)) return false
+  if (!isOptionalString(corrin.name) || !isOptionalString(corrin.hairColour)) return false
+  if (corrin.legacy !== undefined && corrin.legacy !== true) return false
 
   if (!Array.isArray(value.favourites) || !value.favourites.every((id) => typeof id === 'string')) return false
 
@@ -46,9 +57,34 @@ function isRunPlan(value: unknown): value is RunPlan {
     if (unit.friendshipPartners !== undefined && (!Array.isArray(unit.friendshipPartners) ||
       !unit.friendshipPartners.every((id) => typeof id === 'string'))) return false
     if (unit.pairRole !== undefined && unit.pairRole !== 'front' && unit.pairRole !== 'back') return false
+    if (unit.favouriteClasses !== undefined && !isNumberList(unit.favouriteClasses)) return false
+    if (unit.favouriteParents !== undefined && (!Array.isArray(unit.favouriteParents) ||
+      !unit.favouriteParents.every((id) => typeof id === 'string'))) return false
   }
 
   return true
+}
+
+/**
+ * Schema 4 kept one set of Corrin choices. Both genders start from it; the plans themselves are
+ * copied across once the dataset is loaded (corrin.ts › expandLegacyCorrin, flagged by `legacy`).
+ */
+function migrateRun(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.corrin) || 'builds' in value.corrin) return value
+  const { gender, boon, bane, talentClassId, ...rest } = value.corrin
+  const build = { boon, bane, talentClassId }
+  return { ...value, corrin: { ...rest, gender, builds: { male: build, female: { ...build } }, legacy: true } }
+}
+
+/** Upgrades a schema 4 document (or share payload) to the current schema; anything else is returned unchanged. */
+export function migratePlanDocument(value: unknown): unknown {
+  if (!isRecord(value) || value.schema !== 4) return value
+  return {
+    ...value,
+    schema: PLAN_SCHEMA,
+    ...(Array.isArray(value.runs) ? { runs: value.runs.map(migrateRun) } : {}),
+    ...('run' in value ? { run: migrateRun(value.run) } : {}),
+  }
 }
 
 export function isPlanDocument(value: unknown): value is PlanDocument {
@@ -68,8 +104,9 @@ export function parsePlanDocument(json: string): PlanDocument {
   } catch {
     throw new Error('This file is not valid JSON.')
   }
-  if (!isPlanDocument(parsed)) throw new Error('This file is not a compatible Fates Planner schema 4 export.')
-  return parsed
+  const migrated = migratePlanDocument(parsed)
+  if (!isPlanDocument(migrated)) throw new Error(`This file is not a compatible Fates Planner schema ${PLAN_SCHEMA} export.`)
+  return migrated
 }
 
 export function encodeSharedRun(run: RunPlan): string {
@@ -85,10 +122,11 @@ export function decodeSharedRun(token: string): RunPlan {
   } catch {
     throw new Error('The share link is incomplete or invalid.')
   }
-  if (!isRecord(parsed) || parsed.schema !== PLAN_SCHEMA || !isRunPlan(parsed.run)) {
-    throw new Error('The share link does not contain a compatible schema 4 run.')
+  const migrated = migratePlanDocument(parsed)
+  if (!isRecord(migrated) || migrated.schema !== PLAN_SCHEMA || !isRunPlan(migrated.run)) {
+    throw new Error(`The share link does not contain a compatible schema ${PLAN_SCHEMA} run.`)
   }
-  return parsed.run
+  return migrated.run
 }
 
 export function shareUrlForRun(run: RunPlan, currentUrl = window.location.href): string {

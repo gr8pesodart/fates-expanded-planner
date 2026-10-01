@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { UnitDef } from '../data/types'
+import { usePlanner } from '../app/plannerContext'
 import { displayName } from '../logic/army'
 import { Portrait } from './art'
 import { Icon } from './icons'
@@ -39,12 +40,14 @@ export function RelationSlot({ kind, partner, onClick, ownerName, disabled, corr
  * slot can hold several partners: 2–4 share a 2×2 grid of busts, more use a larger grid of face
  * crops (Figma 14:352); spare cells take the slot hue.
  */
-export function RelationCard({ kind, partners, onClick, disabled, corrin = false }: {
+export function RelationCard({ kind, partners, onClick, disabled, corrin = false, stale = false }: {
   kind: SlotKind
   partners: readonly { id: string; name: string }[]
   onClick(): void
   disabled?: boolean
   corrin?: boolean
+  /** The stored partner moved on while the other Corrin was active: shown greyed, grants nothing. */
+  stale?: boolean
 }) {
   const slot = slotLabel(kind, corrin)
   const [first] = partners
@@ -57,6 +60,7 @@ export function RelationCard({ kind, partners, onClick, disabled, corrin = false
       data-kind={kind}
       data-filled={first ? '' : undefined}
       data-grid={columns > 1 ? '' : undefined}
+      data-stale={stale ? '' : undefined}
       aria-label={first ? `${slot}: ${names}. Change` : `Choose ${slot}`}
       onClick={onClick}
       disabled={disabled}
@@ -84,7 +88,8 @@ export function RelationCard({ kind, partners, onClick, disabled, corrin = false
 
 /** A tappable row that opens another character's page (family quick links, Parent A). */
 export function UnitLink({ unit, onOpen, children }: { unit: UnitDef; onOpen(): void; children?: ReactNode }) {
-  const name = displayName(unit)
+  const { run } = usePlanner()
+  const name = displayName(unit, run)
   return (
     <button type="button" className="unit-link" aria-label={`Open ${name}`} onClick={onOpen}>
       <Portrait unitId={unit.id} name={name} className="chip-32" />

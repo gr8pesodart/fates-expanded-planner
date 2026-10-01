@@ -15,6 +15,9 @@ import { buildProgression, tierCap, withReclass } from '../../logic/progression'
 import type { Reclass, RunPlan } from '../../state/model'
 import { emptyUnitPlan } from '../../state/model'
 import { skillView } from '../../app/unitViews'
+import { SkillNotice } from '../../components/SkillNotice'
+import type { SkillAccess } from '../../logic/skillAccess'
+import { skillAccess, unreachableSkill } from '../../logic/skillAccess'
 
 const SEAL_LABEL: Record<ReclassSeal, string> = {
   master: 'Master Seal',
@@ -37,6 +40,11 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const [open, setOpen] = useState<string | null>(null)
   const progression = useMemo(() => buildProgression(dataset, run, ctx), [dataset, run, ctx])
   const unitId = ctx.unit.id
+  const access = useMemo(() => skillAccess(dataset, run, ctx), [dataset, run, ctx])
+  const equipped = ctx.plan.skills.filter((id): id is number => id !== null).map((id) => access.byId.get(id) ?? unreachableSkill(id))
+  // Equipped skills the planned path doesn't teach, and (children) ones still to be inherited.
+  const offPath = equipped.filter((item) => item.group === 'available' || item.group === 'locked')
+  const toInherit = equipped.filter((item) => item.group === 'inheritable')
 
   /** Applies a plan change, then removes reclasses the new path can no longer reach. */
   const commit = (update: (plan: RunPlan['units'][string]) => RunPlan['units'][string]) => {
@@ -63,47 +71,55 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
 
   const last = progression.segments.at(-1)
   const lastRow = last?.rows.at(-1)
-  const canEternal = last && last.tier !== 'base' && lastRow?.level === tierCap(last.tier, progression.eternalSeals)
+  const canEternal = last && last.tier !== 'base' && lastRow?.level === tierCap(last.tier, progression.eternalSeals, ctx.unit.levelCap)
   const joinClass = dataset.classesById.get(ctx.start.classId)
   const fixedParent = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
-  const joinCap = joinClass ? tierCap(joinClass.tier) : 20
+  const joinCap = joinClass ? tierCap(joinClass.tier, 0, ctx.unit.levelCap) : 20
 
   return (
     <>
       <section className="panel-section join-section" aria-labelledby="join-title">
         <h2 id="join-title" className="section-title">Recruitment</h2>
         <div className="join-line">
-          <span>{ctx.start.chapter ? `${ctx.start.chapter} · ` : ''}{classFamily(joinClass?.name ?? '?')}</span>
+          <div className="join-info">
+            <span>{ctx.start.chapter ? `${ctx.start.chapter} · ` : ''}{classFamily(joinClass?.name ?? '?')}</span>
+            {progression.startsWith.length ? (
+              <span className="join-skills" aria-label="Skills on recruitment">
+                <SkillChips dataset={dataset} skills={progression.startsWith} />
+              </span>
+            ) : null}
+          </div>
           {ctx.start.variableLevel ? (
             <JoinLevelField key={ctx.start.level} level={ctx.start.level} cap={joinCap} disabled={readOnly} onCommit={setJoinLevel} />
           ) : <span className="join-level-fixed">Lv {ctx.start.level}</span>}
         </div>
-        {progression.startsWith.length ? (
-          <div className="starts-with">
-            <h3 className="sub-title">Starts with</h3>
-            <SkillChips dataset={dataset} skills={progression.startsWith} />
-          </div>
-        ) : null}
       </section>
       {ctx.isChild ? (
         <section className="panel-section" aria-labelledby="inherit-title">
           <h2 id="inherit-title" className="section-title">Inherited Skills</h2>
+          {toInherit.length ? <EquippedNotes dataset={dataset} items={toInherit} corrin={ctx.unit.isCorrin} label="Equipped skills only a parent can pass on" /> : null}
           <div className="inherit-cards">
             <InheritCard
               dataset={dataset}
               skillId={ctx.plan.inheritFixedSkill}
-              parent={fixedParent ? displayName(fixedParent) : null}
+              parent={fixedParent ? displayName(fixedParent, run) : null}
               disabled={readOnly || !fixedParent}
               onClick={() => openPicker({ skill: { unitId, slot: 'inheritFixed' } })}
             />
             <InheritCard
               dataset={dataset}
               skillId={ctx.plan.inheritSkill}
-              parent={ctx.variableParent ? displayName(ctx.variableParent) : null}
+              parent={ctx.variableParent ? displayName(ctx.variableParent, run) : null}
               disabled={readOnly}
               onClick={() => openPicker({ skill: { unitId, slot: 'inheritVariable' } })}
             />
           </div>
+        </section>
+      ) : null}
+      {offPath.length ? (
+        <section className="panel-section" aria-labelledby="offpath-title">
+          <h2 id="offpath-title" className="section-title">Not in Progression</h2>
+          <EquippedNotes dataset={dataset} items={offPath} corrin={ctx.unit.isCorrin} label="Equipped skills this path doesn't teach" />
         </section>
       ) : null}
       {progression.segments.map((segment, segmentIndex) => (
@@ -153,6 +169,16 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   )
 }
 
+function EquippedNotes({ dataset, items, corrin, label }: { dataset: Dataset; items: SkillAccess[]; corrin: boolean; label: string }) {
+  return (
+    <div className="skill-list" aria-label={label}>
+      {items.map((item) => (
+        <SkillCard key={item.skillId} skill={skillView(dataset, item.skillId)} notice={<SkillNotice access={item} corrin={corrin} />} />
+      ))}
+    </div>
+  )
+}
+
 /** Only the parent's name carries the strong tag token; the rest of the line stays muted. */
 function InheritCard({ dataset, skillId, parent, disabled, onClick }: { dataset: Dataset; skillId: number | undefined; parent: string | null; disabled: boolean; onClick(): void }) {
   const name = <strong className="skill-card-parent">{parent ?? 'Parent B'}</strong>
@@ -172,7 +198,7 @@ function SkillChips({ dataset, skills }: { dataset: Dataset; skills: LearnedSkil
     const name = dataset.skillsById.get(item.skillId)?.name ?? '?'
     return (
       <span key={item.skillId} className="learned-skill">
-        <SkillIcon skillId={item.skillId} name={name} size={16} />
+        <SkillIcon skillId={item.skillId} name={name} size={24} />
         {name}
       </span>
     )
@@ -183,7 +209,6 @@ function LearnedLine({ dataset, row }: { dataset: Dataset; row: LevelRow }) {
   if (!row.learned.length) return <span className="level-learned" />
   return (
     <span className="level-learned">
-      <em className="muted">Learns</em>
       <SkillChips dataset={dataset} skills={row.learned} />
     </span>
   )

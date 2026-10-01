@@ -4,6 +4,7 @@ import type { UnitContext } from './army'
 import { pairRank, supportBonusesOf } from './army'
 import { sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
+import { expectedFinal } from './progression'
 import { projectUnit } from './stats'
 
 export type LensId =
@@ -11,6 +12,7 @@ export type LensId =
   | 'personalGrowths'
   | 'effectiveGrowths'
   | 'maxStats'
+  | 'expectedFinal'
   | 'effectivePairUp'
   | 'personalPairUp'
   | 'baseStats'
@@ -31,6 +33,7 @@ export const LENSES: readonly LensDef[] = [
   { id: 'personalGrowths', label: 'Growth Rates (Personal)', signed: false },
   { id: 'effectiveGrowths', label: 'Growth Rates (Effective)', signed: false },
   { id: 'maxStats', label: 'Max Stats (Effective)', signed: false },
+  { id: 'expectedFinal', label: 'Expected Final Stats', signed: false },
   { id: 'effectivePairUp', label: 'Pair Up Bonuses (Effective)', signed: true },
   { id: 'personalPairUp', label: 'Pair Up Bonuses (Personal)', signed: true },
   { id: 'baseStats', label: 'Base Stats (Class)', signed: false },
@@ -88,6 +91,8 @@ export function lensRow(dataset: Dataset, run: RunPlan, ctx: UnitContext, lens: 
       break
     case 'classPairUp':
       return classDef ? pairUpRow(classDef.pairUp) : [...empty(), null]
+    case 'expectedFinal':
+      return expectedFinal(dataset, run, ctx).row
     case 'personalPairUp': {
       const rank = ctx.pairPartner ? pairRank(dataset, run, ctx.unit.id, ctx.pairPartner.id) : 'S'
       return pairUpRow(pairUpBonus(null, supportBonusesOf(dataset, run, ctx), rank))

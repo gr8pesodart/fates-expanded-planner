@@ -18,7 +18,7 @@ const IGNORE = 'input, select, textarea, .rail, .char-tabs, [data-swipe-ignore]'
 /** A committed swipe: far enough, or a quick flick. */
 export function swipeDirection(dx: number, velocity: number): -1 | 0 | 1 {
   if (Math.abs(dx) < 16) return 0
-  if (Math.abs(dx) > 72 || Math.abs(velocity) > 0.45) return dx < 0 ? 1 : -1
+  if (Math.abs(dx) > 48 || Math.abs(velocity) > 0.3) return dx < 0 ? 1 : -1
   return 0
 }
 

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { ASSETS_ENABLED, portraitArt, spriteLayers } from '../data/art'
+import { PlannerContext } from '../app/plannerContext'
+import { ASSETS_ENABLED, defaultHairColour, portraitArt, spriteLayers } from '../data/art'
 import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
+import { hairColourOf } from '../logic/hair'
 
 function monogram(label: string): string {
   const words = label.replace(/\([^)]*\)/g, ' ').trim().split(/\s+/).filter(Boolean)
@@ -71,31 +73,46 @@ function useInViewport(ref: { current: HTMLSpanElement | null }): boolean {
   return visible
 }
 
+// One clock for every sprite, like the game's frame counter: sprites idle in step, and one that
+// scrolls into view (or re-mounts) joins mid-cycle instead of restarting from its first pose.
+const CLOCK_EPOCH = performance.now()
+const TICK_MS = 1000 / 60
+
+/** The frame showing at `now` on the shared clock, and the ms until it changes. */
+function frameAt(sequence: SpriteAnimationFrame[], now: number): { index: number; wait: number } {
+  const total = sequence.reduce((sum, frame) => sum + Math.max(1, frame[1]), 0)
+  const elapsed = now - CLOCK_EPOCH
+  let tick = Math.floor(elapsed / TICK_MS) % total
+  for (let index = 0; index < sequence.length; index += 1) {
+    const delay = Math.max(1, sequence[index][1])
+    if (tick < delay) return { index, wait: (delay - tick) * TICK_MS - (elapsed % TICK_MS) }
+    tick -= delay
+  }
+  return { index: 0, wait: TICK_MS }
+}
+
 function useAnimationIndex(sequence: SpriteAnimationFrame[] | undefined, enabled: boolean): number {
   const [index, setIndex] = useState(0)
   useEffect(() => {
     if (!enabled || !sequence || sequence.length < 2) return
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     if (reducedMotion.matches) return
-    let frame = 0
     let timer = 0
-    const schedule = () => {
-      timer = window.setTimeout(() => {
-        frame = (frame + 1) % sequence.length
-        setIndex(frame)
-        schedule()
-      }, Math.max(1, Math.round(sequence[frame][1] * 1000 / 60)))
+    const tick = () => {
+      const { index: current, wait } = frameAt(sequence, performance.now())
+      setIndex(current)
+      timer = window.setTimeout(tick, Math.max(1, wait))
     }
     const visibility = () => {
       window.clearTimeout(timer)
-      if (!document.hidden) schedule()
+      if (!document.hidden) tick()
     }
     const motion = (event: MediaQueryListEvent) => {
       window.clearTimeout(timer)
       if (event.matches) setIndex(0)
-      else if (!document.hidden) schedule()
+      else if (!document.hidden) tick()
     }
-    schedule()
+    tick()
     document.addEventListener('visibilitychange', visibility)
     reducedMotion.addEventListener('change', motion)
     return () => {
@@ -141,17 +158,120 @@ function useImagesReady(urls: readonly string[]): boolean {
   return ready
 }
 
-export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: { unitId: string | null; classId: number; name: string; size?: number; tile?: boolean }) {
-  const layers = spriteLayers(unitId, classId)
+// ×2 modulate of the grey hair mask, as tools/assets/extract_sprites.py › tint_modulate2x, so
+// runtime tints match the extracted defaults. (Overlay washed bright hair out to near-white.)
+function tintTables(hex: string): Uint8Array[] {
+  return [1, 3, 5].map((offset) => {
+    const colour = parseInt(hex.slice(offset, offset + 2), 16)
+    const table = new Uint8Array(256)
+    for (let value = 0; value < 256; value += 1) table[value] = Math.min(255, Math.floor((2 * value * colour) / 255))
+    return table
+  })
+}
+
+/** `${file}|${colour}` → tinted strip URL, or null when tinting failed (the default shows). */
+const tintedStrips = new Map<string, string | null>()
+const tinting = new Map<string, Promise<void>>()
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => resolve(image)
+    image.onerror = reject
+    image.src = src
+  })
+}
+
+/** The strip with its recolourable hair replaced by the tinted mask, as an object URL (cached). */
+function tintStrip(file: string, hair: string, colour: string): Promise<void> {
+  const key = `${file}|${colour}`
+  const existing = tinting.get(key)
+  if (existing) return existing
+  const job = Promise.all([loadImage(file), loadImage(hair)]).then(([base, mask]) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = base.naturalWidth
+    canvas.height = base.naturalHeight
+    const context = canvas.getContext('2d', { willReadFrequently: true })
+    if (!context) throw new Error('no canvas')
+    context.drawImage(mask, 0, 0)
+    const hairPixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+    context.clearRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(base, 0, 0)
+    const out = context.getImageData(0, 0, canvas.width, canvas.height)
+    const tables = tintTables(colour)
+    for (let i = 0; i < hairPixels.length; i += 4) {
+      if (!hairPixels[i + 3]) continue
+      out.data[i] = tables[0][hairPixels[i]]
+      out.data[i + 1] = tables[1][hairPixels[i + 1]]
+      out.data[i + 2] = tables[2][hairPixels[i + 2]]
+      out.data[i + 3] = 255
+    }
+    context.putImageData(out, 0, 0)
+    return new Promise<void>((resolve) => canvas.toBlob((blob) => {
+      tintedStrips.set(key, blob ? URL.createObjectURL(blob) : null)
+      resolve()
+    }))
+  // A failed tint falls back to the extracted default colours.
+  }).catch(() => { tintedStrips.set(key, null) })
+  tinting.set(key, job)
+  return job
+}
+
+/** `image` with its hair tinted `colour`; `pending` until the tinted strip exists. */
+function useTinted<T extends SpriteImage>(image: T | null, colour: string | null): { image: T | null; pending: boolean } {
+  const key = image?.hair && colour ? `${image.file}|${colour}` : null
+  const done = key !== null && tintedStrips.has(key)
+  const [, rerender] = useState(0)
+  useEffect(() => {
+    if (!key || done || !image?.hair || !colour) return
+    let cancelled = false
+    void tintStrip(image.file, image.hair, colour).then(() => {
+      if (!cancelled) rerender((count) => count + 1)
+    })
+    return () => { cancelled = true }
+  }, [key, done, image, colour])
+  if (!image || !key) return { image, pending: false }
+  const file = tintedStrips.get(key)
+  return { image: file ? { ...image, file } : image, pending: !done }
+}
+
+/**
+ * The colour to tint a unit's recolourable hair in this run (logic/hair.ts), or null when the
+ * extracted default already shows it. `override` serves draft runs (the new-run flow).
+ */
+function useHairColour(unitId: string | null, override?: string | null): string | null {
+  const planner = useContext(PlannerContext)
+  if (!unitId) return null
+  const colour = override !== undefined ? override : planner ? hairColourOf(planner.dataset, planner.run, unitId, defaultHairColour) : null
+  return colour && colour.toLowerCase() !== defaultHairColour(unitId)?.toLowerCase() ? colour : null
+}
+
+export function ClassSprite({ unitId, classId, name, size = 32, tile = false, hair }: {
+  unitId: string | null
+  classId: number
+  name: string
+  size?: number
+  tile?: boolean
+  /** Hair colour to show instead of the run's (draft runs); null = extracted default. */
+  hair?: string | null
+}) {
+  const resolved = spriteLayers(unitId, classId)
   const spriteRef = useRef<HTMLSpanElement | null>(null)
   const visible = useInViewport(spriteRef)
+  const hairColour = useHairColour(unitId, hair)
+  const rawHead = resolved?.kind === 'stitched'
+    ? resolved.offset?.variant === 'small' ? resolved.smallHead ?? resolved.head : resolved.head
+    : null
+  const tintedHead = useTinted(rawHead, hairColour)
+  const tintedSingle = useTinted(resolved?.kind === 'single' ? resolved.image : null, hairColour)
+  const layers = resolved?.kind === 'single' && tintedSingle.image ? { ...resolved, image: tintedSingle.image } : resolved
+  const head = tintedHead.image
   const animation = layers?.kind === 'stitched' ? layers.body.animation : layers?.kind === 'single' ? layers.image.animation : undefined
   const animationIndex = useAnimationIndex(animation, visible)
   const frame = animation?.[animationIndex]
-  const head = layers?.kind === 'stitched'
-    ? layers.offset?.variant === 'small' ? layers.smallHead ?? layers.head : layers.head
-    : null
-  const ready = useImagesReady(!layers ? [] : layers.kind === 'single' ? [layers.image.file] : [layers.body.file, ...(head ? [head.file] : [])])
+  const decoded = useImagesReady(!layers ? [] : layers.kind === 'single' ? [layers.image.file] : [layers.body.file, ...(head ? [head.file] : [])])
+  // Wait for the tint too, so the default colour never flashes before the chosen one.
+  const ready = decoded && !tintedHead.pending && !tintedSingle.pending
   const wrap = (content: ReactNode) => (
     <span ref={spriteRef} className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
   )
@@ -183,11 +303,15 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false }: 
   )
 }
 
-export function SkillIcon({ skillId, name, size = 20 }: { skillId: number | null; name: string; size?: number }) {
+/** Skill icons are 24×24 in the game; like map sprites they only draw at whole multiples (24, 48…). */
+export const SKILL_ICON_PX = 24
+
+export function SkillIcon({ skillId, name, size = SKILL_ICON_PX }: { skillId: number | null; name: string; size?: number }) {
   const src = ASSETS_ENABLED && skillId !== null ? assetUrl('skill', skillId) : undefined
   const [failed, setFailed] = useState(false)
+  const box = SKILL_ICON_PX * Math.max(1, Math.round(size / SKILL_ICON_PX))
   return (
-    <span className="skill-icon" style={{ width: size, height: size }} role="img" aria-label={name}>
+    <span className="skill-icon" style={{ width: box, height: box }} role="img" aria-label={name}>
       {src && !failed ? <img src={src} alt="" draggable={false} onError={() => setFailed(true)} /> : <span>{monogram(name).slice(0, 1)}</span>}
     </span>
   )

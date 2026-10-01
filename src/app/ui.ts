@@ -4,6 +4,8 @@ import type { LensId } from '../logic/lenses'
 import type { GenerationFilter, RosterSort } from '../logic/rosterSort'
 import { DEFAULT_ROSTER_SORT, directionOfSort } from '../logic/rosterSort'
 import type { ParentSort } from '../logic/parents'
+
+export type ChartTab = 'full' | 'skills' | 'progression' | 'pairUp'
 import { DEFAULT_PARENT_SORT } from '../logic/parents'
 
 interface UiState {
@@ -16,6 +18,9 @@ interface UiState {
   chartFavouritesFirst: boolean
   chartLinkPairs: boolean
   chartGeneration: GenerationFilter
+  chartTab: ChartTab
+  /** Skill picker: collapsed class groups per unit, as `${group}:${classId}`. */
+  collapsedSkillClasses: Record<string, string[]>
   classLens: LensId
   classFilter: 'base' | 'promoted' | 'all'
   parentSort: ParentSort
@@ -32,11 +37,13 @@ interface UiState {
   setChartFavouritesFirst(value: boolean): void
   setChartLinkPairs(value: boolean): void
   setChartGeneration(value: GenerationFilter): void
+  setChartTab(tab: ChartTab): void
+  toggleSkillClass(unitId: string, key: string): void
   setClassLens(lens: LensId): void
   setClassFilter(filter: UiState['classFilter']): void
 }
 
-export const useUi = create<UiState>()(persist((set) => ({
+export const useUi = create<UiState>()(persist((set, get) => ({
   rosterLens: 'statModifiers',
   rosterSort: DEFAULT_ROSTER_SORT,
   rosterFavouritesFirst: true,
@@ -46,6 +53,8 @@ export const useUi = create<UiState>()(persist((set) => ({
   chartFavouritesFirst: true,
   chartLinkPairs: true,
   chartGeneration: 'all',
+  chartTab: 'skills',
+  collapsedSkillClasses: {},
   classLens: 'baseStats',
   classFilter: 'base',
   parentSort: DEFAULT_PARENT_SORT,
@@ -61,6 +70,12 @@ export const useUi = create<UiState>()(persist((set) => ({
   setChartFavouritesFirst: (chartFavouritesFirst) => set({ chartFavouritesFirst }),
   setChartLinkPairs: (chartLinkPairs) => set({ chartLinkPairs }),
   setChartGeneration: (chartGeneration) => set({ chartGeneration }),
+  setChartTab: (chartTab) => set({ chartTab }),
+  toggleSkillClass: (unitId, key) => {
+    const current = get().collapsedSkillClasses[unitId] ?? []
+    const next = current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
+    set({ collapsedSkillClasses: { ...get().collapsedSkillClasses, [unitId]: next } })
+  },
   setClassLens: (classLens) => set({ classLens }),
   setClassFilter: (classFilter) => set({ classFilter }),
 }), {
@@ -85,6 +100,8 @@ export const useUi = create<UiState>()(persist((set) => ({
       chartGeneration: persisted.chartGeneration ?? 'all',
       parentSort: persisted.parentSort ?? DEFAULT_PARENT_SORT,
       parentEffective: persisted.parentEffective ?? false,
+      chartTab: persisted.chartTab ?? 'skills',
+      collapsedSkillClasses: persisted.collapsedSkillClasses ?? {},
     }
   },
 }))

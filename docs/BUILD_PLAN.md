@@ -39,6 +39,21 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   Corrin A-rank grid, family links; Parents page per Figma 15:1542; sprite head/body load sync and
   whole-number scaling; Chart sticky header. Agent knowledge captured in `.claude/skills/` (see
   AGENTS.md).
+- v3.3 (branch `v3`, 2026-10-01, owner notes "fe fates planner v3.3"): per-gender Corrin (schema 5
+  with schema-4 migration; inactive Corrin keeps its plan, stale partners greyed), Corrin name,
+  boon/bane swap; character tabs as one always-mounted swipe strip (48px / flick commit, 380ms),
+  slow slide-in on open, splash cross-fade on gender switch; sticky class-stat rail; class
+  favourites (Profile + Stats); skill access groups (In / Not in progression, Inheritable only, Not
+  accessible) driving the new skill picker, Profile skill notices (Figma 3:4348) and two Progression
+  sections; recruitment skills under the join line, "Learns" dropped; Roster Expected Final Stats
+  lens; Chart tabs (Full / Skills / Progression / Skills + Pair Up). Pickers and Runs are lazy chunks
+  (main chunk back under 500 kB). Skill icons stay native (no usable higher-res set — docs/ASSETS.md).
+  Corrin hair colour (30 swatches) and inherited hair on map sprites (grey hair strips + runtime
+  overlay tint). Follow-up notes: Jakob/Felicia level cap 40, heart for roster favourites, per-child
+  parent favourites, integer-scaled skill icons, compact inheritable notices in the picker.
+  Skill access now covers relationship combinations (duplicate-branch fallbacks), checked by
+  `npm run audit:skills`; picker notices sit under the class headings. Corrin's hair swatches come
+  from the ROM (`MyUnitEdit.bin` colour table); sprite animations share one clock.
 
 ### Backlog
 
@@ -52,11 +67,11 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
 - **Directional map animations** (walk cycles): the ROM has eight-direction move clips alongside
   idle (docs/assets/overworld-animation-audit.md); v3.1 ships idle only to keep strips small.
 
-- **Variable hair colour** (map sprites + talk portraits): a child's hair colour comes from their
-  second parent; Corrin's is custom (add a Corrin hair-colour choice to the Avatar tab). Both art sets
-  currently use the FaceData default tint. Needs: per-unit hair masks shipped separately (sprite
-  `0xEE`/`0xFF` bands, portrait hair layer), the parent → colour lookup, and a runtime tint (e.g. a
-  CSS `mix-blend-mode` overlay on the hair layer, matching the game's overlay blend).
+- **Variable hair colour on talk portraits / splash** (map sprites done in v3.3): portraits still
+  use the FaceData default. Ship the portrait hair layer (`face/hair/<hair>/髪0.bch.lz`) separately
+  and reuse `ClassSprite`'s canvas tint (art.tsx › tintStrip). The sprite tint is a ×2 modulate
+  chosen against the overlay blend by eye (docs/ASSETS.md › Hair colours); compare with an in-game
+  capture when convenient.
 
 ### A — Assets (gated; do first, in parallel with B)
 

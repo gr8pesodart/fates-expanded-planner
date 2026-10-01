@@ -68,11 +68,11 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
 }
 
 const RosterRow = memo(function RosterRow({ entry, signed, slideIndex, active, referenceRows }: { entry: RosterEntry; signed: boolean; slideIndex: number; active: boolean; referenceRows: (number | null)[][] }) {
-  const { dataset, readOnly, mutate } = usePlanner()
+  const { dataset, run, readOnly, mutate } = usePlanner()
   const openPicker = usePickers((state) => state.open)
   const { ctx, name, unitId } = entry
   const classDef = dataset.classesById.get(ctx.currentClassId)
-  const partner = (unit: typeof ctx.sPartner) => (unit ? { id: unit.id, name: displayName(unit) } : null)
+  const partner = (unit: typeof ctx.sPartner) => (unit ? { id: unit.id, name: displayName(unit, run) } : null)
   const slots: [SlotKind, ReturnType<typeof partner>][] = [
     ['s', partner(ctx.sPartner)],
     ['pair', partner(ctx.pairPartner)],
@@ -83,7 +83,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, slideIndex, active, r
   if (ctx.isChild) slots.splice(2, 0, ['parent', partner(ctx.variableParent)])
   const open = () => navigate({ name: 'unit', unitId, tab: 'profile' })
   return (
-    <li className="roster-row" aria-current={active || undefined} onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
+    <li className="roster-row" aria-current={active || undefined} data-muted={entry.muted || undefined} onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
       <div className="roster-row-top">
         <div className="roster-id">
           <Portrait unitId={unitId} name={name} className="chip-32" />
@@ -91,7 +91,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, slideIndex, active, r
             <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
           </button>
           <span className="unit-name">{name}</span>
-          <StarButton on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((run) => toggleFavourite(run, unitId))} />
+          <StarButton heart on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((run) => toggleFavourite(run, unitId))} />
         </div>
         <div className="roster-actions">
           {slots.map(([kind, value]) => (
@@ -100,7 +100,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, slideIndex, active, r
           <EditButton label={`Open ${name}`} onClick={open} />
         </div>
       </div>
-      <StatTable row={entry.lensRow} signed={signed} label={`${name} stats`} referenceRows={referenceRows} slideIndex={slideIndex} />
+      <StatTable row={entry.lensRow} signed={signed} muted={entry.muted} label={`${name} stats`} referenceRows={referenceRows} slideIndex={slideIndex} />
     </li>
   )
 })

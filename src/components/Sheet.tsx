@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
 import { Icon } from './icons'
 import { useToast } from './toast'
@@ -28,7 +29,9 @@ export function Sheet({ title, onClose, children, actions, wide = false, closing
       previous?.focus()
     }
   }, [onClose])
-  return (
+  // Portalled to the app root: a sheet opened inside the character tab strip would otherwise be
+  // positioned against its transformed track instead of the viewport.
+  return createPortal(
     <div className="sheet-scrim" data-closing={closing || undefined} onClick={onClose}>
       <div
         ref={panel}
@@ -46,7 +49,8 @@ export function Sheet({ title, onClose, children, actions, wide = false, closing
         </div>
         <div className="sheet-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.querySelector('.app') ?? document.body,
   )
 }
 

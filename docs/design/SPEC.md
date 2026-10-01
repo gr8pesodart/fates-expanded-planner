@@ -47,6 +47,9 @@ active or selected state uses the route accent.** "Darkened when selected" becom
 | `--rel-pair` | `#5eb761` | pair-up slot (`#69d06d`) |
 | `--good` / `--good-soft` | `#5eb761` / `#9ed2a0` | boon fill / boon outline |
 | `--bad` / `--bad-soft` | `#be5555` / `#f5adad` | bane fill / bane outline |
+| `--bad-tint` / `--bad-ink` | `--bad-soft` 70% on white / `--bad` 72% on ink | "Not accessible" skill notice fill / text (Figma 3:4348) |
+| `--warn` / `--warn-soft` | `#b39d2d` / `#efe39b` | a yellow matched to `--bad` / `--bad-soft` |
+| `--warn-tint` / `--warn-ink` | `--warn-soft` 70% on white / `--warn` 72% on ink | "Not in progression" skill notice fill / text |
 | `--stat-low` / `--stat-mid` / `--stat-high` | `#842334` / `#8a6a00` / `#12803f` | dynamic stat colouring (text colour, not fill; each stop ≥ 4.5:1 on `--surface-2`) |
 
 Relationship hues are **semantic** (which slot this is), not selection, so they stay fixed on every
@@ -92,7 +95,8 @@ areas may extend past the visible chip.
   crossed swords) at 50% hue. When filled, a PortraitChip with a 1px solid border in the slot hue.
 - **ClassSprite**: the stitched, animated idle map sprite (body + the unit's head, see *Assets*).
   It has no background tile on the Roster or Chart, but keeps a tile in the class picker.
-- **SkillIcon** (20–32px) and **SkillCard** (icon over name on the left, description on the right;
+- **SkillIcon** — native 24×24, drawn only at whole multiples (24 in lists, chips and the Chart; 48
+  on SkillCards), like map sprites — and **SkillCard** (icon over name on the left, description on the right;
   12px `--ink-2`). The locked personal-skill card uses `--surface-2` fill and no border, with a 12px
   `--ink-2` lock inline to the left of the skill name (no "Personal skill" label).
 - **BottomNav**: Roster / Chart / Runs, with icons at 30px and 12px/600 labels. The active item uses
@@ -116,9 +120,15 @@ areas may extend past the visible chip.
 - **Recruit order** is route-specific. Optional recruits sit at their chapter (e.g. Mozu at her
   paralogue's place), and all children sort after first-generation units in paralogue order.
 - **Lens rail** under the title: every lens from the Stats tab, in this order: Stat Modifiers,
-  Personal Growth Rates, Effective Growth Rates, Max Stats, Effective Pair Up Bonuses, Personal
-  Pair Up Bonuses, Base Stats, Class Growth Rates, Class Pair Up Bonuses. The choice persists in UI
-  state, not in the run.
+  Personal Growth Rates, Effective Growth Rates, Max Stats, **Expected Final Stats**, Effective Pair
+  Up Bonuses, Personal Pair Up Bonuses, Base Stats, Class Growth Rates, Class Pair Up Bonuses. The
+  choice persists in UI state, not in the run.
+- **Expected Final Stats** (v3.3): average stats at the end of each unit's planned path, plus Mov of
+  the class held there. With no reclasses the path is the join class up to Lv 20 (40 on the special
+  track). A path that never leaves a base class dims the whole listing to 40% (no stat colouring)
+  except its open button.
+- **Favourites**: the Roster / Chart / character-header favourite is a **heart** (v3.3); stars are
+  reserved for class favourites (Profile) and parent favourites (Parents tab).
 - **Row** (padding 12/10, `--line` bottom border). Left side: PortraitChip 32, ClassSprite, name,
   and a favourite star (filled `--ink` / outline `--ink-3`; tap toggles). The sprite has no chip
   background and opens the class popup. Right side, gap 6: the S, A+ and pair-up RelationSlots
@@ -141,7 +151,7 @@ areas may extend past the visible chip.
   **Avatar** (Corrin only), **Profile**, **Stats** and **Progression**; second-generation units also
   have a **Parents** tab. The default is Profile.
 - **Panel**: white, with a `--r-sheet` top radius, overlapping the splash by about 78px. Opening
-  another character starts at the top and slides the page in.
+  a character slides the page in from the right (460ms, no fade) and starts at the top.
 - **Mobile layering**: the character page is a fixed, scrolling layer over the screen it was opened
   from (Roster or Chart), which stays mounted and `inert` underneath. Closing it — including iOS's
   edge swipe-back, which previews a snapshot of that screen — reveals it unchanged, with no re-render
@@ -150,11 +160,14 @@ areas may extend past the visible chip.
   back button, the name (21/700), then the tab pills — that slides in (340ms, ease-out) once the hero
   tabs scroll away and slides out (240ms, ease-in) when they return, pinned to the top throughout.
   Spacious margins (12/16px, plus the top safe area). Switching tabs preserves scroll.
-- **Swipes**: a horizontal swipe on the panel moves to the previous/next tab; the content follows the
-  finger and the tab contents slide (old out, new in from the opposite side). Swipes starting within
-  24px of the left edge are left to the system back gesture, and horizontal scrollers (pill rails,
-  tab rails, form controls) keep their own gestures. The Roster swipes between stat lenses the same
-  way, sliding every row's stat table.
+- **Swipes**: the tabs sit side by side in one strip and stay mounted once shown (the opening tab
+  renders first, the rest just after the page has slid in), so a drag reveals the neighbouring tab's
+  real content. The strip follows the finger and eases to the chosen tab over 380ms (a failed swipe
+  springs back at the same pace); a swipe commits past 48px or on a quick flick. The panel takes the
+  active tab's height. Swipes starting within 24px of the left edge are left to the system back
+  gesture, and horizontal scrollers (pill rails, tab rails, the talent carousel, form controls) keep
+  their own gestures. The Roster swipes between stat lenses with the same thresholds, sliding every
+  row's stat table.
 - **Relationships**: each filled card has a white rounded-square "open" button top-right (Figma
   `3:4136`) that opens that character. Corrin's A Rank holds several partners: one shows the normal
   card; 2–4 a 2×2 grid of busts; more a larger grid (3×3, …) of face crops, with square cells and
@@ -163,18 +176,33 @@ areas may extend past the visible chip.
 
 ### Avatar tab (`3:5890`) — Corrin only
 
+- The tab opens with the same top margin as the other tabs (30px).
 - **Gender**: two square cards side by side (gap 10, `--r-md`) showing the male and female Corrin
   promo art. Selected: 4px `--accent-strong` border, dark base, black gradient, white label.
   Unselected: 1px `--line` border, 56% opacity, white gradient, `--ink` label. The selection
-  switches the splash art and Corrin's gendered classes.
+  cross-fades the splash art (600ms) to the other Corrin on the same page. **Each gender keeps its
+  own plan** — boon, bane, talent, relationships, classes, progression and skills; the inactive one
+  is kept but has no effect. Switching back restores the old marriage and pair-up if the partner is
+  still free; a partner taken meanwhile shows greyed with a one-line notice in place of "Gains X".
+  The favourite star, name and hair colour are shared.
+- **Name**: a text field (placeholder "Corrin") whose value replaces "Corrin" everywhere
+  (commits on blur / Enter).
+- **Hair colour**: a row with the current swatch and a chevron; it opens a sheet with a 64px
+  preview sprite and the game's 30 swatches as rounded-square chips (`--r-sm`), 10 columns × 3 rows,
+  6px gap (selected: 2px accent outline), read from the ROM's colour table. The default is the
+  first swatch (white, `#f6f4ef`). Map sprites
+  follow it — Corrin's, and every child whose variable parent is Corrin; other children take their
+  variable parent's hair colour (the Parents tab shows each candidate's colour on the child's
+  sprites).
 - **Boon** / **Bane**: a 4×2 grid of chips (`min-width 73px`, `--r-xs`) with a name and a
   `(Stat)` line. Boon chips use a `--good-soft` outline and `--ink-2` text; the selected boon is
-  `--good` fill with white text. Bane chips use `--bad-soft` / `--bad` the same way. Boon ≠ bane is
-  enforced (the matching chip in the other grid is disabled).
-- **Talent**: a horizontal scroller of 102px square cards, each showing the tree's base and
-  promoted ClassSprites overlapped by −12px, plus the tree name. The selected card is
-  `--accent-strong` fill with white text; the rest are `--line` outline with `--ink-2` text.
-  Sprites use Corrin's head for the current gender.
+  `--good` fill with white text. Bane chips use `--bad-soft` / `--bad` the same way. The stat held
+  by the other grid is greyed but still tappable: picking it swaps the two (+Spd/−Lck, pick +Lck →
+  −Spd).
+- **Talent**: a horizontal scroller of 102px square cards (gap `--s2`, as the boon/bane grid),
+  each showing the tree's base and promoted ClassSprites overlapped by −12px, plus the tree name.
+  The selected card is `--accent-strong` fill with white text; the rest are `--line` outline with
+  `--ink-2` text. Sprites use Corrin's head for the current gender. Scrolling it never swipes tabs.
 
 ### Profile tab (`3:5891`)
 
@@ -193,15 +221,23 @@ areas may extend past the visible chip.
   them up with an "A rank" badge.
 - **Classes**: the heading with a Base / Advanced / All Segmented on the right, then a pill
   StatLensRail of class-relevant lenses (Base Stats (Class), Max Stats (Effective), Growth Rates
-  (Class), Growth Rates (Effective), Pair Up Bonuses (Class), Pair Up Bonuses (Effective)).
+  (Class), Growth Rates (Effective), Pair Up Bonuses (Class), Pair Up Bonuses (Effective)). The rail
+  is sticky under the sticky character header (with a 1px `--line` bottom border) while the class
+  cards scroll past.
   Category labels appear on the rail; section headings omit the category. **Class cards** (`--r-md`,
   `--line` border) show the sprite, class
-  name (14/700) and StatTable. Tapping a card selects it: `--accent-strong` fill, white text and a
-  "SELECTED" tag. Selection sets the unit's current class (the same field as the Roster class
-  popup).
-- **Skills**: the personal skill first (locked card), then five equip slots. Tapping a slot opens
-  the **skill picker** (the unit's reachable skill pool plus inheritable skills; each row shows the
-  source and learn level). An empty slot shows a dashed placeholder, a `+` icon in the round icon well, and "Empty slot".
+  name (14/700), a favourite star top-right and the StatTable. Starred classes are listed first
+  (per unit, always on) and lead the Stats tab's class rail with an inline star. Tapping a card
+  selects it: `--accent-strong` fill, white text and a "SELECTED" tag. Selection sets the unit's
+  current class (the same field as the Roster class popup).
+- **Skills** (Figma `3:4348`): the personal skill first (locked card), then five equip slots. A
+  skill the plan doesn't reach carries an inset notice under the card: **yellow** "Not in
+  progression: *Class Lv N*" (`--warn-tint` / `--warn-ink`) when a class the unit already has teaches
+  it; **red** "Not accessible: *Class Lv N*" (`--bad-tint` / `--bad-ink`) when it needs another
+  relationship, listing the portraits that would unlock it ("Via S Rank", "Via A+ Rank" — "Via A
+  Rank" for Corrin — and "Via Parent") and "Can be inherited from *Name*". A child's skill only a
+  parent can pass on reads "Only inheritable … Inherit from *Parent*". Tapping a slot opens the
+  skill picker. An empty slot shows a dashed placeholder, a `+` icon in the round icon well, and "Empty slot".
 
 ### Parents tab — children only
 
@@ -215,6 +251,8 @@ candidate joins before Parent A, otherwise with a bold "(+N chapters)" delta; th
 tables (no Mov): inherited stat modifiers, growths and pair-up bonuses. By default these show the
 **parent's own contribution** (their modifiers, their personal growths, their B + S pair-up rows);
 the toggle switches to the child's results. The chosen parent's card inverts to `--accent-strong`.
+The star on a card is a **parent favourite**, saved per child and separate from the Roster heart:
+starred candidates are always listed first (like class favourites), then the chosen sort.
 
 ### Stats tab (`3:5892`)
 
@@ -247,8 +285,9 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
 
 ### Progression tab (`3:10133`)
 
-- A **Recruitment** section comes first: join chapter and class, the join level, and "Starts with"
-  skill chips (the only place several skills arrive at once). Paralogue, Xenologue, DLC and "or
+- A **Recruitment** section comes first: join chapter and class with the skills held on recruitment
+  as chips directly underneath (the only place several skills arrive at once); that two-line block
+  is vertically centred against the join level on the right. Paralogue, Xenologue, DLC and "or
   later" recruits get a numeric **Lv** field (16px text, commits on blur/Enter) because their join
   level depends on when they're recruited; others show the fixed level in `--ink-2`.
 - For **children**, an **Inherited Skills** section sits after it: two SkillCards, one per parent,
@@ -257,12 +296,15 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   the description plus "From *Parent*" styled the same way.
   Each opens the skill picker limited to that parent's inheritable skills; a skill already taken by
   the other slot is disabled ("From other parent"). Inherited skills also appear in the child's
-  equip-slot picker ("Inherited from *parent*").
+  equip-slot picker. Directly under the heading, equipped skills that only a parent can pass on and
+  that aren't inherited yet are listed with their notice.
+- **Not in Progression** (just above the first segment): equipped skills the planned path doesn't
+  teach, each with its yellow or red notice.
 - The page is split into **segments**, one per class tier the route passes through: Base (1–20),
   Advanced (1–20), Special (1–40), plus Eternal Seal extensions (+5 each). A segment only
   exists while the route needs it. Each segment has a 21/700 heading, then **one row per level**:
-  the level number (14/700), the skill learned at that level ("Learns ◆ *Skill*", italic `--ink-2`
-  label with icon; at most one per level-up), a
+  the level number (14/700), the skill learned at that level (icon + name; at most one per
+  level-up), a
   dotted leader line, an **info button**, and a **reclass dropdown** (`--surface-3`, `--r-xs`, 12px;
   the placeholder is italic "No reclass").
 - A reclass chosen at level *n* takes effect from level *n*. The rest of that segment recomputes
@@ -282,9 +324,16 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
 ## Chart (`3:10134`)
 
 - The "Chart" title and sort button in a sticky white header (as the Roster's, no shadow; a 1px
-  `--line` bottom border fades in over 150ms only once the page has scrolled), then a list of cards
-  (`--line` border, `--r-lg`, gap 20, padding 10). Map sprites render at whole-number scales only
-  (32px = 1×), so Chart and Roster sprites are 32px.
+  `--line` bottom border fades in over 150ms only once the page has scrolled), with an underline
+  tab rail like the Roster's: **Full**, **Skills** (default), **Progression**, **Skills + Pair Up**.
+  Then a list of cards (`--line` border, `--r-lg`, gap 20, padding 10; rows have 4px left padding).
+  Map sprites render at whole-number scales only (32px = 1×), so Chart and Roster sprites are 32px.
+- Tabs: *Skills* shows each row's skill icons; *Progression* adds a grey inset with the compact
+  class path ("Lv 1: Nohr Princess → Lv 10: Samurai → Lv 12: Swordmaster → Lv 15: Master of Arms":
+  the join class, then each class change at the level it's taken); *Skills + Pair Up* shows skills
+  for leads and solo units, and the back unit's **Effective Pair Up Bonuses** table instead (at the
+  pair's actual support rank — A but not S means no S bonus); *Full* shows skills, path and pair-up
+  bonuses for everyone. The swap button sits on the divider between the two rows.
 - A sort button opens its own Recruit / Name / Stat sheet with direction, a **Show** filter (All /
   First gen / Children), Favourites-first and Link pair-up partners; these settings do not share state with the Roster. Class sprites have no chip
   background and sit between the portrait and name.
@@ -333,9 +382,18 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
   S and A+ show the "Gains *Class*" line under each candidate.
 - **Class popup**: classes available to the unit, grouped by source (Own, Parent, Partner Seal,
   Friendship Seal, Talent, DLC) as sprite + name rows. The current class has an accent check.
-- **Skill picker**: a list of SkillCards grouped by source, each with "Lv 10 · Samurai" learn
-  tags. Skills the progression doesn't reach show "Not on route" in `--ink-2`, and are still
-  selectable.
+- **Skill picker** (equip slots): every skill the unit could hold in this run — including ones
+  needing a relationship that isn't set; gender-locked and route-locked classes and skills no
+  possible partner provides are left out. Medium (17/700) group headings in order: **In
+  progression**, **Not in progression**, **Inheritable only** (children), **Not accessible**. Within
+  each group (group headings stick to the top of the sheet while their group scrolls), small headings per teaching class with its ClassSprite and a collapse chevron
+  (collapsed state saved per unit). Each class heading has **one** grey notice under it (class
+  name, no level; the inheritable one reads "Only inheritable from *Parent*: *Class*"), listing every
+  way in across its skills — acquisition guidance only, so "Not in progression" classes get none; the
+  skill cards themselves only carry their learn level ("Lv 10") as a tag. Classes that only a
+  *combination* opens list it as "Only together: S *Jakob* & A+ *Elise*". A skill
+  equipped in another slot is muted ("Equipped · tap to swap") and picking it swaps the two slots.
+  The inherit-slot pickers keep the simple list of that parent's inheritable skills.
 
 ## Desktop (≥ 1024px; the mock is mobile-only)
 

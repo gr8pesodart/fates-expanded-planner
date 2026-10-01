@@ -404,40 +404,79 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
     return entries, missing
 
 
-def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: str) -> dict | None:
+def export_head_variants(image: Image.Image, out_dir: str, prefix: str, source: str, hair: Image.Image | None = None) -> dict | None:
     """Export the large and small four-pose idle head strips for `prefix`.
 
     `prefix` is site-relative (e.g. "assets/sprites/heads/25"); either cell may
     be absent on class-generic sheets, in which case only the other is written.
-    Each cell ships as a two-layer priority strip.
+    Each cell ships as a two-layer priority strip. With `hair` (the untinted
+    sheet), recolourable hair also ships as a same-layout `-hair` strip holding
+    only the grey 0xEE/0xFF pixels, which the app tints per run (art.tsx).
     """
     dest = os.path.join(os.path.dirname(out_dir), *prefix.split("/"))
     entry = None
-    def head_strip(width: int, y: int) -> Image.Image:
+    def head_strip(source_image: Image.Image, width: int, y: int) -> Image.Image:
         strip = Image.new("RGBA", (width * len(HEAD_BANDS) * 4, width), (0, 0, 0, 0))
         for frame in range(4):
-            cell = image.crop((frame * width, y, (frame + 1) * width, y + width))
+            cell = source_image.crop((frame * width, y, (frame + 1) * width, y + width))
             strip.alpha_composite(layer_strip(cell, HEAD_BANDS), (frame * width * len(HEAD_BANDS), 0))
         return strip
 
-    large = head_strip(32, 0)
-    small = head_strip(16, 32)
-    if large.getbbox() is not None:
-        assert_binary_alpha(large, prefix)
-        write_webp(large, f"{dest}.webp")
-        entry = head_entry(f"{prefix}.webp", source, 32, 32)
-    if small.getbbox() is not None:
-        assert_binary_alpha(small, f"{prefix}-small")
-        write_webp(small, f"{dest}-small.webp")
-        small_entry = head_entry(f"{prefix}-small.webp", source + " (small)", 16, 16)
-        if entry is None:
-            entry = small_entry
-        else:
-            entry["small"] = small_entry
+    hair_only = hair_pixels(hair) if hair is not None else None
+
+    def export(width: int, y: int, suffix: str, label: str) -> dict | None:
+        strip = head_strip(image, width, y)
+        if strip.getbbox() is None:
+            return None
+        assert_binary_alpha(strip, f"{prefix}{suffix}")
+        write_webp(strip, f"{dest}{suffix}.webp")
+        result = head_entry(f"{prefix}{suffix}.webp", source + label, width, width)
+        if hair_only is not None:
+            mask = head_strip(hair_only, width, y)
+            if mask.getbbox() is not None:
+                assert_binary_alpha(mask, f"{prefix}{suffix}-hair")
+                write_webp(mask, f"{dest}{suffix}-hair.webp")
+                result["hair"] = f"{prefix}{suffix}-hair.webp"
+        return result
+
+    large = export(32, 0, "", "")
+    small = export(16, 32, "-small", " (small)")
+    if large is not None:
+        entry = large
+        if small is not None:
+            entry["small"] = small
+    elif small is not None:
+        entry = small
     return entry
 
 
 HAIR_MASK = frozenset({0xEE, 0xFF})
+
+
+def hair_pixels(image: Image.Image) -> Image.Image:
+    """Only the recolourable-hair pixels (alpha 0xEE / 0xFF kept, everything else cleared), untinted."""
+    alpha = image.getchannel("A").point(lambda value: value if value in HAIR_MASK else 0)
+    result = image.copy()
+    result.putalpha(alpha)
+    return result
+
+
+def tint_modulate2x(image: Image.Image, color: bytes) -> Image.Image:
+    """Map-sprite hair tint: out = min(255, 2 * grey * colour / 255) per channel.
+
+    The overlay blend the portraits use washes the brighter hair greys (170-238) out towards white
+    for darker colours (Ryoma's #58332d gave #e8e3e2 highlights, where his hand-drawn sprite hair is
+    all dark browns); a x2 modulate keeps mid-grey at the colour and the highlights saturated. The
+    game's actual combiner is not verified. Mirrored in src/components/art.tsx > tintTables.
+    """
+    lut = []
+    for channel in range(3):
+        base = color[channel]
+        lut.extend(min(255, (2 * value * base) // 255) for value in range(256))
+    rgb = image.convert("RGB").point(lut)
+    result = rgb.convert("RGBA")
+    result.putalpha(image.getchannel("A"))
+    return result
 
 
 def tint_hair(image: Image.Image, color: bytes | None) -> Image.Image:
@@ -448,7 +487,7 @@ def tint_hair(image: Image.Image, color: bytes | None) -> Image.Image:
     mask = alpha.point(lambda value: 255 if value in HAIR_MASK else 0)
     if mask.getbbox() is None:
         return image
-    tinted = extract_portraits.tint_overlay(image, color)
+    tinted = tint_modulate2x(image, color)
     result = image.copy()
     result.paste(tinted.convert("RGB"), mask=mask)
     result.putalpha(alpha)
@@ -469,6 +508,35 @@ def hair_colours(romfs: str, units: list[dict], lz13) -> dict[str, bytes]:
     return colours
 
 
+def corrin_hair_swatches(romfs: str, lz13) -> list[str]:
+    """Corrin's creation-screen hair colours: GameData/MyUnitEdit.bin.lz, the BinArchive table
+    labelled カラーテーブル ("colour table") — u32 label ptr, u16 count, u16 entry size, u32 data ptr;
+    entries are RGBA8888. Paragon's FE14 HairColorMenu module reads the same table."""
+    path = os.path.join(romfs, "GameData", "MyUnitEdit.bin.lz")
+    with open(path, "rb") as f:
+        data = lz13.decompress(f.read())
+    # Find the descriptor: a pointer to the label, followed by a 30 x 4-byte header. Both the label
+    # text and its pointer recur elsewhere in the archive, so check every pairing.
+    text = "カラーテーブル".encode("shift_jis")
+    found = None
+    label = data.find(text)
+    while label >= 0 and found is None:
+        needle = struct.pack("<I", label - 0x20)
+        position = data.find(needle)
+        while position >= 0:
+            count, size, pointer = struct.unpack_from("<HHI", data, position + 4)
+            if count == 30 and size == 4:
+                found = (count, size, pointer)
+                break
+            position = data.find(needle, position + 1)
+        label = data.find(text, label + 1)
+    if found is None:
+        fail("MyUnitEdit.bin: colour table descriptor not found")
+    count, size, pointer = found
+    base = pointer + 0x20
+    return ["#" + data[base + i * size : base + i * size + 3].hex() for i in range(count)]
+
+
 def extract_heads(romfs: str, out_dir: str, units: list[dict], lz13):
     entries = {}
     missing = []
@@ -479,10 +547,11 @@ def extract_heads(romfs: str, out_dir: str, units: list[dict], lz13):
         if not folder or not os.path.isfile(sheet):
             missing.append((unit["id"], unit["name"], folder))
             continue
-        image = tint_hair(load_display(sheet, lz13), colours.get(unit["id"]))
+        raw = load_display(sheet, lz13)
+        image = tint_hair(raw, colours.get(unit["id"]))
         prefix = f"assets/sprites/heads/{unit['slot']}"
         source = f"unit/Head/{folder}/{HEAD_FILE}"
-        entry = export_head_variants(image, out_dir, prefix, source)
+        entry = export_head_variants(image, out_dir, prefix, source, hair=raw)
         if entry is None:
             missing.append((unit["id"], unit["name"], folder))
             continue
@@ -517,6 +586,7 @@ def extract_generic_heads(romfs: str, out_dir: str, classes: list[dict], lz13):
 
 def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[dict], lz13):
     entries = {}
+    colours = hair_colours(romfs, units, lz13)
     for unit in units:
         per_class = {}
         for class_def in classes:
@@ -526,13 +596,17 @@ def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[di
             directory = os.path.join(romfs, "unit", "Unique", folder)
             animation = idle_animation(os.path.join(directory, "anime.bin"))
             idle_frames = unique_idle_frames(animation, f"unique {unit['slot']}-{class_def['id']}")
-            body_sheet = load_display(os.path.join(directory, HEAD_FILE), lz13)
+            raw_sheet = load_display(os.path.join(directory, HEAD_FILE), lz13)
+            body_sheet = tint_hair(raw_sheet, colours.get(unit["id"]))
+            hair_sheet = hair_pixels(raw_sheet)
             image = Image.new("RGBA", (32 * 4, 32), (0, 0, 0, 0))
+            hair = Image.new("RGBA", (32 * 4, 32), (0, 0, 0, 0))
             for index, frame in idle_frames.items():
                 if frame.body_w != 32 or frame.body_h != 32 or frame.body_src_y != 0 or frame.body_src_x != index * 32:
                     raise fe_assets.AssetError("unique idle body cell is unexpected")
-                body = body_sheet.crop((frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h))
-                image.alpha_composite(flatten(body), (index * 32, 0))
+                box = (frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h)
+                image.alpha_composite(flatten(body_sheet.crop(box)), (index * 32, 0))
+                hair.alpha_composite(flatten(hair_sheet.crop(box)), (index * 32, 0))
             label = f"unique {unit['slot']}-{class_def['id']}"
             assert_binary_alpha(image, label)
             file_name = f"assets/sprites/unique/{unit['slot']}-{class_def['id']}.webp"
@@ -547,6 +621,11 @@ def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[di
                 "animation": compact_animation(animation_data, None),
                 "source": source,
             }
+            if hair.getbbox() is not None:
+                assert_binary_alpha(hair, f"{label} hair")
+                hair_file = f"assets/sprites/unique/{unit['slot']}-{class_def['id']}-hair.webp"
+                write_webp(hair, os.path.join(os.path.dirname(out_dir), *hair_file.split("/")))
+                per_class[str(class_def["id"])]["hair"] = hair_file
         if per_class:
             entries[unit["id"]] = per_class
     return entries
@@ -677,6 +756,10 @@ def main() -> None:
         "heads": heads,
         "genericHeads": generic_heads,
         "unique": unique,
+        # FaceData default hair per unit: what a child inherits from this unit as variable parent.
+        "hairColours": {unit_id: "#" + colour[:3].hex() for unit_id, colour in hair_colours(args.romfs, units, lz13).items()},
+        # Corrin's 30 creation swatches, in menu order (the first, white, is the default).
+        "corrinHairColours": corrin_hair_swatches(args.romfs, lz13),
     }
     os.makedirs(os.path.dirname(args.manifest), exist_ok=True)
     with open(args.manifest, "w", encoding="utf-8", newline="\n") as f:

@@ -1,18 +1,20 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
-import { Pickers } from './app/pickers'
+import { lazy, Suspense, useMemo, useState, useSyncExternalStore } from 'react'
 import { PlannerProvider } from './app/planner'
 import { Nav } from './components/Nav'
 import { Toaster } from './components/Sheet'
 import { sectionOf, useRoute } from './lib/router'
 import type { AppRoute } from './lib/router'
-import { CharacterScreen } from './screens/CharacterScreen'
+import { CharacterPage } from './screens/CharacterScreen'
 import { ChartScreen } from './screens/ChartScreen'
 import { NewRunScreen } from './screens/NewRunScreen'
 import { RosterScreen } from './screens/RosterScreen'
-import { RunsScreen } from './screens/RunsScreen'
 import type { RunPlan } from './state/model'
 import { decodeSharedRun } from './state/serialization'
 import { useActiveRun, usePlansStore } from './state/store'
+
+// Split out of the main chunk: sheets open on demand and Runs is visited rarely.
+const Pickers = lazy(() => import('./app/pickers').then((module) => ({ default: module.Pickers })))
+const RunsScreen = lazy(() => import('./screens/RunsScreen').then((module) => ({ default: module.RunsScreen })))
 
 const DESKTOP = '(min-width: 1024px)'
 
@@ -36,7 +38,7 @@ function Section({ route }: { route: AppRoute }) {
     case 'chart':
       return <ChartScreen />
     case 'runs':
-      return <RunsScreen />
+      return <Suspense fallback={<Loading />}><RunsScreen /></Suspense>
     case 'new-run':
       return <NewRunScreen />
     default:
@@ -59,7 +61,7 @@ function MobileMain({ route, backdrop }: { route: AppRoute; backdrop: AppRoute }
       </div>
       {route.name === 'unit' ? (
         <div className="character-layer">
-          <CharacterScreen key={route.unitId} unitId={route.unitId} tab={route.tab} />
+          <CharacterPage unitId={route.unitId} tab={route.tab} />
         </div>
       ) : null}
     </>
@@ -72,14 +74,14 @@ function DesktopMain({ route }: { route: AppRoute }) {
     case 'chart':
       return <ChartScreen />
     case 'runs':
-      return <RunsScreen />
+      return <Suspense fallback={<Loading />}><RunsScreen /></Suspense>
     case 'new-run':
       return <NewRunScreen />
     case 'unit':
       return (
         <div className="two-pane">
           <RosterScreen activeUnitId={route.unitId} />
-          <CharacterScreen key={route.unitId} unitId={route.unitId} tab={route.tab} embedded />
+          <CharacterPage unitId={route.unitId} tab={route.tab} embedded />
         </div>
       )
     default:
@@ -122,7 +124,7 @@ export default function App() {
             <main className="main">
               {sharedRun ? <ChartScreen /> : desktop ? <DesktopMain route={route} /> : <MobileMain route={route} backdrop={backdrop} />}
             </main>
-            <Pickers />
+            <Suspense fallback={null}><Pickers /></Suspense>
           </>
         )}
         <Toaster />

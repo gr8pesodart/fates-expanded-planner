@@ -1,7 +1,6 @@
 import type { Dataset } from '../data/types'
 import type { PairRole, RunPlan, UnitPlan } from '../state/model'
 import { emptyUnitPlan } from '../state/model'
-import { sexedClassId } from './classes'
 
 export type BondKind = 'sPartner' | 'aPlusPartner' | 'pairPartner'
 
@@ -72,10 +71,20 @@ export function swapPair(run: RunPlan, unitId: string): RunPlan {
   return setPairRole(run, unitId, role === 'front' ? 'back' : 'front')
 }
 
+/**
+ * The partner of a mutual bond, or undefined. Writes keep S and pair-up symmetric; the one exception
+ * is a Corrin (or Kana) made active again whose partner was taken meanwhile — that one-sided link
+ * is kept for the notice but grants nothing (corrin.ts › switchCorrinGender).
+ */
+export function bondPartner(run: RunPlan, unitId: string, kind: 'sPartner' | 'pairPartner'): string | undefined {
+  const partner = run.units[unitId]?.[kind]
+  return partner && run.units[partner]?.[kind] === unitId ? partner : undefined
+}
+
 /** A child's second parent is its fixed parent's S partner (the "Parent B" slot writes through to it). */
 export function variableParentOf(dataset: Dataset, run: RunPlan, unitId: string): string | undefined {
   const fixed = dataset.unitsById.get(unitId)?.fixedParent
-  return fixed ? run.units[fixed]?.sPartner : undefined
+  return fixed ? bondPartner(run, fixed, 'sPartner') : undefined
 }
 
 export function setVariableParent(dataset: Dataset, run: RunPlan, childId: string, parentId: string | null): RunPlan {
@@ -94,53 +103,37 @@ export function toggleFriendshipPartner(run: RunPlan, corrinId: string, partnerI
   return { ...run, units }
 }
 
+/** Starred classes are per unit and always listed first (Profile class cards, Stats class rail). */
+export function toggleFavouriteClass(run: RunPlan, unitId: string, classId: number): RunPlan {
+  return {
+    ...run,
+    units: edit(run.units, unitId, ({ favouriteClasses = [], ...plan }) => {
+      const next = favouriteClasses.includes(classId) ? favouriteClasses.filter((id) => id !== classId) : [...favouriteClasses, classId]
+      return next.length ? { ...plan, favouriteClasses: next } : plan
+    }),
+  }
+}
+
+/** Starred second-parent candidates are per child and listed first on the Parents tab. */
+export function toggleFavouriteParent(run: RunPlan, childId: string, parentId: string): RunPlan {
+  return {
+    ...run,
+    units: edit(run.units, childId, ({ favouriteParents = [], ...plan }) => {
+      const next = favouriteParents.includes(parentId) ? favouriteParents.filter((id) => id !== parentId) : [...favouriteParents, parentId]
+      return next.length ? { ...plan, favouriteParents: next } : plan
+    }),
+  }
+}
+
+/** Favourites first, each group keeping its order. */
+export function favouriteClassesFirst(classIds: readonly number[], favourites: readonly number[] = []): number[] {
+  const starred = new Set(favourites)
+  return [...classIds.filter((id) => starred.has(id)), ...classIds.filter((id) => !starred.has(id))]
+}
+
 export function toggleFavourite(run: RunPlan, unitId: string): RunPlan {
   const favourites = run.favourites.includes(unitId)
     ? run.favourites.filter((id) => id !== unitId)
     : [...run.favourites, unitId]
   return { ...run, favourites }
-}
-
-/**
- * Corrin (M)/(F) and Kana (M)/(F) are separate units. Switching Corrin's gender moves both
- * plans (and every reference to them) onto the other variant so relationships survive.
- */
-export function switchCorrinGender(dataset: Dataset, run: RunPlan, gender: 'male' | 'female'): RunPlan {
-  if (run.corrin.gender === gender) return run
-  const renames = new Map<string, string>()
-  const corrinFrom = dataset.units.find((unit) => unit.isCorrin && unit.gender === run.corrin.gender)
-  const corrinTo = dataset.units.find((unit) => unit.isCorrin && unit.gender === gender)
-  if (corrinFrom && corrinTo) renames.set(corrinFrom.id, corrinTo.id)
-  const kanaFrom = dataset.units.find((unit) => corrinFrom && unit.fixedParent === corrinFrom.id)
-  const kanaTo = dataset.units.find((unit) => corrinTo && unit.fixedParent === corrinTo.id)
-  if (kanaFrom && kanaTo) renames.set(kanaFrom.id, kanaTo.id)
-
-  const rename = (id: string | undefined) => (id === undefined ? undefined : renames.get(id) ?? id)
-  const units: Units = {}
-  for (const [unitId, plan] of Object.entries(run.units)) {
-    const next: UnitPlan = { ...plan }
-    for (const kind of ['sPartner', 'aPlusPartner', 'pairPartner'] as const) {
-      const renamed = rename(plan[kind])
-      if (renamed === undefined) delete next[kind]
-      else next[kind] = renamed
-    }
-    const target = rename(unitId) ?? unitId
-    const targetGender = dataset.unitsById.get(target)?.gender
-    if (target !== unitId && targetGender) {
-      const sex = (classId: number) => sexedClassId(dataset, classId, targetGender)
-      if (next.classId !== undefined) next.classId = sex(next.classId)
-      next.reclasses = next.reclasses.map((step) => ({ ...step, classId: sex(step.classId) }))
-    }
-    units[target] = next
-  }
-  return {
-    ...run,
-    corrin: {
-      ...run.corrin,
-      gender,
-      talentClassId: run.corrin.talentClassId === null ? null : sexedClassId(dataset, run.corrin.talentClassId, gender),
-    },
-    favourites: run.favourites.map((id) => rename(id) ?? id),
-    units,
-  }
 }

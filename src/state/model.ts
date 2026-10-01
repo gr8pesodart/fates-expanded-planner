@@ -1,7 +1,8 @@
 import type { Route, StatKey } from '../data/types'
 
-export const PLAN_SCHEMA = 4 as const
+export const PLAN_SCHEMA = 5 as const
 
+// Kept from schema 4 so saved plans migrate in place (store.ts › migrate).
 export const PLAN_STORAGE_KEY = 'fates-expanded-planner:plans:v4'
 
 export const SKILL_SLOTS = 5
@@ -15,11 +16,32 @@ export interface Reclass {
   classId: number
 }
 
-export interface CorrinPlan {
-  gender: 'male' | 'female'
+export type Gender = 'male' | 'female'
+
+/** Creation choices each Corrin keeps separately. */
+export interface CorrinBuild {
   boon: StatKey
   bane: StatKey
   talentClassId: number | null
+}
+
+/**
+ * Corrin (M)/(F) and Kana (M)/(F) are separate units with their own plans; switching gender
+ * makes the other pair active and keeps the inactive pair's plans (relationships.ts ›
+ * switchCorrinGender). Name and hair colour are shared.
+ */
+export interface CorrinPlan {
+  gender: Gender
+  builds: Record<Gender, CorrinBuild>
+  /** Shown instead of "Corrin"; unset = the default name. */
+  name?: string
+  /** Hex colour from the game's swatches; unset = the default. */
+  hairColour?: string
+  /**
+   * Set when migrating schema 4: the old single Corrin still has to be copied onto the other gender,
+   * which needs the dataset (corrin.ts › expandLegacyCorrin).
+   */
+  legacy?: true
 }
 
 /**
@@ -46,6 +68,10 @@ export interface UnitPlan {
   friendshipPartners?: string[]
   /** Recruitment level for units whose join level depends on when they're recruited. */
   joinLevel?: number
+  /** Starred classes, listed first on the Profile and Stats tabs. */
+  favouriteClasses?: number[]
+  /** Children: starred second-parent candidates, listed first on the Parents tab. */
+  favouriteParents?: string[]
 }
 
 export interface RunPlan {
@@ -74,7 +100,7 @@ export interface RunPatch {
   mods?: string[]
   dlc?: boolean
   route?: Route
-  corrin?: Partial<CorrinPlan>
+  corrin?: CorrinPlan
 }
 
 export function emptyUnitPlan(): UnitPlan {
@@ -93,12 +119,26 @@ export function emptyRun(id = createId()): RunPlan {
     modpackId: 'ugf-2.5.2',
     dlc: true,
     route: 'conquest',
-    corrin: { gender: 'female', boon: 'spd', bane: 'lck', talentClassId: null },
+    corrin: { gender: 'female', builds: { male: defaultCorrinBuild(), female: defaultCorrinBuild() } },
     favourites: [],
     units: {},
     createdAt: now,
     updatedAt: now,
   }
+}
+
+export function defaultCorrinBuild(): CorrinBuild {
+  return { boon: 'spd', bane: 'lck', talentClassId: null }
+}
+
+/** The active Corrin's creation choices. */
+export function corrinBuild(run: RunPlan): CorrinBuild {
+  return run.corrin.builds[run.corrin.gender]
+}
+
+export function withCorrinBuild(run: RunPlan, patch: Partial<CorrinBuild>): RunPlan {
+  const { gender, builds } = run.corrin
+  return { ...run, corrin: { ...run.corrin, builds: { ...builds, [gender]: { ...builds[gender], ...patch } } } }
 }
 
 export function createId(): string {

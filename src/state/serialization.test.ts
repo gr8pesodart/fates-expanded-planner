@@ -11,7 +11,7 @@ import {
 } from './serialization'
 
 describe('plan serialization', () => {
-  it('round-trips a schema 4 export', () => {
+  it('round-trips an export', () => {
     const run = emptyRun('run-test')
     const document: PlanDocument = { schema: PLAN_SCHEMA, runs: [run], activeRunId: run.id }
 
@@ -47,6 +47,6 @@ describe('plan serialization', () => {
 
   it('rejects unsupported and malformed exports', () => {
     expect(() => parsePlanDocument('{')).toThrow('valid JSON')
-    expect(() => parsePlanDocument('{"schema":1,"runs":[],"activeRunId":""}')).toThrow('schema 4')
+    expect(() => parsePlanDocument('{"schema":1,"runs":[],"activeRunId":""}')).toThrow(`schema ${PLAN_SCHEMA}`)
   })
 })

@@ -80,8 +80,18 @@ The texture alpha is a **layer mask, not opacity**. Do not ship raw alpha in Web
 
 `0xEE`/`0xFF` are the **recolourable-hair mask** (Corrin, Kana, children inheriting hair, Azama):
 hair is stored grey and tinted at extraction with the unit's FaceData default
-(`extract_portraits.parse_face_data` → `extract_sprites.tint_hair` → `extract_portraits.tint_overlay`);
-per-run Corrin colours are backlogged.
+(`extract_portraits.parse_face_data` → `extract_sprites.tint_hair` → `extract_portraits.tint_overlay`).
+v3.3: the extractor also writes the **untinted hair pixels** as a same-layout `-hair` strip (entry
+`hair`; heads, small heads, Unique bodies) and `hairColours` (FaceData colour per unit). `ClassSprite`
+(`art.tsx › useHairColour / useTinted / tintStrip`) composites the tinted mask over the strip on a
+canvas, caches an object URL per (strip, colour) and holds the sprite until it's ready. Colour rule:
+`logic/hair.ts › hairColourOf` (Corrin's swatch; children = variable parent's colour). Keep the
+runtime maths identical to `extract_sprites.tint_modulate2x` (`min(255, 2·grey·c // 255)`); sprites
+moved off `tint_overlay` (owner: tints looked far too light — overlay pushes greys ≥ 128 towards white).
+Portraits still use overlay. The Parents tab draws the child with each candidate's colour (`hair` prop).
+Corrin's swatches: ROM `GameData/MyUnitEdit.bin.lz` › `カラーテーブル` (30 × RGBA) →
+`sprites.json › corrinHairColours` (`corrin_hair_swatches`). Animation timing: every `ClassSprite`
+reads one shared 60 fps clock (`art.tsx › frameAt`), so sprites stay in step and join mid-cycle.
 
 Recorded wrong readings (do not revive): (a) "brighter = closer, head wins ties" drew Corrin (F)'s
 `0xEE` hair over her body; (b) treating every value as a per-pixel priority with head-wins ties still
@@ -126,7 +136,8 @@ unexpected alpha value.
   (Songstress, Faceless, monsters). `None`, `Silent Dragon` ×2, `Outrealm Class` have nothing.
 - Unique per unit×class = exact `unit/Unique/<class folder>_<fid name>/`; skip `_変_` transform
   folders. Expected pairs: 13.
-- Coverage baseline: bodies 125/129, heads 71/71 (large+small), generic heads 113/129, unique 13.
+- Coverage baseline: bodies 125/129, heads 71/71 (large+small), generic heads 113/129, unique 13;
+  hair strips: 24 large heads, 23 small, 9 Unique (pinned in `sprites.test.ts`).
 - The contact sheet (`docs/screenshots/v3/sprites.png`) is the visual gate: 16 combos including
   mounted small-head paths and Unique overrides, composed with the same `compose_contract` at 4×
   nearest-neighbour. It must be regenerated with the sprites.

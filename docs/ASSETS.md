@@ -266,3 +266,37 @@ Inlined as SVG path data in `src/components/SortIcon.tsx`, fetched from the Icon
 
 The recruit-order clock and the direction arrow come from the Figma `sortRecruit` export; the name
 letters from `mdi:sort-alphabetical-ascending` (Apache 2.0, Pictogrammers).
+The skill-notice icon (`alertCircle` in `src/components/icons.tsx`) is `mdi:alert-circle` (Apache 2.0,
+Pictogrammers).
+
+### Hair colours (v3.3)
+
+Recolourable hair (alpha `0xEE`/`0xFF`) is still baked with each unit's FaceData default, and now
+also ships as a same-layout **grey hair strip** (`<head>-hair.webp`, `<head>-small-hair.webp`,
+`unique/<slot>-<class>-hair.webp`): 24 large heads, 23 small heads and 9 Unique forms (Corrin, the
+variable-hair children except Shigure, Azama; Kana, Selkie and Velouria's Unique forms). Unique
+bodies are now tinted with the FaceData default too (they used to keep the raw grey). The manifest's
+`hairColours` holds every unit's FaceData colour (record `+0x1C`). At runtime `ClassSprite` paints
+the grey strip over the head with a **×2 modulate** (`min(255, 2·grey·colour/255)` per channel —
+`extract_sprites.py › tint_modulate2x`, also used for the baked defaults) in the run's colour. The
+portraits' overlay blend was tried first and washed bright hair greys (170–238) out to near-white for
+darker colours (Ryoma's `#58332d` → `#e8e3e2` highlights, where his hand-drawn sprite hair is all
+dark browns); the game's real combiner is unverified. Colour source: Corrin's chosen swatch, or a child's variable
+parent's colour (Fire Emblem Wiki › Inheritance: mothers pass hair colour, male Kana his father's —
+always the variable parent in planner terms; Shigure's hair is fixed). Portraits are not recoloured
+yet.
+
+Corrin's 30 swatches come from the ROM: `GameData/MyUnitEdit.bin.lz`, the BinArchive table
+labelled `カラーテーブル` (descriptor: u32 label ptr, u16 count 30, u16 entry size 4, u32 data ptr;
+RGBA8888 entries, menu order) — found by the DS research agent, cross-checked with Paragon's FE14
+`HairColorMenu.json`. `extract_sprites.py › corrin_hair_swatches` writes them to
+`sprites.json › corrinHairColours`; `src/data/hairColours.ts` reads that. (An earlier fan list,
+Kamui Customizer's `colorList`, is a few levels off on every entry — don't use it.)
+
+### Higher-resolution skill icons? (researched 2026-10-01)
+
+No. The dump's icons are native 24×24 cells and the set is complete (229/229). Serenes Forest hosts
+the same 24×24 rips; the only fan redraws found (NougatFromOrbit, Reddit r/fireemblem, ~160×160) cover
+four icons with informal permission; Engage (52×52) and Heroes reuse some designs, but coverage is
+partial (≈38 name overlaps with Engage, artwork unverified) and no source gives reuse terms for the
+game art. Keep the dump's icons and scale them by whole multiples only.

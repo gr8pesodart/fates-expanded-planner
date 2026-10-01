@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ClassSprite, Portrait } from '../components/art'
 import { Icon } from '../components/icons'
 import type { SlotKind } from '../components/slots'
@@ -7,18 +7,21 @@ import { Sheet } from '../components/Sheet'
 import { Segmented } from '../components/controls'
 import { SortIcon } from '../components/SortIcon'
 import { SkillCard } from '../components/SkillCard'
+import { SkillNotice } from '../components/SkillNotice'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import { displayName, unitContext } from '../logic/army'
 import { classFamily } from '../logic/classes'
 import { blankColumns } from '../logic/lenses'
 import type { ClassPoolEntry } from '../logic/classes'
-import { buildProgression, dlcClassesFor } from '../logic/progression'
+import { dlcClassesFor } from '../logic/progression'
+import type { SkillAccess, SkillGroup } from '../logic/skillAccess'
+import { classNotice, SKILL_GROUP_ORDER, skillAccess } from '../logic/skillAccess'
 import type { RosterSort } from '../logic/rosterSort'
 import { directionOfSort } from '../logic/rosterSort'
 import type { ParentSort } from '../logic/parents'
 import { parentSortDirection, parentSortIcon } from '../logic/parents'
 import { toggleFriendshipPartner } from '../logic/relationships'
-import { inheritableSkillPool, skillPool } from '../logic/skills'
+import { inheritableSkillPool } from '../logic/skills'
 import { SKILL_SLOTS, emptyUnitPlan } from '../state/model'
 import { applyBond, bondOf, usePickers } from './pickerStore'
 import type { SkillTarget } from './pickerStore'
@@ -42,7 +45,7 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
   const owner = dataset.unitsById.get(unitId)
   const candidates = candidatesFor(dataset, run, unitId, kind)
   if (!owner) return null
-  const ownerName = displayName(owner)
+  const ownerName = displayName(owner, run)
   const subjectId = kind === 'parent' ? owner.fixedParent : unitId
   // Corrin has no A+; the A slot is a set of planned Friendship Seal partners, so picks toggle.
   const multi = kind === 'a' && owner.isCorrin
@@ -112,7 +115,7 @@ function ClassPicker({ unitId, onClose }: { unitId: string; onClose(): void }) {
     }
   }
   if (run.dlc) groups.set('DLC', dlcClassesFor(dataset, ctx.unit.gender).map((def) => def.id))
-  const name = displayName(ctx.unit)
+  const name = displayName(ctx.unit, run)
   const choose = (classId: number) => {
     mutate((next) => ({ ...next, units: { ...next.units, [unitId]: { ...(next.units[unitId] ?? emptyUnitPlan()), classId } } }))
     onClose()
@@ -142,78 +145,150 @@ function ClassPicker({ unitId, onClose }: { unitId: string; onClose(): void }) {
 }
 
 function SkillPicker({ unitId, slot, onClose }: { unitId: string; slot: SkillTarget; onClose(): void }) {
+  return typeof slot === 'number'
+    ? <EquipSkillPicker unitId={unitId} slot={slot} onClose={onClose} />
+    : <InheritSkillPicker unitId={unitId} slot={slot} onClose={onClose} />
+}
+
+const GROUP_TITLE: Record<SkillGroup, string> = {
+  progression: 'In progression',
+  available: 'Not in progression',
+  inheritable: 'Inheritable only',
+  locked: 'Not accessible',
+}
+
+/**
+ * Every skill the unit could ever hold in this run, grouped by how far the plan is from it
+ * (skillAccess.ts), then by the class that teaches it. Class groups collapse per unit. Picking a
+ * skill equipped in another slot swaps the two slots.
+ */
+function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: number; onClose(): void }) {
+  const { dataset, run, mutate } = usePlanner()
+  const collapsed = useUi((state) => state.collapsedSkillClasses[unitId])
+  const toggleSkillClass = useUi((state) => state.toggleSkillClass)
+  const ctx = useMemo(() => unitContext(dataset, run, unitId), [dataset, run, unitId])
+  const access = useMemo(() => (ctx ? skillAccess(dataset, run, ctx) : null), [dataset, run, ctx])
+  if (!ctx || !access) return null
+  const plan = run.units[unitId] ?? emptyUnitPlan()
+  const current = plan.skills[slot]
+
+  const choose = (skillId: number | null) => {
+    mutate((next) => {
+      const unitPlan = next.units[unitId] ?? emptyUnitPlan()
+      const skills = Array.from({ length: SKILL_SLOTS }, (_, index) => unitPlan.skills[index] ?? null)
+      const other = skillId === null ? -1 : skills.findIndex((id, index) => id === skillId && index !== slot)
+      if (other >= 0) skills[other] = skills[slot]
+      skills[slot] = skillId
+      return { ...next, units: { ...next.units, [unitId]: { ...unitPlan, skills } } }
+    })
+    onClose()
+  }
+
+  const groups = SKILL_GROUP_ORDER.map((group) => {
+    const classes = new Map<number | null, SkillAccess[]>()
+    for (const item of access.list) {
+      if (item.group === group) classes.set(item.classId, [...(classes.get(item.classId) ?? []), item])
+    }
+    return { group, classes: [...classes.entries()] }
+  }).filter((item) => item.classes.length)
+
+  return (
+    <Sheet
+      title={`Skill ${slot + 1} for ${displayName(ctx.unit, run)}`}
+      onClose={onClose}
+      actions={current != null ? <button type="button" className="text-btn" onClick={() => choose(null)}>Clear</button> : null}
+    >
+      {groups.map(({ group, classes }) => (
+        <section key={group} className="skill-pick-group" aria-label={GROUP_TITLE[group]}>
+          <h3 className="pick-heading">{GROUP_TITLE[group]}</h3>
+          {classes.map(([classId, items]) => {
+            const key = `${group}:${classId ?? 'inherited'}`
+            const open = !collapsed?.includes(key)
+            const def = classId !== null ? dataset.classesById.get(classId) : undefined
+            return (
+              <div key={key} className="skill-pick-class">
+                <button type="button" className="skill-class-head" aria-expanded={open} onClick={() => toggleSkillClass(unitId, key)}>
+                  {def ? <ClassSprite unitId={unitId} classId={def.id} name={def.name} size={32} /> : null}
+                  <span className="skill-class-name">{def ? classFamily(def.name) : 'Inherited'}</span>
+                  <Icon name="chevronDown" size={20} className="skill-class-chevron" />
+                </button>
+                {open ? (
+                  <div className="pick-list">
+                    {/* Only acquisition guidance here: the group heading already says "Not in progression". */}
+                    {group === 'available' ? null : <SkillNotice access={classNotice(items)} grey perClass corrin={ctx.unit.isCorrin} />}
+                    {items.map((item) => {
+                      const skill = dataset.skillsById.get(item.skillId)
+                      if (!skill) return null
+                      const equippedElsewhere = plan.skills.some((id, index) => id === item.skillId && index !== slot)
+                      return (
+                        <SkillCard
+                          key={item.skillId}
+                          skill={{ id: skill.id, name: skill.name, description: skill.description }}
+                          iconSize={24}
+                          selected={item.skillId === current}
+                          muted={equippedElsewhere}
+                          tag={[item.level !== null ? `Lv ${item.level}` : null, equippedElsewhere ? 'Equipped · tap to swap' : null].filter(Boolean).join(' · ') || undefined}
+                          onClick={() => choose(item.skillId)}
+                        />
+                      )
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            )
+          })}
+        </section>
+      ))}
+    </Sheet>
+  )
+}
+
+/** A child's inherited skill: the chosen parent's inheritable skills. */
+function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: 'inheritFixed' | 'inheritVariable'; onClose(): void }) {
   const { dataset, run, mutate } = usePlanner()
   const ctx = unitContext(dataset, run, unitId)
   if (!ctx) return null
-  const name = displayName(ctx.unit)
   const plan = run.units[unitId] ?? emptyUnitPlan()
   const fixedParent = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
-  const inherit = slot === 'inheritFixed' || slot === 'inheritVariable'
   const field = slot === 'inheritFixed' ? 'inheritFixedSkill' : 'inheritSkill'
-  const donor = slot === 'inheritFixed' ? fixedParent : slot === 'inheritVariable' ? ctx.variableParent : ctx.unit
+  const donor = slot === 'inheritFixed' ? fixedParent : ctx.variableParent
   const donorCtx = donor ? unitContext(dataset, run, donor.id) : null
   // The same skill from both parents is only one skill, so each inherit slot blocks the other's pick.
-  const otherInherited = slot === 'inheritFixed' ? plan.inheritSkill : slot === 'inheritVariable' ? plan.inheritFixedSkill : undefined
-  const inheritedByChild = inherit ? [] : ([[plan.inheritFixedSkill, fixedParent], [plan.inheritSkill, ctx.variableParent]] as const)
-    .flatMap(([skillId, parent]) => skillId !== undefined && parent ? [{ skillId, label: `Inherited from ${displayName(parent)}` }] : [])
-
-  const reached = new Set<number>(inheritedByChild.map((entry) => entry.skillId))
-  if (!inherit) {
-    const progression = buildProgression(dataset, run, ctx)
-    for (const learned of progression.startsWith) reached.add(learned.skillId)
-    for (const segment of progression.segments) {
-      for (const row of segment.rows) for (const learned of row.learned) reached.add(learned.skillId)
-    }
-  }
-  const entries: { skillId: number; label: string }[] = inherit
-    ? donorCtx ? inheritableSkillPool(dataset, donorCtx.unit, donorCtx.pool, run.route) : []
-    : [
-      ...skillPool(dataset, ctx.unit, ctx.pool, run.route).filter((entry) => entry.source !== 'personal'),
-      ...inheritedByChild,
-      ...(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender).flatMap((def) => def.skillLearn.map((learn) => ({ skillId: learn.id, label: `${classFamily(def.name)} Lv ${learn.level}` }))) : []),
-    ]
-  const current = inherit ? plan[field] : plan.skills[slot]
-  const equippedElsewhere = new Set(plan.skills.filter((id, index) => id !== null && index !== slot) as number[])
+  const otherInherited = slot === 'inheritFixed' ? plan.inheritSkill : plan.inheritFixedSkill
+  const entries = donorCtx ? inheritableSkillPool(dataset, donorCtx.unit, donorCtx.pool, run.route) : []
+  const current = plan[field]
   const seen = new Set<number>()
   const unique = entries.filter((entry) => (seen.has(entry.skillId) ? false : (seen.add(entry.skillId), true)))
 
   const choose = (skillId: number | null) => {
     mutate((next) => {
-      const unitPlan = next.units[unitId] ?? emptyUnitPlan()
-      let updated: typeof unitPlan
-      if (inherit) {
-        const { [field]: _old, ...rest } = unitPlan
-        updated = skillId === null ? rest : { ...rest, [field]: skillId }
-      } else {
-        updated = { ...unitPlan, skills: Array.from({ length: SKILL_SLOTS }, (_, index) => (index === slot ? skillId : unitPlan.skills[index] ?? null)) }
-      }
-      return { ...next, units: { ...next.units, [unitId]: updated } }
+      const { [field]: _old, ...rest } = next.units[unitId] ?? emptyUnitPlan()
+      return { ...next, units: { ...next.units, [unitId]: skillId === null ? rest : { ...rest, [field]: skillId } } }
     })
     onClose()
   }
 
   return (
     <Sheet
-      title={inherit ? `Inherited from ${donor ? displayName(donor) : 'Parent B'}` : `Skill ${slot + 1} for ${name}`}
+      title={`Inherited from ${donor ? displayName(donor, run) : 'Parent B'}`}
       onClose={onClose}
       actions={current != null ? <button type="button" className="text-btn" onClick={() => choose(null)}>Clear</button> : null}
     >
-      {inherit && !donor ? <p className="empty-note">Choose a second parent on the Parents tab first.</p> : null}
+      {!donor ? <p className="empty-note">Choose a second parent on the Parents tab first.</p> : null}
       <div className="pick-list">
         {unique.map((entry) => {
           const skill = dataset.skillsById.get(entry.skillId)
           if (!skill) return null
-          const offRoute = !inherit && !reached.has(entry.skillId)
           const fromOther = entry.skillId === otherInherited
-          const taken = equippedElsewhere.has(entry.skillId) && !inherit
           return (
             <SkillCard
               key={entry.skillId}
               skill={{ id: skill.id, name: skill.name, description: skill.description }}
+              iconSize={24}
               selected={entry.skillId === current}
-              disabled={taken || fromOther}
+              disabled={fromOther}
               onClick={() => choose(entry.skillId)}
-              tag={<>{entry.label}{offRoute ? ' · Not on route' : ''}{taken ? ' · Equipped' : ''}{fromOther ? ' · From other parent' : ''}</>}
+              tag={<>{entry.label}{fromOther ? ' · From other parent' : ''}</>}
             />
           )
         })}

@@ -29,14 +29,30 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   when the hero tabs scroll away (IntersectionObserver) and out (240ms ease-in). An earlier version put
   the rail inside the panel and it "hopped" when scrolling back up.
 - Tabs: `navigate(..., { replace: true })`; switching preserves scroll.
-- Tab swipe: `useSwipePager(panelRef, …)` + `<SlideSwap index={activeIndex}>` around the tab content.
+- **Tab pager (v3.3)**: all tabs sit side by side in `TabPager` (`.pager` > `.pager-track` >
+  `.pager-page`), mounted once shown (`useMountedTabs`: the opening tab first, the rest after 480ms,
+  when the slide-in is done). The track translates by `--page` and the live `--swipe-dx` from
+  `useSwipePager(panelRef, …)`; the viewport takes the active page's height (ResizeObserver →
+  `--pager-h`) with `overflow: clip` (not hidden — sticky must keep working inside). Owner asked for
+  this because SlideSwap only rendered the neighbour on commit ("content pops in mid swipe").
+  Inactive pages are `inert` + `aria-hidden`.
+- `CharacterPage` keys the screen by unit, except both Corrins share the key `corrin`: the Avatar
+  gender switch navigates to the other Corrin without remounting, so `SplashSwap` cross-fades the
+  splash (600ms) and scroll stays put. The scroll reset runs on mount only.
+- `--char-head-h` (measured sticky head height on the article) lets rails inside tabs stick under the
+  head: Profile › Classes' lens rail is `.class-lens-rail` (sticky, `top: var(--char-head-h)`).
+- Opening animation: `.character-layer` slides in from 100% over 460ms, no fade (owner).
+- Profile class cards: the favourite star sits *beside* the card button in `.class-card-wrap`
+  (a button can't contain a button), absolutely over the head row.
 
 ## Swipes — `src/lib/swipe.ts`, `src/components/SlideSwap.tsx`
 
 - `useHorizontalSwipe`: touch pointers only, direction-locked; ignores touches starting within
   **24px of the left edge** (iOS back gesture) and inside `input, select, textarea, .rail,
-  .char-tabs, [data-swipe-ignore]`. Mark swipe surfaces with `data-swipe` (CSS gives them
-  `touch-action: pan-y`).
+  .char-tabs, [data-swipe-ignore]` (the Avatar talent carousel has `data-swipe-ignore`). Mark swipe
+  surfaces with `data-swipe` (CSS gives them `touch-action: pan-y`). Commit: |dx| > 48px or
+  |velocity| > 0.3 px/ms (v3.3; was 72 / 0.45 — owner found it sticky). When testing with CDP
+  touches, don't start the drag on an input (the Avatar Name field) — it's ignored by design.
 - `useSwipePager(ref, index, count, onChange)`: live drag via `--swipe-dx` (damped at ends), commit
   on distance/velocity (`swipeDirection`), exit animation starts from `--swipe-from`.
 - `SlideSwap`: on `index` change the old content slides out one side while the new enters from the
@@ -62,6 +78,16 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   (`justify-self: stretch` is required — `.rel-col` centres items and the card collapsed without it).
   Corrin's A caption collapses to "Gains multiple" when >1 class (full list in title/aria-label).
 - `UnitLink`: link row (portrait, name, arrow) for Children/Parents quick links and Parent A.
+- `RelationCard stale`: a re-activated Corrin's partner who moved on — greyed card, one-line
+  "Unavailable" caption (`--bad-ink`) in place of "Gains X"; full reason in title/aria-label.
+- `SkillNotice` (`components/SkillNotice.tsx`, Figma 3:4348): inset under a `SkillCard` (`notice`
+  prop) from `logic/skillAccess.ts`: yellow "Not in progression" (`--warn-tint/-ink`), red "Not
+  accessible" (`--bad-tint/-ink`) with Via S / A+ (Corrin: A) / Parent portraits and "Can be inherited
+  from". `grey` in the skill picker (owner: the group headings already carry the colour meaning).
+- `SkillCard muted`: dimmed but tappable (picker: equipped in another slot → picking swaps slots).
+- Chart tabs (`ui.chartTab`): Full / Skills / Progression / Skills + Pair Up; `partsFor(tab, role)`
+  decides skills / class path (`progression.ts › routeSteps`) / effective pair-up table per row. The
+  swap button lives in a zero-height `.chart-swap` between the rows so uneven rows don't misplace it.
 - Class sprites: sizes in multiples of 32 only (see `fates-sprites`).
 
 ## Owner design rulings (keep)
@@ -72,6 +98,16 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Run settings toggle is an animated chevron (not an ellipsis).
 - Linked pair-up partners on the Roster get the Chart's swap button on the line between them.
 - Route cards: standard 1px border tinted with the route accent — a coloured left border is banned.
+- v3.3 rulings: Roster/Chart/header favourite = **heart** (`StarButton heart`); stars only for class
+  favourites (`UnitPlan.favouriteClasses`) and per-child parent favourites (`favouriteParents`, listed
+  first on the Parents tab). Skill icons at whole multiples of 24 (`SkillIcon` snaps; SkillCard 48).
+  Expected Final Stats dims non-promoting rows (whole row but the open button). Hair swatches: 10×3
+  rounded squares, 6px gap, default = swatch 1 (white). Sheets are portalled to `.app` (the tab
+  strip's transform would trap `position: fixed`).
+- v3.3 rulings: "on route" in owner notes about skills means the planned **progression** path (UI
+  says "In / Not in progression"); notice colours: red from `--bad`, matching yellow `--warn`; grey
+  notices in the picker; class favourites can't be switched off; Avatar gaps = boon/bane grid gap
+  (`--s2`).
 - Zoom is disabled in the installed app (viewport `maximum-scale=1`, `touch-action: manipulation`,
   `gesturestart` cancelled in `main.tsx`) — owner request, accessibility trade-off acknowledged.
 - Parents page (Figma 15:1542): cards in one bordered list; chosen card inverts to `--accent-strong`;

@@ -37,6 +37,7 @@ npm run dev          # vite dev server (localhost:5173)
 npm run lint         # oxlint — must stay clean
 npm run build        # tsc -b && vite build — must stay clean
 npm test             # vitest — data spot-checks, logic, asset manifest coverage
+npm run audit:skills # exhaustive relationship-combination check of the skill picker (~8 s)
 
 python tools/extract/extract_game_data.py       # units/classes/skills from GameData + messages
 python tools/extract/extract_ugf_supports.py    # support graph from UGF's Paragon export
@@ -96,7 +97,9 @@ format notes live in docs/ASSETS.md.
   CSS framework. Route accent: set `data-route` on `.app`; use `var(--accent)` tokens.
 - Routing: tiny hash router in `src/lib/router.ts` (v3: `#/roster`, `#/unit/:id/<tab>`, `#/chart`,
   `#/runs`, `#/runs/new`). No router library.
-- Store: `schema: 4` (localStorage key `fates-expanded-planner:plans:v4`). S and pair-up writes are
+- Store: `schema: 5` (localStorage key still `fates-expanded-planner:plans:v4`; schema 4 saves, exports and
+  share links migrate via `serialization.ts › migratePlanDocument` + `corrin.ts › expandLegacyCorrin`).
+  Corrin's boon/bane/talent are per gender (`run.corrin.builds`). S and pair-up writes are
   symmetric; A+ is one-way; Corrin's A ranks are a set (`friendshipPartners`). Owned by
   `src/logic/relationships.ts`.
 - Assets: `Sprite`/`AssetImage` resolves `kind` + game id through `src/data/assets.json`; missing

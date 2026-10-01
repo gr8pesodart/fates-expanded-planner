@@ -5,15 +5,18 @@ import { Icon } from './icons'
 export interface RailItem<T extends string | number> {
   id: T
   label: string
+  /** Drawn before the label (e.g. the favourite star on class pills). */
+  icon?: ReactNode
 }
 
 /** Horizontal scroller of lens/class choices; keeps the active item in view. */
-export function Rail<T extends string | number>({ items, active, onSelect, variant, label }: {
+export function Rail<T extends string | number>({ items, active, onSelect, variant, label, className = '' }: {
   items: readonly RailItem<T>[]
   active: T
   onSelect(id: T): void
   variant: 'tabs' | 'pills'
   label: string
+  className?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -25,7 +28,7 @@ export function Rail<T extends string | number>({ items, active, onSelect, varia
     rail.scrollTo({ left: rail.scrollLeft + offset - (rail.clientWidth - node.offsetWidth) / 2, behavior: 'smooth' })
   }, [active])
   return (
-    <div ref={ref} className={`rail rail-${variant}`} role="tablist" aria-label={label}>
+    <div ref={ref} className={`rail rail-${variant} ${className}`} role="tablist" aria-label={label}>
       {items.map((item) => (
         <button
           key={item.id}
@@ -35,6 +38,7 @@ export function Rail<T extends string | number>({ items, active, onSelect, varia
           className="rail-item"
           onClick={() => onSelect(item.id)}
         >
+          {item.icon}
           {item.label}
         </button>
       ))}
@@ -67,24 +71,27 @@ export function Segmented<T extends string>({ options, value, onChange, label, d
   )
 }
 
-export function StarButton({ on, onToggle, name, size = 16, light = false, disabled }: {
+/** Favourite toggle. Units on the roster use a heart; class and parent favourites use the star. */
+export function StarButton({ on, onToggle, name, size = 16, light = false, disabled, className = '', heart = false }: {
   on: boolean
   onToggle(): void
   name: string
   size?: number
   light?: boolean
   disabled?: boolean
+  className?: string
+  heart?: boolean
 }) {
   return (
     <button
       type="button"
-      className={light ? 'star light' : 'star'}
+      className={['star', light ? 'light' : '', className].filter(Boolean).join(' ')}
       aria-pressed={on}
       aria-label={on ? `Unfavourite ${name}` : `Favourite ${name}`}
       disabled={disabled}
       onClick={onToggle}
     >
-      <Icon name={on ? 'star' : 'starOutline'} size={size} />
+      <Icon name={heart ? (on ? 'heart' : 'heartOutline') : on ? 'star' : 'starOutline'} size={heart ? Math.round(size * 1.15) : size} />
     </button>
   )
 }

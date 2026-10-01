@@ -199,8 +199,16 @@ The current planner therefore does not include inherited support rows in child p
 - **Relationships** — S and pair-up are exclusive and mutual. A+ is a one-way choice: picking
   Jakob as Ryoma's A+ does not set Jakob's, and several units may pick the same partner. A child's second parent is never
   stored: it *is* the fixed parent's S partner, so the roster/profile "Parent B" slot writes
-  through to that S bond. Switching Corrin's gender moves Corrin's and Kana's plans (and every
-  reference, favourite and gendered class id) onto the other variant.
+  through to that S bond.
+- **Corrin per gender (v3.3, `corrin.ts`)** — Corrin (M)/(F) and their Kana keep separate plans,
+  and boon / bane / talent live in `run.corrin.builds[gender]`; name and hair colour are shared.
+  Switching gender releases the leaving pair's S / pair-up partners (only the partner's side is
+  cleared) and restores the arriving pair's stored bonds where the partner is still free. A partner
+  taken meanwhile leaves a one-sided link: `relationships.ts › bondPartner` treats only mutual
+  links as real, so it grants nothing and the Profile shows it greyed. The favourite star moves to
+  the active Corrin / Kana. Schema 4 saves migrate by copying the old single Corrin onto both
+  genders (classes re-sexed; bonds the other gender can't hold dropped) — `expandLegacyCorrin`,
+  run once the dataset is loaded.
 - **Candidates** — S / Parent B: romantic edges of the subject in the build's graph. A+
   (`army.ts › aPlusEligible`): **same gender**, edge with an **open 4th rank** (the game reads a
   pair's 4th rank as A+ for same-gender pairs and S otherwise; a locked 4th rank — siblings — caps
@@ -210,9 +218,26 @@ The current planner therefore does not include inherited support rows in child p
 - **Pair-up rank** — S between spouses, otherwise the highest non-S rank the edge allows (A+ pairs
   fight at A); no edge → class bonus only.
 - **Lenses** — "Stat Modifiers" = personal cap mods (+ boon/bane, child rule); pair-up lenses and
-  modifiers have no HP value (rendered `-`, unsortable).
+  modifiers have no HP value (rendered `-`, unsortable). "Expected Final Stats" = the last row of the
+  planned progression (no reclasses → join class to Lv 20, or 40 on the special track) plus that
+  class's Mov; a path that never leaves a base class is flagged (`progression.ts › expectedFinal`).
+- **Skill access (v3.3, `skillAccess.ts`)** — every skill a unit could hold in the run, classified in
+  order: learned on the planned path (or chosen to inherit) → taught by a class the unit has now →
+  only a current parent can pass it on → needs a relationship not in the plan (each roster S
+  partner, A+ partner — Corrin: same-gender A-rank partner — and, for children, each other possible
+  second parent tried one at a time on top of the current plan, plus what those parents could pass
+  on), then **combinations**: a duplicate branch falls back to the contributor's next class, so e.g.
+  Sakura with S Jakob + A+ Elise gets Wyvern Rider (both first branches are Troubadour). Only pairs
+  (and, from an overlapping pair, triples) whose single gains share a base class can fall back, so
+  only those are evaluated; `npm run audit:skills` (`tools/audit/skillCombos.audit.ts`) brute-forces
+  every second parent × S × A+ combination (Corrin: S × up to two A-rank partners) on every route
+  and both Corrins and must report 0 unlisted skills (it reports 128 with combinations disabled). Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
+  else; skills nothing in the run gives are not listed.
 - **Progression** — join class/level from `recruitment.json` (falls back to the primary base class
-  at Lv 1). Each level-up adds `(personal + class growth) / 100` to the personal part of every stat;
+  at Lv 1). A character's own level cap (GameData +134, `units.json › levelCap`) raises promoted
+  segments: Jakob and Felicia join promoted (Butler / Maid) with cap 40 — four built-in Eternal
+  Seals; Eternal Seals add 5 on top. (They also gain EXP like unpromoted units; the planner models
+  levels, not EXP.) Each level-up adds `(personal + class growth) / 100` to the personal part of every stat;
   the displayed stat is personal + class base, with the personal part clamped so the displayed stat
   never exceeds the current class's cap (overflow is lost, as in-game). Reclasses: base↔base and
   promoted↔promoted keep the level; Master Seal (Lv ≥ 10) promotes to Lv 1 and starts an "Advanced"

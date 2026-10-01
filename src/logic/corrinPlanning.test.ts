@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { candidatesFor, recruitIndex } from '../app/selectors'
 import { loadDataset } from '../data/loader'
 import type { Dataset } from '../data/types'
-import { emptyRun } from '../state/model'
+import { emptyRun, withCorrinBuild } from '../state/model'
 import type { RunPlan } from '../state/model'
 import { classStart, unitContext } from './army'
 import { classFamily } from './classes'
@@ -17,11 +17,7 @@ beforeAll(async () => {
 describe('Corrin support and child classes', () => {
   const makeRun = (): RunPlan => {
     const talentClassId = dataset.classes.find((item) => item.name === 'Samurai (F)')!.id
-    return {
-      ...emptyRun('test'),
-      route: 'revelation' as const,
-      corrin: { ...emptyRun('test').corrin, gender: 'female' as const, talentClassId },
-    }
+    return withCorrinBuild({ ...emptyRun('test'), route: 'revelation' as const }, { talentClassId })
   }
 
   it('grants Friendship Seal branches only from the A-rank partners Corrin plans to reach', () => {
@@ -48,7 +44,7 @@ describe('Corrin support and child classes', () => {
     const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === 'female')!
     const kana = dataset.units.find((unit) => unit.fixedParent === corrin.id)!
     const ctx = unitContext(dataset, run, kana.id)!
-    const talentFamily = classFamily(dataset.classesById.get(run.corrin.talentClassId!)!.name)
+    const talentFamily = classFamily(dataset.classesById.get(run.corrin.builds.female.talentClassId!)!.name)
     expect(ctx.pool.some((entry) => entry.branch === 'parent' && classFamily(dataset.classesById.get(entry.classId)!.name) === talentFamily)).toBe(true)
   })
 
@@ -79,7 +75,7 @@ describe('Corrin support and child classes', () => {
 
   it('passes the Nohr Prince tree, not the talent, when Corrin is the variable parent', () => {
     const talentClassId = dataset.classes.find((item) => item.name === 'Samurai (M)')!.id
-    let run: RunPlan = { ...emptyRun('test'), route: 'revelation', corrin: { ...emptyRun('test').corrin, gender: 'male', talentClassId } }
+    let run: RunPlan = withCorrinBuild({ ...emptyRun('test'), route: 'revelation', corrin: { ...emptyRun('test').corrin, gender: 'male' } }, { talentClassId })
     const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === 'male')!
     const azura = dataset.units.find((unit) => unit.name === 'Azura')!
     const shigure = dataset.units.find((unit) => unit.fixedParent === azura.id)!
@@ -93,7 +89,7 @@ describe('Corrin support and child classes', () => {
 
   it('gives Corrin the secondary class of a Kitsune/Wolfskin A-rank partner (Serenes Forest › Class Changing)', () => {
     const talentClassId = dataset.classes.find((item) => item.name === 'Samurai (M)')!.id
-    const base: RunPlan = { ...emptyRun('test'), route: 'revelation', corrin: { ...emptyRun('test').corrin, gender: 'male', talentClassId } }
+    const base: RunPlan = withCorrinBuild({ ...emptyRun('test'), route: 'revelation', corrin: { ...emptyRun('test').corrin, gender: 'male' } }, { talentClassId })
     const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === 'male')!
     for (const [name, expected] of [['Kaden', 'Diviner'], ['Keaton', 'Fighter']] as const) {
       const donor = dataset.units.find((unit) => unit.name === name)!

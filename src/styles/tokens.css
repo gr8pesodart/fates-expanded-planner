@@ -24,6 +24,13 @@
   --good-soft: #9ed2a0;
   --bad: #be5555;
   --bad-soft: #f5adad;
+  /* Skill notices: red from --bad; a yellow at the same weight for "not in progression". */
+  --bad-tint: color-mix(in oklab, var(--bad-soft) 70%, #ffffff);
+  --bad-ink: color-mix(in oklab, var(--bad) 72%, #1b1b1b);
+  --warn: #b39d2d;
+  --warn-soft: #efe39b;
+  --warn-tint: color-mix(in oklab, var(--warn-soft) 70%, #ffffff);
+  --warn-ink: color-mix(in oklab, var(--warn) 72%, #1b1b1b);
   --stat-low: #842334;
   --stat-mid: #8a6a00;
   --stat-high: #12803f;

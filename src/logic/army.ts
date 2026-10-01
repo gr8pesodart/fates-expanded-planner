@@ -1,10 +1,10 @@
-import type { Dataset, RecruitmentEntry, Route, UnitDef } from '../data/types'
+import type { Dataset, RecruitmentEntry, Route, StatKey, UnitDef } from '../data/types'
 import type { RunPlan, UnitPlan } from '../state/model'
-import { unitPlanFor } from '../state/model'
+import { corrinBuild, unitPlanFor } from '../state/model'
 import type { ClassPoolEntry } from './classes'
 import { classFamily, classPool, primaryBaseClass, sexedClassId } from './classes'
 import type { PairUpRank } from './pairUp'
-import { variableParentOf } from './relationships'
+import { bondPartner, variableParentOf } from './relationships'
 import { fixedParentIsCorrin } from './stats'
 
 // Route-locked promotions (Fire Emblem Fandom › Nohr Prince: "Nohr Noble (Conquest/Revelation)",
@@ -47,8 +47,9 @@ export function aPlusEligible(dataset: Dataset, unit: UnitDef, donor: UnitDef | 
     (edge.a === donor.id || edge.b === donor.id) && edge.info.ranks.a !== null && edge.info.ranks.s !== null)
 }
 
-export function displayName(unit: UnitDef): string {
-  return unit.isCorrin ? 'Corrin' : unit.name.replace(/\s*\((M|F)\)$/, '')
+/** Corrin goes by the run's chosen name (default "Corrin"); everyone else drops the (M)/(F) tag. */
+export function displayName(unit: UnitDef, run: RunPlan): string {
+  return unit.isCorrin ? run.corrin.name?.trim() || 'Corrin' : unit.name.replace(/\s*\((M|F)\)$/, '')
 }
 
 export interface ClassStart {
@@ -74,10 +75,12 @@ export interface UnitContext {
   /** Corrin only: the eligible planned Friendship Seal partners (Corrin has no A+). */
   friendshipPartners: UnitDef[]
   pairPartner: UnitDef | undefined
+  /** One-sided S / pair-up links (a re-activated Corrin whose partner moved on): shown, never applied. */
+  stale: { sPartner?: UnitDef; pairPartner?: UnitDef }
   pool: ClassPoolEntry[]
   start: ClassStart
   currentClassId: number
-  projection: { corrinBoon: RunPlan['corrin']['boon']; corrinBane: RunPlan['corrin']['bane']; variableParentId: string | null }
+  projection: { corrinBoon: StatKey; corrinBane: StatKey; variableParentId: string | null }
 }
 
 function partner(dataset: Dataset, id: string | undefined): UnitDef | undefined {
@@ -109,11 +112,17 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
   if (!unit) return null
   const plan = unitPlanFor(run, unitId)
   const variableParent = partner(dataset, variableParentOf(dataset, run, unitId))
-  const sPartner = partner(dataset, plan.sPartner)
-  // A stale pick that's no longer eligible (e.g. since married) grants nothing.
-  const aPlusCandidate = partner(dataset, plan.aPlusPartner)
-  const aPlusPartner = aPlusEligible(dataset, unit, aPlusCandidate, plan.sPartner) ? aPlusCandidate : undefined
+  const sPartner = partner(dataset, bondPartner(run, unitId, 'sPartner'))
+  const pairPartner = partner(dataset, bondPartner(run, unitId, 'pairPartner'))
+  const stale = {
+    sPartner: sPartner ? undefined : partner(dataset, plan.sPartner),
+    pairPartner: pairPartner ? undefined : partner(dataset, plan.pairPartner),
+  }
   const rosterIds = new Set(armyUnits(dataset, run).map((entry) => entry.id))
+  // A stale pick that's no longer eligible (e.g. since married, or off this roster) grants nothing.
+  const aPlusCandidate = partner(dataset, plan.aPlusPartner)
+  const aPlusPartner = aPlusCandidate && rosterIds.has(aPlusCandidate.id) && aPlusEligible(dataset, unit, aPlusCandidate, sPartner?.id) ? aPlusCandidate : undefined
+  const build = corrinBuild(run)
   // Corrin's Friendship Seal partners: the planned ones that are still eligible (same gender, can
   // reach A, on this roster). A gender switch or route change quietly drops the rest.
   const friendshipDonors = unit.isCorrin
@@ -128,7 +137,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     sPartner,
     aPlusPartner,
     friendshipDonors,
-    corrinTalentClassId: run.corrin.talentClassId,
+    corrinTalentClassId: build.talentClassId,
     fixedParentIsCorrin: fixedParentIsCorrin(dataset, unit),
   })
   const start = classStart(dataset, run, unit)
@@ -142,13 +151,14 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     sPartner,
     aPlusPartner,
     friendshipPartners: friendshipDonors,
-    pairPartner: partner(dataset, plan.pairPartner),
+    pairPartner,
+    stale,
     pool: routePool,
     start,
     currentClassId: plan.classId ?? lastReclass ?? start.classId,
     projection: {
-      corrinBoon: run.corrin.boon,
-      corrinBane: run.corrin.bane,
+      corrinBoon: build.boon,
+      corrinBane: build.bane,
       variableParentId: variableParent?.id ?? null,
     },
   }
@@ -182,7 +192,7 @@ export function supportBonusesOf(dataset: Dataset, run: RunPlan, ctx: UnitContex
  * support edge allows (A+ partners pair at A). Null when the build gives them no support.
  */
 export function pairRank(dataset: Dataset, run: RunPlan, a: string, b: string): PairUpRank | null {
-  if (run.units[a]?.sPartner === b) return 'S'
+  if (bondPartner(run, a, 'sPartner') === b) return 'S'
   const edge = (dataset.edgesByCharacter.get(a) ?? []).find((item) => item.a === b || item.b === b)
   if (!edge) return null
   if (edge.info.ranks.a !== null) return 'A'

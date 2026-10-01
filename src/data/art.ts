@@ -22,6 +22,8 @@ export interface SpriteImage {
   layers?: number
   frameCount?: number
   animation?: SpriteAnimationFrame[]
+  /** Same-layout strip of the untinted recolourable hair pixels (tinted per run in ClassSprite). */
+  hair?: string
 }
 
 export interface SpriteHeadOffset { x: number; y: number; variant?: 'small' | 'large' }
@@ -56,6 +58,8 @@ interface SpriteManifest {
   heads: Record<string, SpriteHead>
   genericHeads?: Record<string, SpriteHead>
   unique?: Record<string, Record<string, SpriteImage>>
+  /** FaceData default hair colour per unit (`#rrggbb`). */
+  hairColours?: Record<string, string>
 }
 interface SplashManifest { generatedAt?: string; units: Record<string, SplashEntry> }
 
@@ -118,7 +122,14 @@ export function spriteLayers(unitId: string | null, classId: number): SpriteLaye
 }
 
 function withUrl<T extends SpriteImage>(image: T): T {
-  return { ...image, file: url(image.file, SPRITES?.generatedAt) }
+  const resolved = { ...image, file: url(image.file, SPRITES?.generatedAt) }
+  if (image.hair) resolved.hair = url(image.hair, SPRITES?.generatedAt)
+  return resolved
+}
+
+/** A unit's FaceData hair colour — what their sprite strips are baked with, and what they pass on. */
+export function defaultHairColour(unitId: string): string | null {
+  return SPRITES?.hairColours?.[unitId] ?? null
 }
 
 export function splashArt(unitId: string): (SplashEntry & { src: string }) | null {

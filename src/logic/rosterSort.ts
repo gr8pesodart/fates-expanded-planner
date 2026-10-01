@@ -17,6 +17,8 @@ export interface RosterSortEntry {
   fixedParent: string | null
   /** Active roster lens row; null cells render as "-" and have no value to sort by. */
   lensRow: (number | null)[]
+  /** Expected Final Stats lens: the plan never leaves a base class (row shown muted). */
+  muted?: boolean
   pairPartner?: string
   pairRole?: 'front' | 'back'
 }

@@ -11,8 +11,11 @@ import type { UnitContext } from '../../logic/army'
 import { displayName, recruitmentOf } from '../../logic/army'
 import { classPool } from '../../logic/classes'
 import { compareParents, parentRows, parentSortIcon } from '../../logic/parents'
-import { setVariableParent, toggleFavourite } from '../../logic/relationships'
+import { setVariableParent, toggleFavouriteParent } from '../../logic/relationships'
 import { fixedParentIsCorrin } from '../../logic/stats'
+import { corrinBuild } from '../../state/model'
+import { defaultHairColour } from '../../data/art'
+import { hairColourOf } from '../../logic/hair'
 import { navigate } from '../../lib/router'
 import { candidatesFor, compareRecruitOrder } from '../../app/selectors'
 
@@ -39,7 +42,7 @@ export function ParentsTab({ ctx }: { ctx: UnitContext }) {
       .map((choice) => {
         const pool = classPool(dataset, ctx.unit, {
           variableParent: choice.unit,
-          corrinTalentClassId: run.corrin.talentClassId,
+          corrinTalentClassId: corrinBuild(run).talentClassId,
           fixedParentIsCorrin: fixedParentIsCorrin(dataset, ctx.unit),
         })
         // Only this candidate's contribution; the fixed parent's branch is the same on every card.
@@ -47,7 +50,10 @@ export function ParentsTab({ ctx }: { ctx: UnitContext }) {
         return { ...choice, inherited, chapter: recruitmentOf(dataset, run, choice.unit.id)?.chapter ?? 'Route start', rows: parentRows(dataset, run, ctx, choice.unit, !parentEffective) }
       })
   }, [dataset, run, ctx, fixed, parentEffective])
-  const sorted = [...prepared].sort((a, b) => compareParents(a, b, parentSort, compareRecruitOrder(dataset, run, a.unit, b.unit)))
+  const favouriteParents = ctx.plan.favouriteParents ?? []
+  const starred = (id: string) => (favouriteParents.includes(id) ? 0 : 1)
+  // Starred candidates first (always on, like class favourites), then the chosen sort.
+  const sorted = [...prepared].sort((a, b) => starred(a.unit.id) - starred(b.unit.id) || compareParents(a, b, parentSort, compareRecruitOrder(dataset, run, a.unit, b.unit)))
   const reference = {
     modifiers: prepared.map((item) => item.rows.modifiers),
     growths: prepared.map((item) => item.rows.growths),
@@ -73,21 +79,23 @@ export function ParentsTab({ ctx }: { ctx: UnitContext }) {
         <div className="parent-cards">
           {sorted.map((choice) => {
             const active = choice.unit.id === ctx.variableParent?.id
-            const name = displayName(choice.unit)
+            // The child's sprites wear the hair colour this candidate would pass on.
+            const hair = hairColourOf(dataset, run, choice.unit.id, defaultHairColour)
+            const name = displayName(choice.unit, run)
             const order = chapterNumber(choice.chapter)
             const earlier = order !== null && fixedOrder !== null && order < fixedOrder
             const later = order !== null && fixedOrder !== null && order > fixedOrder ? order - fixedOrder : 0
             return (
               <article key={choice.unit.id} className="parent-card" data-active={active || undefined}>
-                <button type="button" className="parent-card-select" aria-pressed={active} aria-label={`Choose ${name} as ${displayName(ctx.unit)}'s other parent`} disabled={readOnly} onClick={() => select(choice.unit.id)} />
+                <button type="button" className="parent-card-select" aria-pressed={active} aria-label={`Choose ${name} as ${displayName(ctx.unit, run)}'s other parent`} disabled={readOnly} onClick={() => select(choice.unit.id)} />
                 <div className="parent-card-head">
                   <Portrait unitId={choice.unit.id} name={name} className="chip-32" />
                   <span className="parent-name">{name}</span>
-                  <StarButton on={run.favourites.includes(choice.unit.id)} name={name} light={active} disabled={readOnly} onToggle={() => mutate((next) => toggleFavourite(next, choice.unit.id))} />
+                  <StarButton on={favouriteParents.includes(choice.unit.id)} name={name} light={active} disabled={readOnly} onToggle={() => mutate((next) => toggleFavouriteParent(next, ctx.unit.id, choice.unit.id))} />
                   <span className="parent-class-tree" aria-label="Inherited class tree">
                     {choice.inherited.map((classId) => {
                       const def = dataset.classesById.get(classId)
-                      return def ? <ClassSprite key={classId} unitId={ctx.unit.id} classId={classId} name={def.name} size={32} /> : null
+                      return def ? <ClassSprite key={classId} unitId={ctx.unit.id} classId={classId} name={def.name} size={32} hair={hair} /> : null
                     })}
                   </span>
                 </div>

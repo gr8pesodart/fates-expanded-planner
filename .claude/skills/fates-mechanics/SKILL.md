@@ -25,6 +25,12 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 - Unverified: tie order between two base classes feeding one advanced class (pool order used);
   pre-promoted recruits assumed to hold their base skills.
 
+## Level caps — `progression.ts › tierCap` (test: progression.test.ts › Jakob and Felicia)
+
+- Base 20, promoted 20, special 40, +5 per Eternal Seal. A unit's own `levelCap` (GameData +134)
+  replaces the promoted cap: **Jakob and Felicia = 40** (owner, 2026-10-01: promoted Butler/Maid
+  that gain EXP like unpromoted units — effectively four built-in Eternal Seals).
+
 ## Recruitment — `army.ts › classStart`, `recruitmentOf`; data `recruitment.json`
 
 - Paralogue / Xenologue / DLC / "or later" recruits have a plan-editable join level
@@ -78,6 +84,35 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   toggled via `toggleFriendshipPartner`; UI: Corrin's "A Rank" multi-select). Corrin's S partner is
   excluded from that set (setting S drops them from it).
 - Only Corrin can marry into the second generation, so only Kana can have a child as Parent B.
+- **Per-gender Corrin (v3.3, `corrin.ts`, tests `corrin.test.ts`)** — owner ruling: each gender keeps
+  its own boon/bane/talent (`run.corrin.builds`), relationships, classes, progression and skills;
+  name, hair colour and the favourite star are shared. `switchCorrinGender` releases the leaving
+  pair's partners and restores the arriving pair's bonds if the partner is free; otherwise the
+  one-sided link is "stale" — **read bonds through `relationships.ts › bondPartner`** (mutual only),
+  never `plan.sPartner` directly, or a stale link will grant classes/parents.
+
+## Skill access — `skillAccess.ts` (tests: `skillAccess.test.ts`)
+
+- Groups, in picker order: progression (learned on the planned path / chosen inherited) → available
+  (current pool + DLC classes) → inheritable (a current parent's inheritable pool) → locked (each
+  roster S partner / A+ partner / Corrin A-rank partner / other second parent tried one at a time on
+  top of the current plan, plus those parents' inheritable pools). Never lists the unit's personal
+  skill; skills nothing in the run gives are omitted. Combinations are evaluated where the single
+  gains share a base class (duplicate-branch fallback; `viaCombo`, shown "Only together: S X & A+ Y").
+  **Run `npm run audit:skills` after touching `classPool` or `skillAccess`** — it brute-forces every
+  combination and must find 0 gaps. Results are cached per run object (plans are immutable).
+
+## Hair colour — `hair.ts › hairColourOf` (tests: `hair.test.ts`)
+
+- Children take the **variable parent's** hair colour (Fire Emblem Wiki › Inheritance: "their
+  mother's hair colour, with the exception of a male Kana (who inherits the hair color of his
+  father)" — both are the variable parent). Shigure's hair is fixed (Azura's). Corrin = chosen swatch.
+
+## Expected Final Stats — `progression.ts › expectedFinal`
+
+- Last row of `buildProgression` (no reclasses → join class to Lv 20 / 40) + final class Mov;
+  `base: true` when the path never leaves a base class (Roster mutes that row). `routeSteps` gives
+  the Chart's compact path: join class, then each applied reclass at its level.
 
 ## Pair-up — `lenses.ts › pairUpRow`, `army.ts › supportBonusesOf` (tests: `lenses.test.ts`)
 

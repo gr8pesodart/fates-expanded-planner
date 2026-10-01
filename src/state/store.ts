@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { PlanDocument, RunPatch, RunPlan } from './model'
 import { createId, emptyRun, PLAN_SCHEMA, PLAN_STORAGE_KEY } from './model'
-import { isPlanDocument, parsePlanDocument, serializePlanDocument } from './serialization'
+import { isPlanDocument, migratePlanDocument, parsePlanDocument, serializePlanDocument } from './serialization'
 
 export interface PlansStore extends PlanDocument {
   /** False until the user finishes the first new-run flow. */
@@ -32,7 +32,7 @@ export const usePlansStore = create<PlansStore>()(persist((set, get) => ({
   onboarded: false,
   createRun(init = {}) {
     const base = emptyRun()
-    const run: RunPlan = { ...base, ...init, corrin: { ...base.corrin, ...init.corrin } }
+    const run: RunPlan = { ...base, ...init, corrin: init.corrin ?? base.corrin }
     set((state) => {
       const pristine = !state.onboarded && state.runs.length === 1 && Object.keys(state.runs[0].units).length === 0
       return { runs: pristine ? [run] : [...state.runs, run], activeRunId: run.id, onboarded: true }
@@ -43,7 +43,7 @@ export const usePlansStore = create<PlansStore>()(persist((set, get) => ({
     if (get().runs.some((run) => run.id === runId)) set({ activeRunId: runId })
   },
   updateRun(runId, patch) {
-    get().mutateRun(runId, (run) => ({ ...run, ...patch, corrin: { ...run.corrin, ...patch.corrin } }))
+    get().mutateRun(runId, (run) => ({ ...run, ...patch, corrin: patch.corrin ?? run.corrin }))
   },
   mutateRun(runId, transform) {
     set((state) => ({ runs: state.runs.map((run) => (run.id === runId ? touched(transform(run)) : run)) }))
@@ -74,7 +74,11 @@ export const usePlansStore = create<PlansStore>()(persist((set, get) => ({
   version: PLAN_SCHEMA,
   storage: createJSONStorage(() => localStorage),
   partialize: ({ schema, runs, activeRunId, onboarded }) => ({ schema, runs, activeRunId, onboarded }),
-  migrate: () => ({ ...initialDocument(), onboarded: false }),
+  migrate: (persisted) => {
+    const migrated = migratePlanDocument(persisted)
+    if (!isPlanDocument(migrated)) return { ...initialDocument(), onboarded: false }
+    return { ...migrated, onboarded: (persisted as { onboarded?: unknown }).onboarded === true }
+  },
   merge: (persisted, current) => {
     if (!isPlanDocument(persisted)) return current
     const onboarded = (persisted as { onboarded?: unknown }).onboarded === true

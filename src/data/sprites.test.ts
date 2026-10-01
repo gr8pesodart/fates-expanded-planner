@@ -12,6 +12,7 @@ interface SpriteHead {
   frameCount: number
   source: string
   small?: SpriteHead
+  hair?: string
 }
 
 interface BodyEntry {
@@ -32,6 +33,7 @@ interface FlatEntry {
   frameCount: number
   animation: [number, number][]
   source: string
+  hair?: string
 }
 
 interface SpriteManifest {
@@ -42,6 +44,8 @@ interface SpriteManifest {
   heads: Record<string, SpriteHead>
   genericHeads: Record<string, SpriteHead>
   unique: Record<string, Record<string, FlatEntry>>
+  hairColours: Record<string, string>
+  corrinHairColours: string[]
 }
 
 const manifest = spritesJson as unknown as SpriteManifest
@@ -144,5 +148,34 @@ describe('stitched sprite manifest', () => {
     expect(manifest.bodies['31'].head?.variant).toBeUndefined()
     expect(manifest.bodies['103'].head).toBeNull()
     expect(manifest.bodies['103'].layers).toBeUndefined()
+  })
+})
+
+describe('recolourable hair', () => {
+  const sizeOf = (file: string) => webpSize(readFileSync(publicPath(file)))
+
+  it('ships a same-layout grey hair strip for Corrin, the variable-hair children and Unique forms', () => {
+    const heads = Object.values(manifest.heads).filter((head) => head.hair)
+    expect(heads).toHaveLength(24)
+    for (const head of heads) {
+      expect(sizeOf(head.hair!)).toEqual(sizeOf(head.file))
+      if (head.small?.hair) expect(sizeOf(head.small.hair)).toEqual(sizeOf(head.small.file))
+    }
+    const unique = Object.values(manifest.unique).flatMap((perClass) => Object.values(perClass)).filter((entry) => entry.hair)
+    expect(unique).toHaveLength(9)
+    for (const entry of unique) expect(sizeOf(entry.hair!)).toEqual(sizeOf(entry.file))
+  })
+
+  it("records every unit's FaceData hair colour (what a child inherits from them)", () => {
+    expect(Object.keys(manifest.hairColours)).toHaveLength(Object.keys(manifest.heads).length)
+    expect(manifest.hairColours['PID_リョウマ']).toBe('#58332d')
+    expect(manifest.hairColours['PID_カミラ']).toBe('#bfb7df')
+  })
+
+  it("reads Corrin's 30 creation swatches from the ROM colour table (MyUnitEdit.bin)", () => {
+    expect(manifest.corrinHairColours).toHaveLength(30)
+    expect(manifest.corrinHairColours[0]).toBe('#f6f4ef')
+    expect(manifest.corrinHairColours[26]).toBe('#4d81b5')
+    expect(manifest.corrinHairColours[29]).toBe('#6e4f3b')
   })
 })

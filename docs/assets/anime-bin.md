@@ -62,6 +62,10 @@ walk clips source body cells at `x = 0/32/64/96, y = 32..224` of the rotated 128
 indices 0–3); keyframes can revisit a cell and can hold it for different durations. Swordmaster's
 sequence is `[0,1,2,3,2,1]` with the delays above. The app stores each unique cell once and follows
 the source keyframe sequence rather than repeating its pixels in every exported image.
+Not every class ping-pongs: Adventurer (M/F) and Outlaw (M) script a straight `[0,1,2,3]` loop, so
+their hair/cape snaps from cell 3 back to 0. That is what their `anime.bin` keyframe lists say (decoded
+into `src/data/sprites.json`; the same decoder reads Swordmaster's six-step ping-pong), so mirror it
+only if an in-game capture shows otherwise.
 
 - Body cells 0–3: source x `0/32/64/96`, y `0`, each 32×32. Cell 0 is the pose the old v1/v2
   class sprites shipped.

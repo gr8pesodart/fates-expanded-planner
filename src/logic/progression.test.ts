@@ -2,10 +2,10 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { loadDataset } from '../data/loader'
 import type { Dataset } from '../data/types'
 import type { RunPlan } from '../state/model'
-import { emptyRun, emptyUnitPlan } from '../state/model'
+import { emptyRun, emptyUnitPlan, withCorrinBuild } from '../state/model'
 import { unitContext } from './army'
 import type { LearnedSkill, Progression } from './progression'
-import { buildProgression, findRow, tierCap } from './progression'
+import { buildProgression, expectedFinal, findRow, routeSteps, tierCap } from './progression'
 
 let dataset: Dataset
 
@@ -18,12 +18,8 @@ const classId = (name: string) => dataset.classes.find((c) => c.name === name)!.
 const skillId = (name: string) => [...dataset.skillsById.values()].find((s) => s.name === name)!.id
 
 function corrinRun(reclasses: RunPlan['units'][string]['reclasses']): RunPlan {
-  const run = emptyRun('test')
-  return {
-    ...run,
-    corrin: { ...run.corrin, gender: 'female', talentClassId: classId('Samurai (F)') },
-    units: { [CORRIN_F]: { ...emptyUnitPlan(), reclasses } },
-  }
+  const run = withCorrinBuild(emptyRun('test'), { talentClassId: classId('Samurai (F)') })
+  return { ...run, units: { [CORRIN_F]: { ...emptyUnitPlan(), reclasses } } }
 }
 
 function skillNames(skills: LearnedSkill[]) {
@@ -61,6 +57,40 @@ describe('buildProgression', () => {
     expect(learnedAt(progression, 1, 16)).toEqual(['Seal Strength'])
     expect(learnedAt(progression, 1, 17)).toEqual(['Life and Death'])
     expect(findRow(progression, 1, 16)?.classId).toBe(classId('Master of Arms (F)'))
+  })
+
+  it('summarises the path as join class then each class change', () => {
+    const run = corrinRun([
+      { segment: 0, level: 10, classId: classId('Samurai (F)') },
+      { segment: 0, level: 12, classId: classId('Swordmaster (F)') },
+      { segment: 1, level: 15, classId: classId('Master of Arms (F)') },
+    ])
+    const ctx = unitContext(dataset, run, CORRIN_F)!
+    const steps = routeSteps(buildProgression(dataset, run, ctx), ctx.start)
+    expect(steps.map((step) => [step.level, dataset.classesById.get(step.classId)?.name])).toEqual([
+      [1, 'Nohr Princess (F)'], [10, 'Samurai (F)'], [12, 'Swordmaster (F)'], [15, 'Master of Arms (F)'],
+    ])
+  })
+
+  it('expects final stats at the end of the default path, flagging one that stays in a base class', () => {
+    const base = corrinRun([])
+    const baseFinal = expectedFinal(dataset, base, unitContext(dataset, base, CORRIN_F)!)
+    expect(baseFinal.base).toBe(true)
+    const promoted = corrinRun([{ segment: 0, level: 10, classId: classId('Samurai (F)') }, { segment: 0, level: 12, classId: classId('Swordmaster (F)') }])
+    const final = expectedFinal(dataset, promoted, unitContext(dataset, promoted, CORRIN_F)!)
+    expect(final.base).toBe(false)
+    expect(final.row).toHaveLength(9)
+    expect(final.row[8]).toBe(dataset.classesById.get(classId('Swordmaster (F)'))!.movement)
+  })
+
+  it('takes Jakob and Felicia to Lv 40 in their promoted join class (native cap 40)', () => {
+    for (const name of ['Jakob', 'Felicia']) {
+      const unit = dataset.units.find((item) => item.name === name)!
+      const run = emptyRun('test')
+      const progression = buildProgression(dataset, run, unitContext(dataset, run, unit.id)!)
+      expect(progression.segments.map((segment) => segment.tier)).toEqual(['promoted'])
+      expect(progression.segments[0].rows.at(-1)?.level).toBe(40)
+    }
   })
 
   it('learns at most one skill per level-up; only recruitment grants several', () => {
