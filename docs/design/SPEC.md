@@ -95,8 +95,7 @@ areas may extend past the visible chip.
   crossed swords) at 50% hue. When filled, a PortraitChip with a 1px solid border in the slot hue.
 - **ClassSprite**: the stitched, animated idle map sprite (body + the unit's head, see *Assets*).
   It has no background tile on the Roster or Chart, but keeps a tile in the class picker.
-- **SkillIcon** — native 24×24, drawn only at whole multiples (24 in lists, chips and the Chart; 48
-  on SkillCards), like map sprites — and **SkillCard** (icon over name on the left, description on the right;
+- **SkillIcon** — native 24×24, drawn at 1× (24px) everywhere (owner, v3.3) — and **SkillCard** (icon over name on the left, description on the right;
   12px `--ink-2`). The locked personal-skill card uses `--surface-2` fill and no border, with a 12px
   `--ink-2` lock inline to the left of the skill name (no "Personal skill" label).
 - **BottomNav**: Roster / Chart / Runs, with icons at 30px and 12px/600 labels. The active item uses

@@ -100,7 +100,7 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Route cards: standard 1px border tinted with the route accent — a coloured left border is banned.
 - v3.3 rulings: Roster/Chart/header favourite = **heart** (`StarButton heart`); stars only for class
   favourites (`UnitPlan.favouriteClasses`) and per-child parent favourites (`favouriteParents`, listed
-  first on the Parents tab). Skill icons at whole multiples of 24 (`SkillIcon` snaps; SkillCard 48).
+  first on the Parents tab). Skill icons at 1× (24px) everywhere, SkillCards included (`SkillIcon` snaps to multiples of 24).
   Expected Final Stats dims non-promoting rows (whole row but the open button). Hair swatches: 10×3
   rounded squares, 6px gap, default = swatch 1 (white). Sheets are portalled to `.app` (the tab
   strip's transform would trap `position: fixed`).

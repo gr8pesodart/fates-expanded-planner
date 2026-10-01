@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import { Fragment, useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { PlannerContext } from '../app/plannerContext'
 import { ASSETS_ENABLED, defaultHairColour, portraitArt, spriteLayers } from '../data/art'
@@ -172,70 +172,86 @@ function tintTables(hex: string): Uint8Array[] {
   })
 }
 
-/** `${file}|${colour}` → tinted strip URL, or null when tinting failed (the default shows). */
-const tintedStrips = new Map<string, string | null>()
+/** `${hair strip}|${colour}` → tinted hair-only strip URL, or null when tinting failed (default shows). */
+const tintedHair = new Map<string, string | null>()
 const tinting = new Map<string, Promise<void>>()
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = reject
-    image.src = src
-  })
+/**
+ * Loaded *and decoded*: WebKit can fire `load` before decoding, and while the page is loading many
+ * images at once `drawImage` then paints nothing — the tint came out blank for the colour in use at
+ * startup (owner report, iPhone, v3.3).
+ */
+async function loadImage(src: string): Promise<HTMLImageElement> {
+  const image = new Image()
+  image.src = src
+  await image.decode()
+  return image
 }
 
-/** The strip with its recolourable hair replaced by the tinted mask, as an object URL (cached). */
-function tintStrip(file: string, hair: string, colour: string): Promise<void> {
-  const key = `${file}|${colour}`
+const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+/**
+ * The grey hair mask tinted `colour`, hair pixels only, as an object URL (cached). It is drawn over
+ * the extracted head, so a failed or blank tint can only leave the default hair colour showing —
+ * never remove the head.
+ */
+function tintHair(hair: string, colour: string): Promise<void> {
+  const key = `${hair}|${colour}`
   const existing = tinting.get(key)
   if (existing) return existing
-  const job = Promise.all([loadImage(file), loadImage(hair)]).then(([base, mask]) => {
+  const draw = async (attempt: number): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; pixels: ImageData }> => {
+    const mask = await loadImage(hair)
     const canvas = document.createElement('canvas')
-    canvas.width = base.naturalWidth
-    canvas.height = base.naturalHeight
+    canvas.width = mask.naturalWidth
+    canvas.height = mask.naturalHeight
     const context = canvas.getContext('2d', { willReadFrequently: true })
     if (!context) throw new Error('no canvas')
     context.drawImage(mask, 0, 0)
-    const hairPixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-    context.clearRect(0, 0, canvas.width, canvas.height)
-    context.drawImage(base, 0, 0)
-    const out = context.getImageData(0, 0, canvas.width, canvas.height)
-    const tables = tintTables(colour)
-    for (let i = 0; i < hairPixels.length; i += 4) {
-      if (!hairPixels[i + 3]) continue
-      out.data[i] = tables[0][hairPixels[i]]
-      out.data[i + 1] = tables[1][hairPixels[i + 1]]
-      out.data[i + 2] = tables[2][hairPixels[i + 2]]
-      out.data[i + 3] = 255
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height)
+    // Every hair strip has opaque pixels; a blank read means the browser wasn't ready yet.
+    if (!pixels.data.some((value, index) => index % 4 === 3 && value > 0)) {
+      if (attempt >= 3) throw new Error('blank hair strip')
+      for (let frame = 0; frame < 10 * (attempt + 1); frame += 1) await nextFrame()
+      return draw(attempt + 1)
     }
-    context.putImageData(out, 0, 0)
+    return { canvas, context, pixels }
+  }
+  const job = draw(0).then(({ canvas, context, pixels }) => {
+    const tables = tintTables(colour)
+    const data = pixels.data
+    for (let i = 0; i < data.length; i += 4) {
+      if (!data[i + 3]) continue
+      data[i] = tables[0][data[i]]
+      data[i + 1] = tables[1][data[i + 1]]
+      data[i + 2] = tables[2][data[i + 2]]
+      data[i + 3] = 255
+    }
+    context.putImageData(pixels, 0, 0)
     return new Promise<void>((resolve) => canvas.toBlob((blob) => {
-      tintedStrips.set(key, blob ? URL.createObjectURL(blob) : null)
+      tintedHair.set(key, blob ? URL.createObjectURL(blob) : null)
       resolve()
     }))
-  // A failed tint falls back to the extracted default colours.
-  }).catch(() => { tintedStrips.set(key, null) })
+  }).catch(() => { tintedHair.set(key, null) })
   tinting.set(key, job)
   return job
 }
 
-/** `image` with its hair tinted `colour`; `pending` until the tinted strip exists. */
-function useTinted<T extends SpriteImage>(image: T | null, colour: string | null): { image: T | null; pending: boolean } {
-  const key = image?.hair && colour ? `${image.file}|${colour}` : null
-  const done = key !== null && tintedStrips.has(key)
+/** A same-layout overlay of `image`'s hair tinted `colour`; `pending` until it exists. */
+function useTintedHair(image: SpriteImage | null, colour: string | null): { overlay: SpriteImage | null; pending: boolean } {
+  const hair = image?.hair
+  const key = hair && colour ? `${hair}|${colour}` : null
+  const done = key !== null && tintedHair.has(key)
   const [, rerender] = useState(0)
   useEffect(() => {
-    if (!key || done || !image?.hair || !colour) return
+    if (!key || done || !hair || !colour) return
     let cancelled = false
-    void tintStrip(image.file, image.hair, colour).then(() => {
+    void tintHair(hair, colour).then(() => {
       if (!cancelled) rerender((count) => count + 1)
     })
     return () => { cancelled = true }
-  }, [key, done, image, colour])
-  if (!image || !key) return { image, pending: false }
-  const file = tintedStrips.get(key)
-  return { image: file ? { ...image, file } : image, pending: !done }
+  }, [key, done, hair, colour])
+  const file = key ? tintedHair.get(key) : null
+  return { overlay: image && file ? { ...image, file } : null, pending: key !== null && !done }
 }
 
 /**
@@ -265,16 +281,17 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false, ha
   const rawHead = resolved?.kind === 'stitched'
     ? resolved.offset?.variant === 'small' ? resolved.smallHead ?? resolved.head : resolved.head
     : null
-  const tintedHead = useTinted(rawHead, hairColour)
-  const tintedSingle = useTinted(resolved?.kind === 'single' ? resolved.image : null, hairColour)
-  const layers = resolved?.kind === 'single' && tintedSingle.image ? { ...resolved, image: tintedSingle.image } : resolved
-  const head = tintedHead.image
+  const headHair = useTintedHair(rawHead, hairColour)
+  const singleHair = useTintedHair(resolved?.kind === 'single' ? resolved.image : null, hairColour)
+  const layers = resolved
+  const head = rawHead
+  const overlays = [headHair.overlay, singleHair.overlay].flatMap((overlay) => (overlay ? [overlay.file] : []))
   const animation = layers?.kind === 'stitched' ? layers.body.animation : layers?.kind === 'single' ? layers.image.animation : undefined
   const animationIndex = useAnimationIndex(animation, visible)
   const frame = animation?.[animationIndex]
-  const decoded = useImagesReady(!layers ? [] : layers.kind === 'single' ? [layers.image.file] : [layers.body.file, ...(head ? [head.file] : [])])
+  const decoded = useImagesReady(!layers ? [] : [...(layers.kind === 'single' ? [layers.image.file] : [layers.body.file, ...(head ? [head.file] : [])]), ...overlays])
   // Wait for the tint too, so the default colour never flashes before the chosen one.
-  const ready = decoded && !tintedHead.pending && !tintedSingle.pending
+  const ready = decoded && !headHair.pending && !singleHair.pending
   const wrap = (content: ReactNode) => (
     <span ref={spriteRef} className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
   )
@@ -292,6 +309,7 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false, ha
     return wrap(
       <span className="sprite-stage" style={{ width: body.w * scale, height: body.h * scale }}>
         {bands.map((cell) => <SpriteCell key={cell} image={body} x={0} y={0} scale={scale} cell={bodyCell * (body.layers ?? 1) + cell} />)}
+        {singleHair.overlay ? bands.map((cell) => <SpriteCell key={`hair${cell}`} image={singleHair.overlay!} x={0} y={0} scale={scale} cell={bodyCell * (body.layers ?? 1) + cell} />) : null}
       </span>,
     )
   }
@@ -300,7 +318,15 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false, ha
       {STACK.map(([part, cell]) => {
         const image = part === 'head' ? head : body
         const at = part === 'head' ? offset : { x: 0, y: 0 }
-        return cell < (image.layers ?? 1) ? <SpriteCell key={`${part}${cell}`} image={image} x={at.x} y={at.y} scale={scale} cell={bodyCell * (image.layers ?? 1) + cell} /> : null
+        if (cell >= (image.layers ?? 1)) return null
+        const index = bodyCell * (image.layers ?? 1) + cell
+        // The tinted hair covers the extracted hair in the same band (back hair behind the body).
+        return (
+          <Fragment key={`${part}${cell}`}>
+            <SpriteCell image={image} x={at.x} y={at.y} scale={scale} cell={index} />
+            {part === 'head' && headHair.overlay ? <SpriteCell image={headHair.overlay} x={at.x} y={at.y} scale={scale} cell={index} /> : null}
+          </Fragment>
+        )
       })}
     </span>,
   )

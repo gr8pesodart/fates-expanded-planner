@@ -83,8 +83,12 @@ hair is stored grey and tinted at extraction with the unit's FaceData default
 (`extract_portraits.parse_face_data` → `extract_sprites.tint_hair` → `extract_portraits.tint_overlay`).
 v3.3: the extractor also writes the **untinted hair pixels** as a same-layout `-hair` strip (entry
 `hair`; heads, small heads, Unique bodies) and `hairColours` (FaceData colour per unit). `ClassSprite`
-(`art.tsx › useHairColour / useTinted / tintStrip`) composites the tinted mask over the strip on a
-canvas, caches an object URL per (strip, colour) and holds the sprite until it's ready. Colour rule:
+(`art.tsx › useHairColour / useTintedHair / tintHair`) tints **only the hair strip** on a canvas
+(object URL cached per (hair strip, colour)) and draws it as an extra cell over each head band (and
+over Unique bodies), so a failed tint can never remove a head. iPhone trap (v3.3): WebKit fired
+`load` before decode while the page was busy and `drawImage` painted nothing — the old full-strip
+tint baked blank heads for the colour in use at startup. `loadImage` now awaits `decode()` and blank
+reads retry. Colour rule:
 `logic/hair.ts › hairColourOf` (Corrin's swatch; children = variable parent's colour). Keep the
 runtime maths identical to `extract_sprites.tint_ramp` (`min(255, grey·c // 0xBB)`). History — don't
 repeat: overlay washed hair out (greys ≥ 0x80 → white); ×2 modulate clipped light colours to pure white

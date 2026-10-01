@@ -9,10 +9,8 @@ export interface SkillView {
 }
 
 /** Icon over name on the left, in-game description on the right (Profile skills, pickers). */
-export function SkillCard({ skill, locked = false, onClick, tag, emptyText = 'Tap to choose a skill.', selected = false, muted = false, disabled, notice, iconSize = 48 }: {
+export function SkillCard({ skill, locked = false, onClick, tag, emptyText = 'Tap to choose a skill.', selected = false, muted = false, disabled, notice }: {
   skill: SkillView | null
-  /** 48 (2×) on the Profile; the pickers' denser lists use 24 (1×). */
-  iconSize?: 24 | 48
   locked?: boolean
   onClick?: () => void
   tag?: ReactNode
@@ -29,8 +27,8 @@ export function SkillCard({ skill, locked = false, onClick, tag, emptyText = 'Ta
     <>
       <span className="skill-card-id">
         {skill
-          ? <SkillIcon skillId={skill.id} name={skill.name} size={iconSize} />
-          : <span className="skill-icon" style={{ width: iconSize, height: iconSize }} aria-hidden="true"><Icon name="plus" size={iconSize === 48 ? 22 : 16} /></span>}
+          ? <SkillIcon skillId={skill.id} name={skill.name} size={24} />
+          : <span className="skill-icon" style={{ width: 24, height: 24 }} aria-hidden="true"><Icon name="plus" size={16} /></span>}
         <span className="skill-card-name">
           {locked ? <Icon name="lock" size={12} className="skill-card-lock" /> : null}
           {skill?.name ?? 'Empty slot'}

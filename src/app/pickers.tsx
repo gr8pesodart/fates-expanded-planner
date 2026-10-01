@@ -224,7 +224,6 @@ function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: num
                         <SkillCard
                           key={item.skillId}
                           skill={{ id: skill.id, name: skill.name, description: skill.description }}
-                          iconSize={24}
                           selected={item.skillId === current}
                           muted={equippedElsewhere}
                           tag={[item.level !== null ? `Lv ${item.level}` : null, equippedElsewhere ? 'Equipped · tap to swap' : null].filter(Boolean).join(' · ') || undefined}
@@ -284,7 +283,6 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
             <SkillCard
               key={entry.skillId}
               skill={{ id: skill.id, name: skill.name, description: skill.description }}
-              iconSize={24}
               selected={entry.skillId === current}
               disabled={fromOther}
               onClick={() => choose(entry.skillId)}
