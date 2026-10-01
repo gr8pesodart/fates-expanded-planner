@@ -202,7 +202,9 @@ The current planner therefore does not include inherited support rows in child p
   through to that S bond. Switching Corrin's gender moves Corrin's and Kana's plans (and every
   reference, favourite and gendered class id) onto the other variant.
 - **Candidates** — S / Parent B: romantic edges of the subject in the build's graph. A+: platonic
-  edges that reach A. Pair-up: anyone on the roster (rank only changes the bonus).
+  edges that reach A, **same generation only** (owner ruling 2026-10-01: first-gen with first-gen,
+  children with children; a stale cross-generation A+ grants no class). Pair-up: anyone on the
+  roster (rank only changes the bonus).
 - **Pair-up rank** — S between spouses, otherwise the highest non-S rank the edge allows (A+ pairs
   fight at A); no edge → class bonus only.
 - **Lenses** — "Stat Modifiers" = personal cap mods (+ boon/bane, child rule); pair-up lenses and

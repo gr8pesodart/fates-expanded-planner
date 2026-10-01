@@ -125,6 +125,22 @@ describe('Corrin support and child classes', () => {
     expect(choices.every((choice) => choice.unit.gender === corrin.gender)).toBe(true)
   })
 
+  it('only shares A+ ranks within a generation (owner rule)', () => {
+    const run = makeRun()
+    const ryoma = dataset.units.find((unit) => unit.name === 'Ryoma')!
+    const shiro = dataset.units.find((unit) => unit.fixedParent === ryoma.id)!
+    const firstGen = candidatesFor(dataset, run, ryoma.id, 'a')
+    const children = candidatesFor(dataset, run, shiro.id, 'a')
+    expect(firstGen.length).toBeGreaterThan(0)
+    expect(children.length).toBeGreaterThan(0)
+    expect(firstGen.every((choice) => choice.unit.fixedParent === null)).toBe(true)
+    expect(children.every((choice) => choice.unit.fixedParent !== null)).toBe(true)
+    const stale = setBond(run, ryoma.id, 'aPlusPartner', shiro.id)
+    const ctx = unitContext(dataset, stale, ryoma.id)!
+    expect(ctx.aPlusPartner).toBeUndefined()
+    expect(ctx.pool.some((entry) => entry.branch === 'aplus')).toBe(false)
+  })
+
   it('puts current S and A+ partners first in the pair-up picker', () => {
     let run = makeRun()
     const ryoma = dataset.units.find((unit) => unit.name === 'Ryoma')!

@@ -61,6 +61,11 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 - **A+ is one-way** ("unlike other supports, they are not mutual" — Fire Emblem Wiki › Support).
   S and pair-up are mutual and exclusive.
+- **A+ ranks are only shared within a generation** (owner ruling, 2026-10-01): first-gen with
+  first-gen, children with children. `army.ts › sameGeneration` filters the A+ picker
+  (`candidatesFor`) and `unitContext` ignores a stale cross-generation `aPlusPartner` (no class
+  granted). Does not apply to Corrin's A-rank Friendship Seal set (that isn't A+). Pinned in
+  `corrinPlanning.test.ts`.
 - **Corrin cannot give or take A+.** Corrin can Friendship Seal with **any same-gender A-rank
   partner**; the plan stores the ones the player intends to reach (`UnitPlan.friendshipPartners`,
   toggled via `toggleFriendshipPartner`; UI: Corrin's "A Rank" multi-select). Corrin's S partner is

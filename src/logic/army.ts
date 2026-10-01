@@ -29,6 +29,11 @@ export function armyUnits(dataset: Dataset, run: RunPlan): UnitDef[] {
   })
 }
 
+/** Both first-generation or both children (owner rule: A+ ranks are only shared within a generation). */
+export function sameGeneration(a: UnitDef, b: UnitDef | undefined): boolean {
+  return b !== undefined && (a.fixedParent === null) === (b.fixedParent === null)
+}
+
 export function displayName(unit: UnitDef): string {
   return unit.isCorrin ? 'Corrin' : unit.name.replace(/\s*\((M|F)\)$/, '')
 }
@@ -92,7 +97,9 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
   const plan = unitPlanFor(run, unitId)
   const variableParent = partner(dataset, variableParentOf(dataset, run, unitId))
   const sPartner = partner(dataset, plan.sPartner)
-  const aPlusPartner = partner(dataset, plan.aPlusPartner)
+  // A+ ranks are only shared within a generation; a stale cross-generation pick grants nothing.
+  const aPlusCandidate = partner(dataset, plan.aPlusPartner)
+  const aPlusPartner = sameGeneration(unit, aPlusCandidate) ? aPlusCandidate : undefined
   const rosterIds = new Set(armyUnits(dataset, run).map((entry) => entry.id))
   // Corrin's Friendship Seal partners: the planned ones that are still eligible (same gender, can
   // reach A, on this roster). A gender switch or route change quietly drops the rest.
