@@ -69,9 +69,9 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
 
 - **Variable hair colour on talk portraits / splash** (map sprites done in v3.3): portraits still
   use the FaceData default. Ship the portrait hair layer (`face/hair/<hair>/髪0.bch.lz`) separately
-  and reuse `ClassSprite`'s canvas tint (art.tsx › tintStrip). The sprite tint is a ×2 modulate
-  chosen against the overlay blend by eye (docs/ASSETS.md › Hair colours); compare with an in-game
-  capture when convenient.
+  and reuse `ClassSprite`'s canvas tint (art.tsx › tintStrip). The sprite tint is a ramp scaled at
+  grey 0xBB, calibrated on hand-drawn sprites (docs/ASSETS.md › Hair colours); compare with an
+  in-game capture when convenient.
 
 ### A — Assets (gated; do first, in parallel with B)
 

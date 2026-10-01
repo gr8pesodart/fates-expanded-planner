@@ -86,8 +86,10 @@ v3.3: the extractor also writes the **untinted hair pixels** as a same-layout `-
 (`art.tsx › useHairColour / useTinted / tintStrip`) composites the tinted mask over the strip on a
 canvas, caches an object URL per (strip, colour) and holds the sprite until it's ready. Colour rule:
 `logic/hair.ts › hairColourOf` (Corrin's swatch; children = variable parent's colour). Keep the
-runtime maths identical to `extract_sprites.tint_modulate2x` (`min(255, 2·grey·c // 255)`); sprites
-moved off `tint_overlay` (owner: tints looked far too light — overlay pushes greys ≥ 128 towards white).
+runtime maths identical to `extract_sprites.tint_ramp` (`min(255, grey·c // 0xBB)`). History — don't
+repeat: overlay washed hair out (greys ≥ 0x80 → white); ×2 modulate clipped light colours to pure white
+(owner saw "heads missing" on iPhone). 0xBB is calibrated on hand-drawn first-gen sprite hair, which
+sits at ~0.5–1.1× its FaceData colour's lightness.
 Portraits still use overlay. The Parents tab draws the child with each candidate's colour (`hair` prop).
 Corrin's swatches: ROM `GameData/MyUnitEdit.bin.lz` › `カラーテーブル` (30 × RGBA) →
 `sprites.json › corrinHairColours` (`corrin_hair_swatches`). Animation timing: every `ClassSprite`

@@ -461,18 +461,24 @@ def hair_pixels(image: Image.Image) -> Image.Image:
     return result
 
 
-def tint_modulate2x(image: Image.Image, color: bytes) -> Image.Image:
-    """Map-sprite hair tint: out = min(255, 2 * grey * colour / 255) per channel.
+# The mask grey that shows exactly the FaceData colour: the ramps run 0x44-0xBB plus a few 0xEE
+# specular pixels, and hand-drawn first-gen sprite hair sits at 0.46-1.1x its FaceData colour's
+# lightness (Camilla, Azura, Jakob, Elise, Leo...) - the colour is the main lit tone, not the mid.
+HAIR_REFERENCE_GREY = 0xBB
 
-    The overlay blend the portraits use washes the brighter hair greys (170-238) out towards white
-    for darker colours (Ryoma's #58332d gave #e8e3e2 highlights, where his hand-drawn sprite hair is
-    all dark browns); a x2 modulate keeps mid-grey at the colour and the highlights saturated. The
-    game's actual combiner is not verified. Mirrored in src/components/art.tsx > tintTables.
+
+def tint_ramp(image: Image.Image, color: bytes) -> Image.Image:
+    """Map-sprite hair tint: out = min(255, grey * colour / 0xBB) per channel.
+
+    Overlay (as on portraits) washed greys above 0x80 out towards white; a x2 modulate clipped light
+    colours (Camilla, Jakob, Soleil) to pure white. Scaling the ramp so its main lit tone equals the
+    colour matches the artists' own sprites. The game's combiner itself is not verified. Mirrored
+    in src/components/art.tsx > tintTables.
     """
     lut = []
     for channel in range(3):
         base = color[channel]
-        lut.extend(min(255, (2 * value * base) // 255) for value in range(256))
+        lut.extend(min(255, (value * base) // HAIR_REFERENCE_GREY) for value in range(256))
     rgb = image.convert("RGB").point(lut)
     result = rgb.convert("RGBA")
     result.putalpha(image.getchannel("A"))
@@ -487,7 +493,7 @@ def tint_hair(image: Image.Image, color: bytes | None) -> Image.Image:
     mask = alpha.point(lambda value: 255 if value in HAIR_MASK else 0)
     if mask.getbbox() is None:
         return image
-    tinted = tint_modulate2x(image, color)
+    tinted = tint_ramp(image, color)
     result = image.copy()
     result.paste(tinted.convert("RGB"), mask=mask)
     result.putalpha(alpha)

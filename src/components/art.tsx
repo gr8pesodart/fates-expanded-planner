@@ -158,13 +158,16 @@ function useImagesReady(urls: readonly string[]): boolean {
   return ready
 }
 
-// ×2 modulate of the grey hair mask, as tools/assets/extract_sprites.py › tint_modulate2x, so
-// runtime tints match the extracted defaults. (Overlay washed bright hair out to near-white.)
+// The hair mask's main lit grey shows exactly the colour; darker greys shade it (as
+// tools/assets/extract_sprites.py › tint_ramp, so runtime tints match the extracted defaults).
+// Overlay washed hair out and a ×2 modulate clipped light colours to pure white.
+const HAIR_REFERENCE_GREY = 0xbb
+
 function tintTables(hex: string): Uint8Array[] {
   return [1, 3, 5].map((offset) => {
     const colour = parseInt(hex.slice(offset, offset + 2), 16)
     const table = new Uint8Array(256)
-    for (let value = 0; value < 256; value += 1) table[value] = Math.min(255, Math.floor((2 * value * colour) / 255))
+    for (let value = 0; value < 256; value += 1) table[value] = Math.min(255, Math.floor((value * colour) / HAIR_REFERENCE_GREY))
     return table
   })
 }

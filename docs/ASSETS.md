@@ -277,11 +277,15 @@ also ships as a same-layout **grey hair strip** (`<head>-hair.webp`, `<head>-sma
 variable-hair children except Shigure, Azama; Kana, Selkie and Velouria's Unique forms). Unique
 bodies are now tinted with the FaceData default too (they used to keep the raw grey). The manifest's
 `hairColours` holds every unit's FaceData colour (record `+0x1C`). At runtime `ClassSprite` paints
-the grey strip over the head with a **×2 modulate** (`min(255, 2·grey·colour/255)` per channel —
-`extract_sprites.py › tint_modulate2x`, also used for the baked defaults) in the run's colour. The
-portraits' overlay blend was tried first and washed bright hair greys (170–238) out to near-white for
-darker colours (Ryoma's `#58332d` → `#e8e3e2` highlights, where his hand-drawn sprite hair is all
-dark browns); the game's real combiner is unverified. Colour source: Corrin's chosen swatch, or a child's variable
+the grey strip over the head as a **ramp scaled so grey `0xBB` shows exactly the colour**
+(`min(255, grey·colour/0xBB)` per channel — `extract_sprites.py › tint_ramp`, also used for the baked
+defaults). Calibration: hand-drawn first-gen sprite hair sits at 0.46–1.1× its FaceData colour's
+lightness (Camilla, Azura, Jakob, Elise, Leo…), i.e. the colour is the ramp's main lit tone (the
+masks run `0x44`–`0xBB` plus a few `0xEE` specular pixels). Rejected: the portraits' overlay blend
+(greys above `0x80` washed out to near-white — Ryoma's `#58332d` gave `#e8e3e2` highlights) and a ×2
+modulate (light colours — Camilla, Jakob, Soleil, Corrin's white — clipped to pure white, which at
+32px on white cards read as missing heads; owner report 2026-10-01). The game's combiner itself is
+unverified. Colour source: Corrin's chosen swatch, or a child's variable
 parent's colour (Fire Emblem Wiki › Inheritance: mothers pass hair colour, male Kana his father's —
 always the variable parent in planner terms; Shigure's hair is fixed). Portraits are not recoloured
 yet.
