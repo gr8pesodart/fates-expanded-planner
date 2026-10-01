@@ -14,7 +14,7 @@ and what is still open.
 | Skills (229: names, in-game descriptions, icon index, DLC-only flag) | ✅ `skills.json` |
 | Child rules (fixed parents, growth averaging, cap-mod combination, class inheritance) | ✅ in `src/logic/` |
 | Pair-up bonuses (class bonuses + per-unit C/B/A/S support bonuses) | ✅ in the packs (rule sourced below) |
-| A+ (friendship) exact partner tables | ⚠️ approximated (platonic edges that reach A; one-way choice) |
+| A+ (friendship) exact partner tables | ⚠️ derived (same-gender, same-generation edges with an open 4th rank; one-way choice) |
 | Current support rank in the saved plan | ⚠️ final S/A+ decisions only; pair-up assumes C when neither is selected |
 | Assets (class sprites, skill icons, face icons) | ✅ `public/assets/` + `src/data/assets.json` (docs/ASSETS.md) |
 
@@ -201,10 +201,12 @@ The current planner therefore does not include inherited support rows in child p
   stored: it *is* the fixed parent's S partner, so the roster/profile "Parent B" slot writes
   through to that S bond. Switching Corrin's gender moves Corrin's and Kana's plans (and every
   reference, favourite and gendered class id) onto the other variant.
-- **Candidates** — S / Parent B: romantic edges of the subject in the build's graph. A+: platonic
-  edges that reach A, **same generation only** (owner ruling 2026-10-01: first-gen with first-gen,
-  children with children; a stale cross-generation A+ grants no class). Pair-up: anyone on the
-  roster (rank only changes the bonus).
+- **Candidates** — S / Parent B: romantic edges of the subject in the build's graph. A+
+  (`army.ts › aPlusEligible`): **same gender**, edge with an **open 4th rank** (the game reads a
+  pair's 4th rank as A+ for same-gender pairs and S otherwise; a locked 4th rank — siblings — caps
+  at A), **same generation** (owner ruling 2026-10-01), **not the unit's S partner** (owner ruling
+  2026-10-01), never Corrin. A stale pick that fails any of these grants no class. Pair-up: anyone
+  on the roster (rank only changes the bonus).
 - **Pair-up rank** — S between spouses, otherwise the highest non-S rank the edge allows (A+ pairs
   fight at A); no edge → class bonus only.
 - **Lenses** — "Stat Modifiers" = personal cap mods (+ boon/bane, child rule); pair-up lenses and
@@ -266,9 +268,11 @@ Open questions (see also docs/REFERENCES.md):
 2. **Same-sex children.** UGF grants same-sex S supports; the planner allows any romantic partner
    as a second parent. Verify in-game whether same-sex couples recruit children, and narrow the
    candidate list if not.
-3. **A+ partners.** Exact per-character A+ lists are not in the extracted data, and UGF's A+
-   behaviour is not documented beyond its support graph; v3.1 offers platonic edges that reach
-   rank A and stores the choice one-way (Friendship Seal semantics).
+3. **A+ partners — resolved (2026-10-01).** Same-sex pairs that can reach S can also reach A+:
+   UGF code-patches the support menu to reveal A+ once an S rank has been chosen (owner, from
+   in-game play). The planner ignores that ordering and shows every eligible partner as available:
+   same-gender, same-generation edges with an open 4th rank, minus the unit's S partner, stored
+   one-way.
 4. **Child pair-up bonuses — resolved (v3.2).** Children's rows are empty in the table; they take
    the father's C and A rows and the mother's B and S rows (Serenes Forest › Pair-Up Stats: "Any |
    Father's C | Mother's B | Father's A | Mother's S"), except Shigure and male Kana, who take C/A

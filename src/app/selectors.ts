@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { Dataset, UnitDef } from '../data/types'
 import { edgePartner, supportPartners } from '../data/types'
 import type { UnitContext } from '../logic/army'
-import { armyUnits, displayName, recruitmentOf, sameGeneration, unitContext } from '../logic/army'
+import { aPlusEligible, armyUnits, displayName, recruitmentOf, unitContext } from '../logic/army'
 import { classFamily, classPool } from '../logic/classes'
 import type { LensId } from '../logic/lenses'
 import { lensRow } from '../logic/lenses'
@@ -101,12 +101,11 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
   if (kind === 'pair') {
     pool = army.filter((unit) => unit.id !== ownerId).map((unit) => ({ id: unit.id, fast: false }))
   } else {
-    const edges = supportPartners(dataset, subjectId, kind === 'a' && !subject.isCorrin ? 'platonic' : kind === 'a' ? 'a-rank' : 'romantic')
+    const edges = supportPartners(dataset, subjectId, kind === 'a' ? 'a-rank' : 'romantic')
       .filter((edge) => {
         if (kind !== 'a') return true
-        if (edge.info.ranks.a === null) return false
         const id = edgePartner(edge, subjectId)
-        if (!subject.isCorrin) return sameGeneration(subject, dataset.unitsById.get(id))
+        if (!subject.isCorrin) return aPlusEligible(dataset, subject, dataset.unitsById.get(id), run.units[subjectId]?.sPartner)
         // Corrin's S partner can't double as an A-rank Friendship Seal partner.
         return dataset.unitsById.get(id)?.gender === subject.gender && run.units[subjectId]?.sPartner !== id
       })

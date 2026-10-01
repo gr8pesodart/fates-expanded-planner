@@ -125,6 +125,31 @@ describe('Corrin support and child classes', () => {
     expect(choices.every((choice) => choice.unit.gender === corrin.gender)).toBe(true)
   })
 
+  it('offers A+ to same-gender pairs with an open 4th rank, not siblings', () => {
+    const run = makeRun()
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const names = (name: string) => candidatesFor(dataset, run, byName(name).id, 'a').map((choice) => choice.unit.name)
+    expect(names('Odin')).toEqual(expect.arrayContaining(['Niles', 'Laslow', 'Xander']))
+    expect(names('Soleil')).toEqual(expect.arrayContaining(['Velouria', 'Ophelia']))
+    expect(names('Leo')).not.toContain('Xander')
+    expect(names('Ryoma')).not.toContain('Takumi')
+    for (const name of ['Odin', 'Soleil', 'Elise', 'Ryoma']) {
+      const unit = byName(name)
+      const choices = candidatesFor(dataset, run, unit.id, 'a')
+      expect(choices.every((choice) => choice.unit.gender === unit.gender && !choice.unit.isCorrin)).toBe(true)
+    }
+  })
+
+  it('never offers or honours the S partner as A+', () => {
+    const odin = dataset.units.find((unit) => unit.name === 'Odin')!
+    const niles = dataset.units.find((unit) => unit.name === 'Niles')!
+    let run = setBond(makeRun(), odin.id, 'aPlusPartner', niles.id)
+    expect(unitContext(dataset, run, odin.id)!.aPlusPartner?.id).toBe(niles.id)
+    run = setBond(run, odin.id, 'sPartner', niles.id)
+    expect(candidatesFor(dataset, run, odin.id, 'a').some((choice) => choice.unit.id === niles.id)).toBe(false)
+    expect(unitContext(dataset, run, odin.id)!.aPlusPartner).toBeUndefined()
+  })
+
   it('only shares A+ ranks within a generation (owner rule)', () => {
     const run = makeRun()
     const ryoma = dataset.units.find((unit) => unit.name === 'Ryoma')!

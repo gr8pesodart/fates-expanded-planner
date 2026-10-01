@@ -34,6 +34,19 @@ export function sameGeneration(a: UnitDef, b: UnitDef | undefined): boolean {
   return b !== undefined && (a.fixedParent === null) === (b.fixedParent === null)
 }
 
+/**
+ * Whether `unit` can take `donor` as its A+ partner. The game stores one 4th-rank threshold per
+ * pair and reads it as A+ for same-gender pairs (S otherwise); a locked 4th rank caps the pair at A,
+ * which is why siblings never reach A+. Owner rules on top: same generation only, never the unit's
+ * S partner, and Corrin neither gives nor takes A+.
+ */
+export function aPlusEligible(dataset: Dataset, unit: UnitDef, donor: UnitDef | undefined, sPartnerId: string | undefined): donor is UnitDef {
+  if (!donor || donor.id === unit.id || unit.isCorrin || donor.isCorrin) return false
+  if (donor.gender !== unit.gender || donor.id === sPartnerId || !sameGeneration(unit, donor)) return false
+  return (dataset.edgesByCharacter.get(unit.id) ?? []).some((edge) =>
+    (edge.a === donor.id || edge.b === donor.id) && edge.info.ranks.a !== null && edge.info.ranks.s !== null)
+}
+
 export function displayName(unit: UnitDef): string {
   return unit.isCorrin ? 'Corrin' : unit.name.replace(/\s*\((M|F)\)$/, '')
 }
@@ -97,9 +110,9 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
   const plan = unitPlanFor(run, unitId)
   const variableParent = partner(dataset, variableParentOf(dataset, run, unitId))
   const sPartner = partner(dataset, plan.sPartner)
-  // A+ ranks are only shared within a generation; a stale cross-generation pick grants nothing.
+  // A stale pick that's no longer eligible (e.g. since married) grants nothing.
   const aPlusCandidate = partner(dataset, plan.aPlusPartner)
-  const aPlusPartner = sameGeneration(unit, aPlusCandidate) ? aPlusCandidate : undefined
+  const aPlusPartner = aPlusEligible(dataset, unit, aPlusCandidate, plan.sPartner) ? aPlusCandidate : undefined
   const rosterIds = new Set(armyUnits(dataset, run).map((entry) => entry.id))
   // Corrin's Friendship Seal partners: the planned ones that are still eligible (same gender, can
   // reach A, on this roster). A gender switch or route change quietly drops the rest.
