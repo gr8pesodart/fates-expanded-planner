@@ -97,7 +97,10 @@ sits at ~0.5–1.1× its FaceData colour's lightness.
 Portraits still use overlay. The Parents tab draws the child with each candidate's colour (`hair` prop).
 Corrin's swatches: ROM `GameData/MyUnitEdit.bin.lz` › `カラーテーブル` (30 × RGBA) →
 `sprites.json › corrinHairColours` (`corrin_hair_swatches`). Animation timing: every `ClassSprite`
-reads one shared 60 fps clock (`art.tsx › frameAt`), so sprites stay in step and join mid-cycle.
+reads one shared clock at its class's native loop length (`art.tsx › frameAt`), so sprites sharing a
+loop length restart together and copies of a class stay in step; different lengths drift (owner
+ruling — a single stretched 64-tick cycle was tried and dropped). Loop lengths follow the sprite sheet
+/ class line, not movement type (e.g. pegasi 52, wyverns 58, horses 60, Samurai M 68 vs F 46).
 
 Recorded wrong readings (do not revive): (a) "brighter = closer, head wins ties" drew Corrin (F)'s
 `0xEE` hair over her body; (b) treating every value as a per-pixel priority with head-wins ties still

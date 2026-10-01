@@ -127,7 +127,10 @@ areas may extend past the visible chip.
   track). A path that never leaves a base class dims the whole listing to 40% (no stat colouring)
   except its open button.
 - **Favourites**: the Roster / Chart / character-header favourite is a **heart** (v3.3); stars are
-  reserved for class favourites (Profile) and parent favourites (Parents tab).
+  reserved for class favourites (Profile), parent favourites (Parents tab) and skill favourites
+  (picker). Hearts and stars use the route accent (`--accent`), white on dark fills.
+- **Switches** (every toggle, incl. the Mods checklist): a 56×30 pill with "ON" / "OFF" in the space
+  beside a white knob; `--accent` when on, `--ink-3` when off; the knob slides over 200ms.
 - **Row** (padding 12/10, `--line` bottom border). Left side: PortraitChip 32, ClassSprite, name,
   and a favourite star (filled `--ink` / outline `--ink-3`; tap toggles). The sprite has no chip
   background and opens the class popup. Right side, gap 6: the S, A+ and pair-up RelationSlots
@@ -381,17 +384,26 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
   S and A+ show the "Gains *Class*" line under each candidate.
 - **Class popup**: classes available to the unit, grouped by source (Own, Parent, Partner Seal,
   Friendship Seal, Talent, DLC) as sprite + name rows. The current class has an accent check.
-- **Skill picker** (equip slots): every skill the unit could hold in this run — including ones
-  needing a relationship that isn't set; gender-locked and route-locked classes and skills no
-  possible partner provides are left out. Medium (17/700) group headings in order: **In
-  progression**, **Not in progression**, **Inheritable only** (children), **Not accessible**. Within
-  each group (group headings stick to the top of the sheet while their group scrolls), small headings per teaching class with its ClassSprite and a collapse chevron
-  (collapsed state saved per unit). Each class heading has **one** grey notice under it (class
-  name, no level; the inheritable one reads "Only inheritable from *Parent*: *Class*"), listing every
-  way in across its skills — acquisition guidance only, so "Not in progression" classes get none; the
-  skill cards themselves only carry their learn level ("Lv 10") as a tag. Classes that only a
-  *combination* opens list it as "Only together: S *Jakob* & A+ *Elise*". A skill
-  equipped in another slot is muted ("Equipped · tap to swap") and picking it swaps the two slots.
+- **Skill picker** (equip slots): a fixed-height sheet (88dvh) with a filter button beside close and
+  an underline tab rail under the title — **Starred**, **Grouped** (default), **Ungrouped** —
+  swipeable like the Roster's lenses.
+  - Every skill in the game appears: groups in order **In progression**, **Not in progression**,
+    **Inheritable only** (children), **Requires support** (an S / A+ / A partner or another second
+    parent; combinations shown "Only together: S *Jakob* & A+ *Elise*", minimal ones only) and **Not
+    accessible** (nothing in this run gives it — no reason shown; DLC classes are left out entirely
+    while DLC is off).
+  - *Grouped*: medium headings that stick to the top of the sheet (a 1px `--line` bottom border fades
+    in once pinned), then each **class** whole in its own status, with sprite and an animated
+    collapse chevron (collapsed state per unit) — so a skill two classes teach (Locktouch: Outlaw and
+    Ninja) is listed under both. One grey guidance notice under each class heading (none for In / Not
+    in progression); cards carry only "Lv N".
+  - *Ungrouped*: one list, each card with the Profile's coloured notice. *Starred*: the unit's starred
+    skills, same coloured notices.
+  - Every card has a star at its right edge, in line with the icon and name (per unit); notices span
+    the card's full inner width. A skill equipped in another slot is muted
+    ("Equipped · tap to swap"); picking it swaps the slots.
+  - Filter menu: "S rank flexible" and "A+ rank flexible" ("A rank flexible" for Corrin); switching
+    one off treats new relationships of that kind as unavailable.
   The inherit-slot pickers keep the simple list of that parent's inheritable skills.
 
 ## Desktop (≥ 1024px; the mock is mobile-only)

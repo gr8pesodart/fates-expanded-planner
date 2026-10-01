@@ -5,8 +5,6 @@ import { Toaster } from './components/Sheet'
 import { sectionOf, useRoute } from './lib/router'
 import type { AppRoute } from './lib/router'
 import { CharacterPage } from './screens/CharacterScreen'
-import { ChartScreen } from './screens/ChartScreen'
-import { NewRunScreen } from './screens/NewRunScreen'
 import { RosterScreen } from './screens/RosterScreen'
 import type { RunPlan } from './state/model'
 import { decodeSharedRun } from './state/serialization'
@@ -15,6 +13,8 @@ import { useActiveRun, usePlansStore } from './state/store'
 // Split out of the main chunk: sheets open on demand and Runs is visited rarely.
 const Pickers = lazy(() => import('./app/pickers').then((module) => ({ default: module.Pickers })))
 const RunsScreen = lazy(() => import('./screens/RunsScreen').then((module) => ({ default: module.RunsScreen })))
+const ChartScreen = lazy(() => import('./screens/ChartScreen').then((module) => ({ default: module.ChartScreen })))
+const NewRunScreen = lazy(() => import('./screens/NewRunScreen').then((module) => ({ default: module.NewRunScreen })))
 
 const DESKTOP = '(min-width: 1024px)'
 
@@ -36,11 +36,11 @@ function Loading() {
 function Section({ route }: { route: AppRoute }) {
   switch (route.name) {
     case 'chart':
-      return <ChartScreen />
+      return <Suspense fallback={<Loading />}><ChartScreen /></Suspense>
     case 'runs':
       return <Suspense fallback={<Loading />}><RunsScreen /></Suspense>
     case 'new-run':
-      return <NewRunScreen />
+      return <Suspense fallback={<Loading />}><NewRunScreen /></Suspense>
     default:
       return <RosterScreen />
   }
@@ -72,11 +72,11 @@ function MobileMain({ route, backdrop }: { route: AppRoute; backdrop: AppRoute }
 function DesktopMain({ route }: { route: AppRoute }) {
   switch (route.name) {
     case 'chart':
-      return <ChartScreen />
+      return <Suspense fallback={<Loading />}><ChartScreen /></Suspense>
     case 'runs':
       return <Suspense fallback={<Loading />}><RunsScreen /></Suspense>
     case 'new-run':
-      return <NewRunScreen />
+      return <Suspense fallback={<Loading />}><NewRunScreen /></Suspense>
     case 'unit':
       return (
         <div className="two-pane">
@@ -117,12 +117,12 @@ export default function App() {
     <div className="app" data-route={shownRun.route} data-shared={sharedRun ? '' : undefined}>
       <PlannerProvider sharedRun={sharedRun} fallback={<Loading />}>
         {firstRun ? (
-          <main className="main"><NewRunScreen first /></main>
+          <main className="main"><Suspense fallback={<Loading />}><NewRunScreen first /></Suspense></main>
         ) : (
           <>
             {sharedRun ? null : <Nav section={sectionOf(route)} />}
             <main className="main">
-              {sharedRun ? <ChartScreen /> : desktop ? <DesktopMain route={route} /> : <MobileMain route={route} backdrop={backdrop} />}
+              {sharedRun ? <Suspense fallback={<Loading />}><ChartScreen /></Suspense> : desktop ? <DesktopMain route={route} /> : <MobileMain route={route} backdrop={backdrop} />}
             </main>
             <Suspense fallback={null}><Pickers /></Suspense>
           </>

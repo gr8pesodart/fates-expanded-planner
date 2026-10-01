@@ -231,7 +231,12 @@ The current planner therefore does not include inherited support rows in child p
   (and, from an overlapping pair, triples) whose single gains share a base class can fall back, so
   only those are evaluated; `npm run audit:skills` (`tools/audit/skillCombos.audit.ts`) brute-forces
   every second parent × S × A+ combination (Corrin: S × up to two A-rank partners) on every route
-  and both Corrins and must report 0 unlisted skills (it reports 128 with combinations disabled). Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
+  and both Corrins and must report 0 unlisted skills (it reports 128 with combinations disabled).
+  Only minimal combinations are kept (Corrin's Archer: A Midori & A Mozu — Mozu's Villager can't be
+  sealed so she gives Apothecary, which Midori already gives — not also S Kaze & A Midori & A Mozu).
+  Everything else is **unavailable**, by class (no reason given; DLC classes are omitted while DLC is
+  off). Classes are also tracked on their own (`ClassAccess`: a class's first status and
+  ways in), which the picker's Grouped view lists whole. Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
   else; skills nothing in the run gives are not listed.
 - **Progression** — join class/level from `recruitment.json` (falls back to the primary base class
   at Lv 1). A character's own level cap (GameData +134, `units.json › levelCap`) raises promoted

@@ -53,7 +53,9 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   parent favourites, integer-scaled skill icons, compact inheritable notices in the picker.
   Skill access now covers relationship combinations (duplicate-branch fallbacks), checked by
   `npm run audit:skills`; picker notices sit under the class headings. Corrin's hair swatches come
-  from the ROM (`MyUnitEdit.bin` colour table); sprite animations share one clock.
+  from the ROM (`MyUnitEdit.bin` colour table); sprite animations share one clock at native
+  loop lengths (same-length loops in sync). Skill picker v2: Starred / Grouped / Ungrouped tabs, stars, S / A+ filters, Requires
+  relationship + Not accessible groups, classes listed whole (shared skills under each class).
 
 ### Backlog
 

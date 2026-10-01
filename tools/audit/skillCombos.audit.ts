@@ -84,7 +84,8 @@ it('lists every skill any combination of relationships can teach', async () => {
         const listed = skillAccess(dataset, run, ctx).byId
         for (const [skillId, how] of reachableSkills(dataset, run, unit, roster)) {
           checked += 1
-          if (!listed.has(skillId)) gaps.push(`${route.id} · ${unit.name}: ${dataset.skillsById.get(skillId)?.name ?? skillId} (via ${how})`)
+          const group = listed.get(skillId)?.group
+          if (group === undefined || group === 'unavailable') gaps.push(`${route.id} · ${unit.name}: ${dataset.skillsById.get(skillId)?.name ?? skillId} (via ${how})`)
         }
       }
     }

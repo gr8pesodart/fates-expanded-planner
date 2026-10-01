@@ -85,6 +85,14 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   accessible" (`--bad-tint/-ink`) with Via S / A+ (Corrin: A) / Parent portraits and "Can be inherited
   from". `grey` in the skill picker (owner: the group headings already carry the colour meaning).
 - `SkillCard muted`: dimmed but tappable (picker: equipped in another slot → picking swaps slots).
+- Skill picker (`app/pickers.tsx › EquipSkillPicker`): `Sheet toolbar` = tab Rail (Starred / Grouped /
+  Ungrouped, `ui.skillPickerTab`), swipe via `useSwipePager` on `.skill-pick-body` + `SlideSwap`;
+  stars outside the card button (`.pick-skill`); `SkillFilterMenu` popover in `Sheet actions`. Sticky
+  group headings sit 1px above the body edge; `useStuckHeadings` marks pinned ones from a scroll
+  listener — not IntersectionObserver: the full-bleed headings are never fully inside the body, so
+  pinned and unpinned ratios fall between the same thresholds. Class bodies collapse by animating
+  `grid-template-rows` 0fr↔1fr (always rendered, `inert` when closed). Sheets are fixed at 88dvh when
+  they hold the picker. Chart, New Run, Runs and pickers are lazy chunks (main bundle limit).
 - Chart tabs (`ui.chartTab`): Full / Skills / Progression / Skills + Pair Up; `partsFor(tab, role)`
   decides skills / class path (`progression.ts › routeSteps`) / effective pair-up table per row. The
   swap button lives in a zero-height `.chart-swap` between the rows so uneven rows don't misplace it.
@@ -99,8 +107,11 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Linked pair-up partners on the Roster get the Chart's swap button on the line between them.
 - Route cards: standard 1px border tinted with the route accent — a coloured left border is banned.
 - v3.3 rulings: Roster/Chart/header favourite = **heart** (`StarButton heart`); stars only for class
-  favourites (`UnitPlan.favouriteClasses`) and per-child parent favourites (`favouriteParents`, listed
-  first on the Parents tab). Skill icons at 1× (24px) everywhere, SkillCards included (`SkillIcon` snaps to multiples of 24).
+  favourites (`UnitPlan.favouriteClasses`), per-child parent favourites (`favouriteParents`, listed
+  first on the Parents tab) and picker skill favourites (`favouriteSkills`). Hearts and stars are
+  `--accent` (white via `light` on dark fills). Every toggle is `controls.tsx › Switch` (role=switch
+  button with ON/OFF text) — no native checkboxes. Picker group "Requires support" (not
+  "relationship"); filter labels "S rank flexible" / "A+ rank flexible". Skill icons at 1× (24px) everywhere, SkillCards included (`SkillIcon` snaps to multiples of 24).
   Expected Final Stats dims non-promoting rows (whole row but the open button). Hair swatches: 10×3
   rounded squares, 6px gap, default = swatch 1 (white). Sheets are portalled to `.app` (the tab
   strip's transform would trap `position: fixed`).

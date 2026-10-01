@@ -2,7 +2,7 @@ import { usePlanner } from '../app/plannerContext'
 import type { UnitDef } from '../data/types'
 import { displayName } from '../logic/army'
 import { classFamily } from '../logic/classes'
-import type { RelationChange, SkillAccess } from '../logic/skillAccess'
+import type { AccessNotice, RelationChange } from '../logic/skillAccess'
 import { Portrait } from './art'
 import { Icon } from './icons'
 
@@ -12,14 +12,14 @@ import { Icon } from './icons'
  * skill picker shows one grey notice per class heading (`perClass`: no level), since its group
  * headings already say it.
  */
-export function SkillNotice({ access, grey = false, corrin = false, perClass = false }: { access: SkillAccess; grey?: boolean; corrin?: boolean; perClass?: boolean }) {
+export function SkillNotice({ access, grey = false, corrin = false, perClass = false }: { access: AccessNotice; grey?: boolean; corrin?: boolean; perClass?: boolean }) {
   const { dataset, run } = usePlanner()
   if (access.group === 'progression') return null
   const def = access.classId !== null ? dataset.classesById.get(access.classId) : undefined
   const where = def ? `${classFamily(def.name)}${access.level !== null && !perClass ? ` Lv ${access.level}` : ''}` : null
   const roleLabel = (change: RelationChange) => change.role === 's' ? 'S' : change.role === 'parent' ? 'Parent' : corrin ? 'A' : 'A+'
   const names = (units: UnitDef[]) => units.map((unit) => displayName(unit, run)).join(', ')
-  const tone = grey ? 'grey' : access.group === 'locked' ? 'bad' : 'warn'
+  const tone = grey ? 'grey' : access.group === 'locked' || access.group === 'unavailable' ? 'bad' : 'warn'
   // The picker's compact form (owner): "Only inheritable from Ryoma: Sky Knight Lv 1".
   if (grey && access.group === 'inheritable') {
     return (
@@ -33,7 +33,8 @@ export function SkillNotice({ access, grey = false, corrin = false, perClass = f
   }
   const lead = access.group === 'available' ? 'Not in progression'
     : access.group === 'inheritable' ? 'Only inheritable'
-      : 'Not accessible'
+      : access.group === 'locked' ? 'Requires support'
+        : 'Not accessible'
   const faces: { label: string; units: UnitDef[] }[] = access.group === 'locked' ? [
     { label: 'Via S Rank', units: access.viaS },
     { label: corrin ? 'Via A Rank' : 'Via A+ Rank', units: access.viaA },

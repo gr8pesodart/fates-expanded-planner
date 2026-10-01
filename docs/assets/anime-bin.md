@@ -67,6 +67,11 @@ their hair/cape snaps from cell 3 back to 0. That is what their `anime.bin` keyf
 into `src/data/sprites.json`; the same decoder reads Swordmaster's six-step ping-pong), so mirror it
 only if an in-game capture shows otherwise.
 
+The app plays every idle loop at its native length on one shared clock (`src/components/art.tsx ›
+frameAt`): sprites with the same loop length restart together and copies of a class stay in step;
+lengths range 40–134 ticks and follow the sprite sheet / class line rather than movement type
+(pegasi 52, wyverns 58, horses 60, mages / Nobles / Butler 74, Samurai M 68 vs F 46).
+
 - Body cells 0–3: source x `0/32/64/96`, y `0`, each 32×32. Cell 0 is the pose the old v1/v2
   class sprites shipped.
 - Head (foot classes): source x `0/32/64/96`, y `0`, each 32×32.

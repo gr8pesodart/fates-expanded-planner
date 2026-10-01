@@ -73,8 +73,10 @@ function useInViewport(ref: { current: HTMLSpanElement | null }): boolean {
   return visible
 }
 
-// One clock for every sprite, like the game's frame counter: sprites idle in step, and one that
-// scrolls into view (or re-mounts) joins mid-cycle instead of restarting from its first pose.
+// One clock for every sprite, at each class's own loop length (40–134 game frames): sprites whose
+// loops share a length restart together, and every copy of a class stays in step. Different
+// lengths drift relative to each other, as in the game (owner preferred this to stretching every
+// loop to one cycle). A sprite that scrolls into view joins mid-cycle instead of restarting.
 const CLOCK_EPOCH = performance.now()
 const TICK_MS = 1000 / 60
 

@@ -63,6 +63,40 @@ describe('skillAccess', () => {
       && combo.some((change) => change.role === 'a' && change.unit.name === 'Elise'))).toBe(true)
   })
 
+  it('keeps only minimal combinations: Corrin gets Archer from A Midori & A Mozu, not also with Kaze', () => {
+    const run: RunPlan = { ...emptyRun('t'), route: 'conquest' }
+    const archerSkill = skillAccess(dataset, run, unitContext(dataset, run, CORRIN_F)!).list
+      .find((item) => item.classId !== null && dataset.classesById.get(item.classId)?.name.startsWith('Archer'))
+    expect(archerSkill?.viaCombo.length).toBeGreaterThan(0)
+    for (const combo of archerSkill!.viaCombo) {
+      for (const other of archerSkill!.viaCombo) {
+        if (combo === other) continue
+        expect(combo.every((change) => other.some((item) => item.role === change.role && item.unit === change.unit))).toBe(false)
+      }
+    }
+  })
+
+  it('lists a skill under every class that teaches it (Locktouch: Outlaw and Ninja)', () => {
+    const run: RunPlan = { ...emptyRun('t'), route: 'conquest' }
+    const kaze = dataset.units.find((unit) => unit.name === 'Kaze')!
+    const classes = skillAccess(dataset, run, unitContext(dataset, run, kaze.id)!).classes
+    const teaching = classes.filter((record) => record.skills.some((item) => item.skillId === skillId('Locktouch')))
+      .map((record) => dataset.classesById.get(record.classId!)!.name.replace(/ \((M|F)\)$/, ''))
+    expect(teaching).toEqual(expect.arrayContaining(['Ninja', 'Outlaw']))
+  })
+
+  it('puts everything else under Not accessible (no DLC classes while DLC is off) and honours the S / A+ filters', () => {
+    const run: RunPlan = { ...emptyRun('t'), route: 'conquest' }
+    const ctx = unitContext(dataset, run, CORRIN_F)!
+    const all = skillAccess(dataset, run, ctx)
+    expect(all.classes.some((record) => record.group === 'unavailable' && dataset.classesById.get(record.classId!)?.name.startsWith('Hoshido Noble'))).toBe(true)
+    const noDlc: RunPlan = { ...run, dlc: false }
+    expect(skillAccess(dataset, noDlc, unitContext(dataset, noDlc, CORRIN_F)!).classes.some((record) => record.classId !== null && dataset.classesById.get(record.classId)?.dlc)).toBe(false)
+    const noS = skillAccess(dataset, run, ctx, { s: false, a: true })
+    expect(noS.list.some((item) => item.group === 'locked' && item.viaS.length)).toBe(false)
+    expect(noS.list.filter((item) => item.group === 'unavailable').length).toBeGreaterThan(all.list.filter((item) => item.group === 'unavailable').length)
+  })
+
   it('lists a child\'s parent-only skills as inheritable, from a current parent', () => {
     const run = corrinRun()
     for (const unit of armyUnits(dataset, run).filter((item) => item.fixedParent !== null)) {

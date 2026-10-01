@@ -72,6 +72,8 @@ export interface UnitPlan {
   favouriteClasses?: number[]
   /** Children: starred second-parent candidates, listed first on the Parents tab. */
   favouriteParents?: string[]
+  /** Starred skills, shown in the skill picker's Starred tab. */
+  favouriteSkills?: number[]
 }
 
 export interface RunPlan {

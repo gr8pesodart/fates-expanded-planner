@@ -5,11 +5,13 @@ import { Icon } from './icons'
 import { useToast } from './toast'
 
 /** Bottom sheet on phones, centred dialog on desktop. Escape and the scrim close it. */
-export function Sheet({ title, onClose, children, actions, wide = false, closing = false }: {
+export function Sheet({ title, onClose, children, actions, toolbar, wide = false, closing = false }: {
   title: string
   onClose(): void
   children: ReactNode
   actions?: ReactNode
+  /** Fixed under the title (e.g. tabs); the body scrolls beneath it. */
+  toolbar?: ReactNode
   wide?: boolean
   closing?: boolean
 }) {
@@ -47,6 +49,7 @@ export function Sheet({ title, onClose, children, actions, wide = false, closing
           {actions}
           <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Icon name="close" size={22} /></button>
         </div>
+        {toolbar ? <div className="sheet-toolbar">{toolbar}</div> : null}
         <div className="sheet-body">{children}</div>
       </div>
     </div>,

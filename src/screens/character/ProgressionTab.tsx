@@ -43,7 +43,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const access = useMemo(() => skillAccess(dataset, run, ctx), [dataset, run, ctx])
   const equipped = ctx.plan.skills.filter((id): id is number => id !== null).map((id) => access.byId.get(id) ?? unreachableSkill(id))
   // Equipped skills the planned path doesn't teach, and (children) ones still to be inherited.
-  const offPath = equipped.filter((item) => item.group === 'available' || item.group === 'locked')
+  const offPath = equipped.filter((item) => item.group === 'available' || item.group === 'locked' || item.group === 'unavailable')
   const toInherit = equipped.filter((item) => item.group === 'inheritable')
 
   /** Applies a plan change, then removes reclasses the new path can no longer reach. */

@@ -114,6 +114,17 @@ export function toggleFavouriteClass(run: RunPlan, unitId: string, classId: numb
   }
 }
 
+/** Starred skills are per unit and make up the skill picker's Starred tab. */
+export function toggleFavouriteSkill(run: RunPlan, unitId: string, skillId: number): RunPlan {
+  return {
+    ...run,
+    units: edit(run.units, unitId, ({ favouriteSkills = [], ...plan }) => {
+      const next = favouriteSkills.includes(skillId) ? favouriteSkills.filter((id) => id !== skillId) : [...favouriteSkills, skillId]
+      return next.length ? { ...plan, favouriteSkills: next } : plan
+    }),
+  }
+}
+
 /** Starred second-parent candidates are per child and listed first on the Parents tab. */
 export function toggleFavouriteParent(run: RunPlan, childId: string, parentId: string): RunPlan {
   return {

@@ -93,14 +93,19 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 ## Skill access — `skillAccess.ts` (tests: `skillAccess.test.ts`)
 
-- Groups, in picker order: progression (learned on the planned path / chosen inherited) → available
+- Groups, in picker order (UI: In progression / Not in progression / Inheritable only / Requires
+  relationship / Not accessible): progression (learned on the planned path / chosen inherited) → available
   (current pool + DLC classes) → inheritable (a current parent's inheritable pool) → locked (each
   roster S partner / A+ partner / Corrin A-rank partner / other second parent tried one at a time on
   top of the current plan, plus those parents' inheritable pools). Never lists the unit's personal
   skill; skills nothing in the run gives are omitted. Combinations are evaluated where the single
   gains share a base class (duplicate-branch fallback; `viaCombo`, shown "Only together: S X & A+ Y").
   **Run `npm run audit:skills` after touching `classPool` or `skillAccess`** — it brute-forces every
-  combination and must find 0 gaps. Results are cached per run object (plans are immutable).
+  combination and must find 0 gaps. Results are cached per run object + filters (plans are immutable).
+  Combinations are kept minimal (no superset of a working combination). `unavailable` covers the rest
+  (owner: no reasons; DLC classes left out while DLC is off). `classes` (per-class status + ways) drives the picker's Grouped view so a skill shows
+  under every class teaching it (owner: Locktouch under Outlaw and Ninja). `SkillFilters` (picker
+  toggles) drop new S or A+ candidates from the analysis.
 
 ## Hair colour — `hair.ts › hairColourOf` (tests: `hair.test.ts`)
 

@@ -112,3 +112,17 @@ export function SectionHeader({ title, children }: { title: string; children?: R
     </div>
   )
 }
+
+/**
+ * The app's only toggle (owner, v3.3): a pill with ON / OFF in the space beside the knob, route
+ * accent when on, muted grey when off. Inside a <label>, the label text names it and toggles it.
+ */
+export function Switch({ checked, onChange, disabled, label }: { checked: boolean; onChange(checked: boolean): void; disabled?: boolean; label?: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} className="switch" disabled={disabled} onClick={() => onChange(!checked)}>
+      <span className="switch-text switch-on" aria-hidden="true">ON</span>
+      <span className="switch-text switch-off" aria-hidden="true">OFF</span>
+      <span className="switch-knob" aria-hidden="true" />
+    </button>
+  )
+}

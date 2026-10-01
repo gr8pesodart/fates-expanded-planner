@@ -5,7 +5,8 @@ import { corrinBuild } from '../state/model'
 import type { UnitContext } from './army'
 import { aPlusEligible, armyUnits, classOnRoute, personalSkill, unitContext } from './army'
 import type { ClassPoolEntry } from './classes'
-import { baseOfClass, classPool } from './classes'
+import { baseOfClass, classPool, sexedClassId } from './classes'
+import { playableClassIds } from './lenses'
 import { buildProgression, dlcClassesFor } from './progression'
 import { inheritableSkillPool } from './skills'
 import { fixedParentIsCorrin } from './stats'
@@ -16,14 +17,23 @@ import { fixedParentIsCorrin } from './stats'
  *  - available:   a class the unit can take now teaches it, but the plan doesn't reach it
  *  - inheritable: only a current parent can pass it on (second generation)
  *  - locked:      needs a relationship the plan doesn't have (S, A+ / A, another parent)
- * Skills no relationship in this run could ever give the unit are not listed at all.
+ *  - unavailable: nothing in this run gives it (another route, no partner provides it); DLC classes are
+ *                 left out entirely while DLC is off
  */
-export type SkillGroup = 'progression' | 'available' | 'inheritable' | 'locked'
+export type SkillGroup = 'progression' | 'available' | 'inheritable' | 'locked' | 'unavailable'
 
-export const SKILL_GROUP_ORDER: readonly SkillGroup[] = ['progression', 'available', 'inheritable', 'locked']
+export const SKILL_GROUP_ORDER: readonly SkillGroup[] = ['progression', 'available', 'inheritable', 'locked', 'unavailable']
 
-export interface SkillAccess {
-  skillId: number
+/** Picker filters: whether new S / A+ (Corrin: A) relationships count as a way in. */
+export interface SkillFilters {
+  s: boolean
+  a: boolean
+}
+
+export const ALL_WAYS: SkillFilters = { s: true, a: true }
+
+/** What a notice needs: the status, the class (and level) and every way in. */
+export interface AccessNotice {
   group: SkillGroup
   /** The class that teaches it (for inheritable skills: the parent's class), when known. */
   classId: number | null
@@ -39,6 +49,19 @@ export interface SkillAccess {
   inheritFrom: UnitDef[]
 }
 
+/** A skill's best status for the unit (the Profile, Progression, and the picker's flat lists). */
+export interface SkillAccess extends AccessNotice {
+  skillId: number
+}
+
+/**
+ * A class's own status and ways in, with every skill it teaches — the picker's Grouped view lists
+ * each class whole, so a skill several classes teach (Locktouch: Outlaw and Ninja) shows under each.
+ */
+export interface ClassAccess extends AccessNotice {
+  skills: { skillId: number; level: number | null }[]
+}
+
 /** One relationship different from the plan: an S partner, an A+ (Corrin: A-rank) partner or a second parent. */
 export interface RelationChange {
   role: 's' | 'a' | 'parent'
@@ -49,6 +72,8 @@ export interface SkillAccessMap {
   /** Every listed skill, grouped then in class order. */
   list: SkillAccess[]
   byId: Map<number, SkillAccess>
+  /** Every class with something to list, grouped then in discovery order (classId null: chosen inherited skills). */
+  classes: ClassAccess[]
 }
 
 function learnset(dataset: Dataset, classId: number): { id: number; level: number }[] {
@@ -57,40 +82,25 @@ function learnset(dataset: Dataset, classId: number): { id: number; level: numbe
 
 /** An equipped skill no relationship in this run can give (e.g. after a route change). */
 export function unreachableSkill(skillId: number): SkillAccess {
-  return { skillId, group: 'locked', classId: null, level: null, viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [] }
-}
-
-/** One notice for a class heading in the picker: the class, and every way in across its skills. */
-export function classNotice(items: readonly SkillAccess[]): SkillAccess {
-  const union = <T,>(pick: (item: SkillAccess) => T[]) => [...new Set(items.flatMap(pick))]
-  const combos = new Map<string, RelationChange[]>()
-  for (const combo of items.flatMap((item) => item.viaCombo)) combos.set(combo.map((change) => `${change.role}:${change.unit.id}`).sort().join('+'), combo)
-  return {
-    ...items[0],
-    level: null,
-    viaS: union((item) => item.viaS),
-    viaA: union((item) => item.viaA),
-    viaParent: union((item) => item.viaParent),
-    viaCombo: [...combos.values()],
-    inheritFrom: union((item) => item.inheritFrom),
-  }
+  return { skillId, group: 'unavailable', classId: null, level: null, viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [] }
 }
 
 // Plans are immutable, so a run object identifies one state: the Profile, Progression and picker
 // share one computation per unit per change (Corrin's is the heaviest, ~40ms on desktop).
 const cache = new WeakMap<RunPlan, Map<string, SkillAccessMap>>()
 
-export function skillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): SkillAccessMap {
+export function skillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, filters: SkillFilters = ALL_WAYS): SkillAccessMap {
   let perRun = cache.get(run)
   if (!perRun) cache.set(run, (perRun = new Map()))
-  const cached = perRun.get(ctx.unit.id)
+  const key = `${ctx.unit.id}|${filters.s ? 's' : ''}${filters.a ? 'a' : ''}`
+  const cached = perRun.get(key)
   if (cached) return cached
-  const result = computeSkillAccess(dataset, run, ctx)
-  perRun.set(ctx.unit.id, result)
+  const result = computeSkillAccess(dataset, run, ctx, filters)
+  perRun.set(key, result)
   return result
 }
 
-function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): SkillAccessMap {
+function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, filters: SkillFilters): SkillAccessMap {
   const byId = new Map<number, SkillAccess>()
   const order: SkillAccess[] = []
   const personal = personalSkill(ctx.unit, run)
@@ -106,19 +116,39 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): S
     order.push(access)
     return access
   }
+  // Classes keep their own (first, i.e. best) status, whatever their skills' best status is.
+  const classes = new Map<string, ClassAccess>()
+  const cls = (classId: number | null, group: SkillGroup, skills?: { skillId: number; level: number | null }[]): ClassAccess | null => {
+    const key = String(classId ?? 'inherited')
+    const existing = classes.get(key)
+    if (existing) return existing.group === group ? existing : null
+    const own = skills ?? (classId === null ? [] : learnset(dataset, classId).map((item) => ({ skillId: item.id, level: item.level })))
+    const record: ClassAccess = { group, classId, level: null, skills: own.filter((item) => item.skillId !== personal), viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [] }
+    classes.set(key, record)
+    return record
+  }
   const levelIn = (classId: number, skillId: number) => learnset(dataset, classId).find((item) => item.id === skillId)?.level ?? null
 
   // 1. On the planned path, plus skills already chosen to inherit.
   const progression = buildProgression(dataset, run, ctx)
   const learned = [...progression.startsWith, ...progression.segments.flatMap((segment) => segment.rows.flatMap((row) => row.learned))]
-  for (const item of learned) entry(item.skillId, 'progression', item.classId, levelIn(item.classId, item.skillId))
+  for (const item of learned) {
+    entry(item.skillId, 'progression', item.classId, levelIn(item.classId, item.skillId))
+    cls(item.classId, 'progression')
+  }
   for (const skillId of [ctx.plan.inheritFixedSkill, ctx.plan.inheritSkill]) {
-    if (skillId !== undefined) entry(skillId, 'progression', null, null)
+    if (skillId === undefined) continue
+    entry(skillId, 'progression', null, null)
+    const inherited = cls(null, 'progression')
+    if (inherited && !inherited.skills.some((item) => item.skillId === skillId)) inherited.skills.push({ skillId, level: null })
   }
 
   // 2. Classes open to the unit right now.
   const current = [...new Set([ctx.start.classId, ...ctx.pool.map((item) => item.classId), ...(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender).map((def) => def.id) : [])])]
-  for (const classId of current) for (const item of learnset(dataset, classId)) entry(item.id, 'available', classId, item.level)
+  for (const classId of current) {
+    cls(classId, 'available')
+    for (const item of learnset(dataset, classId)) entry(item.id, 'available', classId, item.level)
+  }
 
   // 3. Only a current parent can pass it on.
   const fixedParent = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
@@ -129,6 +159,10 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): S
     for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) {
       const access = entry(item.skillId, 'inheritable', item.classId ?? null, item.level ?? null)
       if (access && !access.inheritFrom.includes(parent)) access.inheritFrom.push(parent)
+      const record = item.classId === undefined ? null : cls(item.classId, 'inheritable', [])
+      if (!record) continue
+      if (!record.skills.some((skill) => skill.skillId === item.skillId)) record.skills.push({ skillId: item.skillId, level: item.level ?? null })
+      if (!record.inheritFrom.includes(parent)) record.inheritFrom.push(parent)
     }
   }
 
@@ -151,8 +185,8 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): S
     .filter((unit): unit is UnitDef => unit !== undefined && onRoster.has(unit.id))
 
   const candidates: RelationChange[] = [
-    ...partners('romantic').filter((unit) => unit.id !== ctx.sPartner?.id).map((unit) => ({ role: 's' as const, unit })),
-    ...(ctx.unit.isCorrin
+    ...(filters.s ? partners('romantic') : []).filter((unit) => unit.id !== ctx.sPartner?.id).map((unit) => ({ role: 's' as const, unit })),
+    ...(!filters.a ? [] : ctx.unit.isCorrin
       // Corrin's Friendship Seal: any same-gender A-rank partner who isn't Corrin's spouse.
       ? partners('a-rank').filter((unit) => unit.gender === ctx.unit.gender && unit.id !== ctx.sPartner?.id && !ctx.friendshipPartners.includes(unit))
       : roster.filter((unit) => unit.id !== ctx.aPlusPartner?.id && aPlusEligible(dataset, ctx.unit, unit, ctx.sPartner?.id))
@@ -188,6 +222,8 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): S
   const singles = candidates.map((change) => {
     const classIds = gainedBy([change])
     for (const classId of classIds) {
+      const record = cls(classId, 'locked')
+      if (record && !record[LIST[change.role]].includes(change.unit)) record[LIST[change.role]].push(change.unit)
       for (const item of learnset(dataset, classId)) {
         const access = entry(item.id, 'locked', classId, item.level)
         if (access && !access[LIST[change.role]].includes(change.unit)) access[LIST[change.role]].push(change.unit)
@@ -200,15 +236,23 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): S
   // and an A+ partner can't also be the S partner.
   const compatible = (changes: RelationChange[]) => changes.every((change, index) => changes.slice(index + 1).every((other) =>
     (change.role !== other.role || (change.role === 'a' && ctx.unit.isCorrin)) && change.unit.id !== other.unit.id))
+  // Only minimal combinations are kept: Corrin's Archer via A Midori & A Mozu (Mozu's Villager can't
+  // be sealed, so she gives Apothecary, which Midori already gives) shouldn't also list S Kaze & A
+  // Midori & A Mozu, where Kaze adds nothing.
+  const within = (small: RelationChange[], large: RelationChange[]) => small.every((change) => large.some((other) => other.role === change.role && other.unit === change.unit))
+  const viaSingle = (record: AccessNotice) => record.viaS.length + record.viaA.length + record.viaParent.length > 0
   const combine = (changes: RelationChange[]) => {
     const classIds = gainedBy(changes)
     for (const classId of classIds) {
+      const record = cls(classId, 'locked')
+      if (record && !viaSingle(record) && !record.viaCombo.some((combo) => within(combo, changes))) {
+        record.viaCombo = [...record.viaCombo.filter((combo) => !within(changes, combo)), changes]
+      }
       for (const item of learnset(dataset, classId)) {
         if (byId.has(item.id) && !byId.get(item.id)!.viaCombo.length) continue
         const access = entry(item.id, 'locked', classId, item.level)
-        if (access && !access.viaCombo.some((combo) => combo.length === changes.length && combo.every((change) => changes.some((other) => other.role === change.role && other.unit === change.unit)))) {
-          access.viaCombo.push(changes)
-        }
+        if (!access || access.viaCombo.some((combo) => within(combo, changes))) continue
+        access.viaCombo = [...access.viaCombo.filter((combo) => !within(changes, combo)), changes]
       }
     }
     return bases(classIds)
@@ -234,9 +278,22 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext): S
     for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) {
       const access = entry(item.skillId, 'locked', item.classId ?? null, item.level ?? null)
       if (access && !access.inheritFrom.includes(parent)) access.inheritFrom.push(parent)
+      const record = item.classId === undefined ? null : cls(item.classId, 'locked')
+      if (record && !record.inheritFrom.includes(parent)) record.inheritFrom.push(parent)
     }
   }
 
+  // 5. Everything else no relationship in this run gives, by the class that would teach it. With DLC
+  // off, DLC classes aren't part of the run at all, so they aren't listed.
+  for (const id of playableClassIds(dataset)) {
+    const classId = sexedClassId(dataset, id, ctx.unit.gender)
+    const def = dataset.classesById.get(classId)
+    if (!def || (def.dlc && !run.dlc)) continue
+    cls(classId, 'unavailable')
+    for (const item of learnset(dataset, classId)) entry(item.id, 'unavailable', classId, item.level)
+  }
+
   const list = SKILL_GROUP_ORDER.flatMap((group) => order.filter((item) => item.group === group))
-  return { list, byId }
+  const classList = SKILL_GROUP_ORDER.flatMap((group) => [...classes.values()].filter((record) => record.group === group && record.skills.length))
+  return { list, byId, classes: classList }
 }

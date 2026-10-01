@@ -117,7 +117,7 @@ const CLASS_LENSES: ReadonlySet<LensId> = new Set(['baseStats', 'classGrowths', 
 const playableCache = new WeakMap<Dataset, number[]>()
 
 /** Classes some playable unit can reach (own sets, reclass sets, their promotions, DLC); excludes enemy-only classes. */
-function playableClassIds(dataset: Dataset): number[] {
+export function playableClassIds(dataset: Dataset): number[] {
   const cached = playableCache.get(dataset)
   if (cached) return cached
   const ids = new Set<number>()

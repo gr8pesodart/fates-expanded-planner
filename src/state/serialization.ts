@@ -58,6 +58,7 @@ function isRunPlan(value: unknown): value is RunPlan {
       !unit.friendshipPartners.every((id) => typeof id === 'string'))) return false
     if (unit.pairRole !== undefined && unit.pairRole !== 'front' && unit.pairRole !== 'back') return false
     if (unit.favouriteClasses !== undefined && !isNumberList(unit.favouriteClasses)) return false
+    if (unit.favouriteSkills !== undefined && !isNumberList(unit.favouriteSkills)) return false
     if (unit.favouriteParents !== undefined && (!Array.isArray(unit.favouriteParents) ||
       !unit.favouriteParents.every((id) => typeof id === 'string'))) return false
   }

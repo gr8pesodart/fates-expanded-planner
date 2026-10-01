@@ -10,7 +10,7 @@ order: [docs/design/SPEC.md](docs/design/SPEC.md) (visual + interaction source o
 [docs/DATA.md](docs/DATA.md) before touching data and [docs/MODS.md](docs/MODS.md) before changing mod
 assumptions. `docs/design/reference.html` and the v1/v2 UIs are **not** design references.
 
-**Status (2026-10-01):** v3.2 is live on GitHub Pages (`main`; work happens on `v3`). Progress and
+**Status (2026-10-02):** v3.3 is live on GitHub Pages (`main`; work happens on `v3`). Progress and
 backlog: `docs/BUILD_PLAN.md` › v3.
 
 ## Agent skills — read before working

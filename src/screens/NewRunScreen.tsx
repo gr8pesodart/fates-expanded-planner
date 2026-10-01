@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Switch } from '../components/controls'
 import { Icon } from '../components/icons'
 import { ModChecklist } from '../components/ModChecklist'
 import { ROUTES } from '../data/types'
@@ -65,7 +66,7 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
                 <span className="sub-title">DLC</span>
                 <span className="muted block">DLC classes, skills and Anna</span>
               </span>
-              <input type="checkbox" role="switch" checked={draft.dlc} onChange={(event) => update({ ...draft, dlc: event.target.checked })} />
+              <Switch checked={draft.dlc} onChange={(dlc) => update({ ...draft, dlc })} />
             </label>
           </>
         ) : null}

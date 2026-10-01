@@ -6,6 +6,7 @@ import { DEFAULT_ROSTER_SORT, directionOfSort } from '../logic/rosterSort'
 import type { ParentSort } from '../logic/parents'
 
 export type ChartTab = 'full' | 'skills' | 'progression' | 'pairUp'
+export type SkillPickerTab = 'starred' | 'grouped' | 'ungrouped'
 import { DEFAULT_PARENT_SORT } from '../logic/parents'
 
 interface UiState {
@@ -19,6 +20,9 @@ interface UiState {
   chartLinkPairs: boolean
   chartGeneration: GenerationFilter
   chartTab: ChartTab
+  skillPickerTab: SkillPickerTab
+  /** Skill picker: count new S / A+ relationships as ways in. */
+  skillFilters: { s: boolean; a: boolean }
   /** Skill picker: collapsed class groups per unit, as `${group}:${classId}`. */
   collapsedSkillClasses: Record<string, string[]>
   classLens: LensId
@@ -38,6 +42,8 @@ interface UiState {
   setChartLinkPairs(value: boolean): void
   setChartGeneration(value: GenerationFilter): void
   setChartTab(tab: ChartTab): void
+  setSkillPickerTab(tab: SkillPickerTab): void
+  setSkillFilters(filters: { s: boolean; a: boolean }): void
   toggleSkillClass(unitId: string, key: string): void
   setClassLens(lens: LensId): void
   setClassFilter(filter: UiState['classFilter']): void
@@ -54,6 +60,8 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   chartLinkPairs: true,
   chartGeneration: 'all',
   chartTab: 'skills',
+  skillPickerTab: 'grouped',
+  skillFilters: { s: true, a: true },
   collapsedSkillClasses: {},
   classLens: 'baseStats',
   classFilter: 'base',
@@ -71,6 +79,8 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   setChartLinkPairs: (chartLinkPairs) => set({ chartLinkPairs }),
   setChartGeneration: (chartGeneration) => set({ chartGeneration }),
   setChartTab: (chartTab) => set({ chartTab }),
+  setSkillPickerTab: (skillPickerTab) => set({ skillPickerTab }),
+  setSkillFilters: (skillFilters) => set({ skillFilters }),
   toggleSkillClass: (unitId, key) => {
     const current = get().collapsedSkillClasses[unitId] ?? []
     const next = current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
@@ -101,6 +111,8 @@ export const useUi = create<UiState>()(persist((set, get) => ({
       parentSort: persisted.parentSort ?? DEFAULT_PARENT_SORT,
       parentEffective: persisted.parentEffective ?? false,
       chartTab: persisted.chartTab ?? 'skills',
+      skillPickerTab: persisted.skillPickerTab ?? 'grouped',
+      skillFilters: persisted.skillFilters ?? { s: true, a: true },
       collapsedSkillClasses: persisted.collapsedSkillClasses ?? {},
     }
   },
