@@ -72,27 +72,31 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Roster: the list is the swipe surface; every row's `StatTable` gets `slide` = { index, prev, next }
   (v3.4 strip: the neighbouring lenses' tables are rendered either side, so a drag shows them; on
   commit the track remounts centred and eases in from `--swipe-from`). SlideSwap is gone.
-- **Progression foot (v3.4)**: `SealTally` is a pill (icons + "x2" only, `--s2`/`--s4` padding, 42px
-  tall, surface fill) with an info button opening a dark `--scrim` tooltip list whose rows show the
-  item sprite inline with the name. On the Progression page the foot owns the chart's bottom border
-  (`border-top`) and the pill hangs on it at the right screen edge, centred with
-  `translateY(-50%)`; a `box-shadow: 0 0 0 --s2 var(--surface)` ring cuts a constant gap out of the
-  border, and the last `.panel-section` (`:has(+ .progression-foot)`) drops its border and pads its
-  bottom to clear the pill's top half. Eternal Seal buttons sit in two equal columns (Remove =
-  outline left, Use = `btn primary` right, muted at 0). Automate progression: `bookOrClassChoices`
-  sheet first, then `app/autoPlanner.ts` runs the search in `logic/autoProgression.worker.ts` (Vite
-  module worker).
+- **Progression foot (v3.4)**: `SealTally` shows icons + "x2" only with an info button opening a
+  dark `--scrim` tooltip list whose rows show the item sprite inline with the name. On the
+  Progression page the foot owns the chart's bottom border (`border-top`) and the bare row (no pill
+  outline; `--s2` vertical padding plus `--s2` on the left, matching the info button's inner icon
+  inset) hangs centred on the page (`left: 50%; translate(-50%, -50%)`); the
+  `box-shadow: 0 0 0 --s2 var(--surface)` ring cuts the border with equal rounded caps and even
+  stubs either side (`--seal-tail-x: 8px` keeps the tooltip tail on the button).
+  The last `.panel-section` (`:has(+ .progression-foot)`) drops its border and pads its bottom to
+  clear the row's top half. Eternal Seal buttons sit in two equal columns (Remove = outline left,
+  Use = `btn primary` right, muted at 0). Automate progression: `bookOrClassChoices` sheet first,
+  then `app/autoPlanner.ts` runs the search in `logic/autoProgression.worker.ts` (Vite module
+  worker).
   The Chart floats the same `SealTally` bottom-right on mobile only (`.chart-seal-float`, hidden
   ≥1024px, tooltip right-aligned) with run-wide totals from `logic/tally.ts › runTallyItems`: one
-  line at a fixed 195px on every mobile width (three-and-a-bit icons), the right edge midway in the
-  page margin, the icons scrolling border-to-border (scrollbar hidden; the float sits outside the
-  chart pager's swipe surface, so native touch scroll works) under the fixed info button, whose
-  `::after` surface gradient (`--seal-fade: 64px` covers the button) fades the list out;
+  line at a fixed 240px on every mobile width (three icons plus a bite of the fourth even with
+  two-digit counts), the right edge midway in the page margin, left padding `--s4 + --s2` (matches
+  the button side), the icons scrolling border-to-border
+  (scrollbar hidden; the float sits outside the chart pager's swipe surface, so native touch scroll
+  works) under the fixed info button, whose `::after` surface gradient (`--seal-fade: 64px` covers
+  the button) fades the list out;
   `flex: none` keeps the button from being squeezed. The shared tooltip (same component on the
   Progression foot) hugs its contents and right-aligns to the pill in both instances, is
   semi-transparent (`color-mix(--scrim 92%, transparent)`), carries `--shadow-float`, builds its
-  tail into its own fill (no seam) and pops out of the tail tip from scale(0) over 300ms
-  (`seal-pop`, disabled under reduced motion).
+  tail into its own fill (no seam, positioned by `--seal-tail-x`) and pops out of the tail tip from
+  scale(0) over 300ms (`seal-pop`, disabled under reduced motion).
 - **Sprites pause while sliding (v3.4, `lib/motion.ts`)**: `useSwipePager` holds the motion flag while
   dragging and `settleMotion()` after; TabPager settles on every index change; `useAnimationIndex`
   stops ticking while held and rejoins the shared clock after (owner: swipes lagged).

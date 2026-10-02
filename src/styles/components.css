@@ -2131,30 +2131,40 @@
   color: var(--ink-2);
 }
 
-/* End of the Progression page: the seals pill hangs on the chart's bottom border at the right,
-   the Eternal Seal buttons sit below. The border lives on the foot so the pill can centre on it,
-   and the padding clears the pill's lower half plus its cut-out ring. */
+/* End of the Progression page: the bare tally row (icons + info button, no pill outline) hangs on
+   the chart's bottom border at the right; the Eternal Seal buttons sit below. The border lives on
+   the foot so the row can centre on it, and the padding clears the row's lower half plus its
+   cut-out ring. */
 .progression-foot {
   position: relative;
   display: grid;
   gap: var(--s3);
   border-top: 1px solid var(--line);
-  padding: calc(21px + var(--s2) * 2) var(--s4) var(--s4);
+  padding: calc(20px + var(--s2) * 2) var(--s4) var(--s4);
 }
 
-/* The pill is 42px tall (28px button + 2 x --s2 + 2px border), so half of it rises above the
-   border. The surface ring cuts a constant gap out of the border around the pill. */
+/* The row is 40px tall (28px button + 2 x --s2 vertical padding): half rises above the border. It
+   is bare (no border) and centred on the page; the --s2 left padding matches the inset the info
+   button keeps around its icon, so the ring leaves the same gap left of the first seal and right
+   of the info button, with equal rounded caps and even border stubs either side. */
 .progression-foot .seal-pill {
+  --seal-tail-x: 8px;
   position: absolute;
   top: 0;
+  left: 0;
   right: 0;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
   transform: translateY(-50%);
+  padding: var(--s2) 0 var(--s2) var(--s2);
+  border: 0;
   box-shadow: 0 0 0 var(--s2) var(--surface);
 }
 
-/* The last chart section hands its border to the foot and leaves room for the pill's top half. */
+/* The last chart section hands its border to the foot and leaves room for the row's top half. */
 .panel-section:has(+ .progression-foot) {
-  padding-bottom: calc(21px + var(--s2) * 2);
+  padding-bottom: calc(20px + var(--s2) * 2);
   border-bottom: 0;
 }
 
@@ -2182,12 +2192,16 @@
 /* Icons and counts only (owner, v3.4); the info button lists them by name in a dark tooltip. */
 .seal-pill {
   --seal-tooltip-bg: color-mix(in srgb, var(--scrim) 92%, transparent);
+  /* Right offset of the tooltip tail: set per instance so it lands on the button's centre. */
+  --seal-tail-x: 20px;
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
   min-height: 32px;
-  padding: var(--s2) var(--s4);
+  /* The left side adds the 6px the info button keeps around its icon, so both ends read the
+     same distance from the pill edge. */
+  padding: var(--s2) var(--s4) var(--s2) calc(var(--s4) + var(--s2));
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-pill);
@@ -2226,6 +2240,7 @@
   place-items: center;
   width: 28px;
   height: 28px;
+  flex: none;
   border-radius: var(--r-pill);
   color: var(--ink-2);
 }
@@ -2249,18 +2264,18 @@
   color: var(--on-dark);
   font: var(--t-sub);
   box-shadow: var(--shadow-float);
-  /* Pops out of the tail tip: 26px in from the right edge, 6px below the box. */
-  transform-origin: calc(100% - 26px) calc(100% + var(--s2));
+  /* Pops out of the tail tip (anchored where the tail right offset puts it, 6px below the box). */
+  transform-origin: calc(100% - var(--seal-tail-x) - 6px) calc(100% + var(--s2));
   animation: seal-pop 300ms var(--ease);
 }
 
-/* The tail is part of the tooltip's fill (same background, no seam) and points at the info button,
-   which sits 26px from the tooltip's right edge in both the Progression and Chart pills. */
+/* The tail is part of the tooltip's fill (same background, no seam) and points at the info button
+   whose centre tracks --seal-tail-x in both the Progression and Chart pills. */
 .seal-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  right: 20px;
+  right: var(--seal-tail-x);
   width: 12px;
   height: var(--s2);
   background: var(--seal-tooltip-bg);
@@ -2295,8 +2310,9 @@
 }
 
 .chart-seal-float .seal-pill {
-  /* Fixed width on every mobile breakpoint: three icons plus a fading fourth, as on 390px. */
-  width: 195px;
+  /* Fixed width on every mobile breakpoint: three icons plus a bite of the fourth even when the
+     counts are two digits (x12/x33), which measures 240px. */
+  width: 240px;
   box-shadow: var(--shadow-float);
 }
 
@@ -2310,9 +2326,9 @@
   border-radius: var(--r-pill);
   /* Span border to border so scrolling content clips at the pill edge, not the start inset; the
      padding moves onto the scroller, and the right side also reaches under the button and fade. */
-  margin-left: calc(-1 * var(--s4));
+  margin-left: calc(-1 * (var(--s4) + var(--s2)));
   margin-right: calc(-1 * (var(--s4) + 28px + var(--s2)));
-  padding-left: var(--s4);
+  padding-left: calc(var(--s4) + var(--s2));
   padding-right: var(--seal-fade);
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -2345,7 +2361,6 @@
 .chart-seal-float .seal-pill-info {
   position: relative;
   z-index: 2;
-  flex: none;
 }
 
 @media (min-width: 1024px) {
