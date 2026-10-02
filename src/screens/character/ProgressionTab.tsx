@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { usePickers } from '../../app/pickerStore'
 import { usePlanner } from '../../app/plannerContext'
 import { SkillIcon } from '../../components/art'
@@ -11,10 +11,12 @@ import type { Dataset, UnitDef } from '../../data/types'
 import type { UnitContext } from '../../logic/army'
 import { displayName, skillsChildrenInherit, unitContext } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
-import type { LearnedSkill, LevelRow, Progression, ReclassSeal } from '../../logic/progression'
-import { buildProgression, sealsUsed, tierCap, withReclass } from '../../logic/progression'
+import type { LearnedSkill, LevelRow, ReclassSeal } from '../../logic/progression'
+import { buildProgression, learnedSkillIds, tierCap, withReclass } from '../../logic/progression'
 import { ItemIcon } from '../../components/ItemIcon'
 import { Sheet } from '../../components/Sheet'
+import { SealTally } from '../../components/SealTally'
+import { tallyItems } from '../../logic/tally'
 import type { AutoPlan, AutoResult } from '../../logic/autoProgression'
 import { bookOrClassChoices, skillBooksUsed } from '../../logic/autoProgression'
 import { planProgression } from '../../app/autoPlanner'
@@ -64,8 +66,8 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   ]
   const toInherit = equipped.filter((item) => item.group === 'inheritable')
   // Equipped skills the path doesn't teach come from their skill book (DLC on), counted with the seals.
-  const learnedIds = useMemo(() => new Set([...progression.startsWith, ...progression.segments.flatMap((segment) => segment.rows.flatMap((row) => row.learned))].map((item) => item.skillId)), [progression])
-  const booksUsed = useMemo(() => skillBooksUsed(run, ctx, learnedIds), [run, ctx, learnedIds])
+  const booksUsed = useMemo(() => skillBooksUsed(run, ctx, learnedSkillIds(progression)), [run, ctx, progression])
+  const tally = useMemo(() => tallyItems(dataset, [{ progression, books: booksUsed }]), [dataset, progression, booksUsed])
 
   /** Applies a plan change, then removes reclasses the new path can no longer reach. */
   const commit = (update: (plan: RunPlan['units'][string]) => RunPlan['units'][string]) => {
@@ -218,7 +220,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
         </section>
       ))}
       <div className="progression-foot">
-        <SealTally dataset={dataset} progression={progression} books={booksUsed} />
+        <SealTally items={tally} />
         {canEternal || progression.eternalSeals > 0 ? (
           <div className="eternal-row">
             <button type="button" className="btn primary" title="+5 levels" disabled={readOnly || !canEternal} onClick={() => setEternal(progression.eternalSeals + 1)}>Use Eternal Seal</button>
@@ -308,52 +310,6 @@ function autoSummary(dataset: Dataset, access: SkillAccessMap, result: AutoResul
     list(why('unavailable'), "can't be learned"),
   ].filter(Boolean)
   return `Planned with ${seals}${plan.eternalSeals ? ` and ${counted(plan.eternalSeals, 'Eternal Seal')}` : ''}.${notes.length ? ` ${notes.join('; ')}.` : ''}`
-}
-
-/**
- * Every seal, class item and skill book the plan uses, as a pill of "[icon] x2" with no text (owner,
- * v3.4); the info button opens a dark tooltip listing them by name.
- */
-function SealTally({ dataset, progression, books }: { dataset: Dataset; progression: Progression; books: number[] }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const away = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false) }
-    document.addEventListener('pointerdown', away)
-    return () => document.removeEventListener('pointerdown', away)
-  }, [open])
-  const items = [
-    ...sealsUsed(progression).map((use) => {
-      const key = use.seal === 'dlc' && use.classId !== null ? classItemKey(dataset, use.classId) : sealItemKey(use.seal)
-      return { id: `${use.seal}:${use.classId}`, key, name: key ? itemName(key) : SEAL_LABEL[use.seal as ReclassSeal] ?? 'Seal', count: use.count }
-    }),
-    ...books.map((skillId) => {
-      const key = bookItemKey(skillId)
-      return { id: `book:${skillId}`, key, name: `${dataset.skillsById.get(skillId)?.name ?? '?'} skill book`, count: 1 }
-    }),
-  ]
-  if (!items.length) return null
-  return (
-    <div ref={ref} className="seal-pill" aria-label="Seals and items used">
-      <ul className="seal-tally">
-        {items.map((item) => (
-          <li key={item.id} className="seal-tally-item" aria-label={`${item.name} x${item.count}`}>
-            {item.key ? <ItemIcon itemKey={item.key} /> : <span className="seal-tally-name">{item.name}</span>}
-            <span aria-hidden="true">x{item.count}</span>
-          </li>
-        ))}
-      </ul>
-      <button type="button" className="seal-pill-info" aria-label="List seals and items" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Icon name="info" size={16} />
-      </button>
-      {open ? (
-        <div className="seal-tooltip" role="tooltip">
-          {items.map((item) => <span key={item.id}>{item.name} x{item.count}</span>)}
-        </div>
-      ) : null}
-    </div>
-  )
 }
 
 /** In place of the access notice for a skill the page assumes its book teaches. */

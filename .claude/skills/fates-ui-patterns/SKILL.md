@@ -76,6 +76,8 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   dark `--scrim` tooltip list; Eternal Seal buttons sit in two equal columns (Use = `btn primary`,
   Remove = outline, muted at 0). Automate progression: `bookOrClassChoices` sheet first, then
   `app/autoPlanner.ts` runs the search in `logic/autoProgression.worker.ts` (Vite module worker).
+  The Chart floats the same `SealTally` bottom-right on mobile only (`.chart-seal-float`, hidden
+  ≥1024px, tooltip right-aligned) with run-wide totals from `logic/tally.ts › runTallyItems`.
 - **Sprites pause while sliding (v3.4, `lib/motion.ts`)**: `useSwipePager` holds the motion flag while
   dragging and `settleMotion()` after; TabPager settles on every index change; `useAnimationIndex`
   stops ticking while held and rejoins the shared clock after (owner: swipes lagged).

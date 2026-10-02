@@ -2148,6 +2148,29 @@
   box-shadow: var(--shadow-float);
 }
 
+/* The Chart's run-wide tally, floating over the bottom-right corner on mobile only (owner, v3.5). */
+.chart-seal-float {
+  position: fixed;
+  right: var(--s3);
+  bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.chart-seal-float .seal-pill {
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
+/* Right-aligned pill: the tooltip opens inwards, not off the screen edge. */
+.chart-seal-float .seal-tooltip {
+  left: auto;
+  right: -1px;
+}
+
+@media (min-width: 1024px) {
+  .chart-seal-float { display: none; }
+}
+
 .book-choices {
   display: grid;
   gap: var(--s3);
