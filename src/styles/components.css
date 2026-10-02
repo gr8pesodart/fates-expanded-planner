@@ -2095,7 +2095,7 @@
   align-items: center;
   gap: var(--s2);
   min-height: 32px;
-  padding: 0 4px 0 var(--s4);
+  padding: 0 var(--s2) 0 var(--s5);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-pill);
 }
@@ -2146,19 +2146,19 @@
   border-radius: var(--r-md);
   background: var(--seal-tooltip-bg);
   color: var(--on-dark);
-  font: var(--t-cell);
+  font: var(--t-sub);
   box-shadow: var(--shadow-float);
   transform-origin: bottom right;
   animation: seal-pop 160ms var(--ease);
 }
 
 /* The tail is part of the tooltip's fill (same background, no seam) and points at the info button,
-   which sits 18px from the tooltip's right edge in both the Progression and Chart pills. */
+   which sits 20px from the tooltip's right edge in both the Progression and Chart pills. */
 .seal-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  right: 12px;
+  right: 14px;
   width: 12px;
   height: var(--s2);
   background: var(--seal-tooltip-bg);
@@ -2201,9 +2201,9 @@
   border-radius: var(--r-pill);
   /* Span border to border so scrolling content clips at the pill edge, not the start inset; the
      padding moves onto the scroller, and the right side also reaches under the button and fade. */
-  margin-left: calc(-1 * var(--s4));
-  margin-right: calc(-1 * (4px + 28px + var(--s2)));
-  padding-left: var(--s4);
+  margin-left: calc(-1 * var(--s5));
+  margin-right: calc(-1 * (var(--s2) + 28px + var(--s2)));
+  padding-left: var(--s5);
   padding-right: var(--seal-fade);
   overscroll-behavior-x: contain;
   scrollbar-width: none;
