@@ -5,7 +5,13 @@ import { classOnRoute, personalSkill, skillsChildrenInherit } from './army'
 import { sexedClassId } from './classes'
 import { SKILL_BOOKS } from '../data/itemIcons'
 import type { ReclassOption } from './progression'
-import { buildProgression, dlcClassesFor, reclassOptions, skillCandidates, tierCap } from './progression'
+import { buildProgression, dlcClassesFor, offspringOptions, reclassOptions, skillCandidates, tierCap } from './progression'
+
+/**
+ * Children recruited from Chapter 19 carry an Offspring Seal: a free promotion on the join row.
+ * `require` plans must use it, `forbid` plans may not; `allow` lets the search pick.
+ */
+export type OffspringMode = 'allow' | 'require' | 'forbid'
 
 /**
  * "Automate progression" (owner, v3.4): the reclass plan that learns every target skill - the unit's
@@ -111,7 +117,7 @@ export function skillBooksUsed(run: RunPlan, ctx: UnitContext, learned: Readonly
 }
 
 /** `bookSkills`: skills the player chose to learn from their skill book rather than a class. */
-export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext, bookSkills: readonly number[] = []): AutoResult {
+export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext, bookSkills: readonly number[] = [], offspring: OffspringMode = 'allow'): AutoResult {
   const { wanted, inherited } = autoTargets(dataset, run, ctx)
   const classes = reachableClasses(dataset, run, ctx)
   const learnable = new Set(classes.flatMap((def) => skillCandidates(dataset, ctx, def).map((item) => item.skillId)))
@@ -123,13 +129,13 @@ export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext
   // Eternal Seals give the floor; the plan without starts its seal budget there, and fewer Eternal
   // Seals are only tried at that floor (the fewest that reach it are offered).
   const goalTier = dataset.classesById.get(ctx.currentClassId)?.tier
-  const floor = goalTier === 'base' ? null : cheapest(dataset, run, ctx, targets, classes, MAX_ETERNAL, MAX_SEALS)
-  const plan = cheapest(dataset, run, ctx, targets, classes, 0, MAX_SEALS, floor?.sealCount ?? 0)
+  const floor = goalTier === 'base' ? null : cheapest(dataset, run, ctx, targets, classes, MAX_ETERNAL, MAX_SEALS, 0, offspring)
+  const plan = cheapest(dataset, run, ctx, targets, classes, 0, MAX_SEALS, floor?.sealCount ?? 0, offspring)
   let withEternal: AutoPlan | null = null
   if (floor && (!plan || floor.sealCount < plan.sealCount)) {
     withEternal = floor
     for (let eternal = 1; eternal < MAX_ETERNAL; eternal += 1) {
-      const fewer = solve(dataset, run, ctx, targets, classes, eternal, floor.sealCount)
+      const fewer = solve(dataset, run, ctx, targets, classes, eternal, floor.sealCount, offspring)
       if (fewer) {
         withEternal = fewer
         break
@@ -159,18 +165,20 @@ function reachableClasses(dataset: Dataset, run: RunPlan, ctx: UnitContext): Cla
  * Seals come first, so search with a growing seal budget and stop at the first that works: the
  * budget prunes every longer reclass chain, which is most of the state space.
  */
-function cheapest(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, maxSeals: number, from = 0): AutoPlan | null {
+function cheapest(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, maxSeals: number, from = 0, offspring: OffspringMode = 'allow'): AutoPlan | null {
   for (let budget = from; budget <= maxSeals; budget += 1) {
-    const plan = solve(dataset, run, ctx, targets, classes, eternal, budget)
+    const plan = solve(dataset, run, ctx, targets, classes, eternal, budget, offspring)
     if (plan) return plan
   }
   return null
 }
 
-function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, budget: number): AutoPlan | null {
+function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, budget: number, offspring: OffspringMode = 'allow'): AutoPlan | null {
   const goal = ctx.currentClassId
   const byId = new Map(classes.map((def) => [def.id, def]))
   if (!byId.has(goal)) return null
+  const startOffspring = offspring === 'forbid' ? [] : offspringOptions(dataset, run, ctx).filter((option) => byId.has(option.classId))
+  if (offspring === 'require' && !startOffspring.length) return null
 
   const candidates = new Map(classes.map((def) => [def.id, skillCandidates(dataset, ctx, def)]))
   const effective = (def: ClassDef, level: number) => (def.tier === 'promoted' ? 20 + level : level)
@@ -210,7 +218,7 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
   const scale = (def: ClassDef, level: number) => (def.tier === 'promoted' ? 20 + level : level)
   const goalDef = byId.get(goal)!
   const goalEnd = scale(goalDef, tierCap(goalDef.tier, eternal, ctx.unit.levelCap))
-  const lowerBound = (node: Pick<Node, 'classId' | 'known' | 'level'>) => {
+  const lowerBound = (node: Pick<Node, 'classId' | 'known' | 'level' | 'parent'>) => {
     let missing = 0
     let count = 0
     targetBits.forEach((skillBit, index) => {
@@ -220,7 +228,9 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
       }
     })
     if (count > goalEnd - scale(byId.get(node.classId)!, node.level)) return Infinity
-    return Math.max(coverOf(missing & ~(teaches.get(node.classId) ?? 0)), node.classId === goal ? 0 : 1)
+    const bound = Math.max(coverOf(missing & ~(teaches.get(node.classId) ?? 0)), node.classId === goal ? 0 : 1)
+    // From the join row the Offspring Seal enters one class for free.
+    return node.parent === null && startOffspring.length ? Math.max(0, bound - 1) : bound
   }
   // Per class: candidates in learning order with their bits.
   const learnOrder = new Map([...useful].map((id) => [id, (candidates.get(id) ?? []).map((item) => ({ ...item, bit: bit.get(item.skillId)! }))]))
@@ -286,19 +296,23 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
     const queue = [...layer.values()].flat().filter((node) => node.canReclass)
     while (queue.length) {
       const node = queue.pop()!
-      if (node.cost.seals >= budget || !alive(layer, node)) continue
-      for (const option of options(node.classId, node.level)) {
+      if ((node.cost.seals >= budget && !(node.parent === null && startOffspring.length)) || !alive(layer, node)) continue
+      const atJoin = node.parent === null
+      const rowOptions = atJoin ? (offspring === 'require' ? startOffspring : [...startOffspring, ...options(node.classId, node.level)]) : options(node.classId, node.level)
+      for (const option of rowOptions) {
         const seal = option.seal === 'dlc' ? `dlc:${option.classId}` : option.seal
+        // The Offspring Seal comes with the child: it's tallied, but costs no seal.
+        const cost = option.seal === 'offspring' ? 0 : 1
         const next: Node = {
           classId: option.classId,
           level: option.newSegment ? option.level : node.level,
           canReclass: option.newSegment,
           known: node.known,
           segment: node.segment + (option.newSegment ? 1 : 0),
-          cost: { ...node.cost, seals: node.cost.seals + 1 },
+          cost: { ...node.cost, seals: node.cost.seals + cost },
           sealsUsed: { ...node.sealsUsed, [seal]: (node.sealsUsed[seal] ?? 0) + 1 },
           parent: node,
-          event: { segment: node.segment, level: node.level, classId: option.classId },
+          event: { segment: node.segment, level: node.level, classId: option.classId, ...(option.seal === 'offspring' ? { seal: 'offspring' as const } : {}) },
         }
         if (offer(layer, next) && next.canReclass) queue.push(next)
       }
@@ -311,9 +325,10 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
     for (const node of layer.get(bucketKey({ classId: goal, level: cap(goalDef), canReclass: false })) ?? []) {
       if ((node.known & goalMask) === goalMask && (!best || better(node.cost, best.cost))) best = node
     }
-    // Level-ups.
+    // Level-ups. A required Offspring Seal is taken before anything else.
     const next = new Map<string, Bucket>()
     for (const node of [...layer.values()].flat()) {
+      if (offspring === 'require' && node.parent === null) continue
       const def = byId.get(node.classId)!
       if (node.level >= cap(def)) continue
       const level = node.level + 1
@@ -335,7 +350,7 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
 
   const reclasses: Reclass[] = []
   for (let node: Node | null = best; node; node = node.parent) if (node.event) reclasses.unshift(node.event)
-  const sealCount = Object.values(best.sealsUsed).reduce((sum, count) => sum + count, 0)
+  const sealCount = Object.entries(best.sealsUsed).reduce((sum, [kind, count]) => sum + (kind === 'offspring' ? 0 : count), 0)
   return { reclasses, eternalSeals: eternal, seals: best.sealsUsed, sealCount, faireLevels: best.cost.faire, growthScore: best.cost.growth }
 }
 

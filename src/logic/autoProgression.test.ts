@@ -104,4 +104,26 @@ describe('autoProgression', () => {
     expect(skillBooksUsed(run, ctx, new Set([skillId('Dragon Fang')]))).toEqual([skillId('Warp')])
     expect(skillBooksUsed({ ...run, dlc: false }, ctx, new Set())).toEqual([])
   })
+
+  it("uses a late-recruited child's Offspring Seal for free, and finds when skipping it fits more", () => {
+    const married = setBond(corrinRun([], 'Nohr Noble (F)'), CORRIN_F, 'sPartner', JAKOB)
+    const kanaRun = (chapter: number, skills: string[], goal: string): RunPlan => ({
+      ...married,
+      units: { ...married.units, [KANA_M]: { ...emptyUnitPlan(), joinChapter: chapter, skills: slots(...skills), classId: classId(goal) } },
+    })
+    // Chapter 19: the seal promotes to Advanced Lv 2, plenty of room for Nohr Noble's two skills.
+    const early = kanaRun(19, ['Draconic Hex', 'Nohrian Trust'], 'Nohr Noble (M)')
+    const earlyCtx = unitContext(dataset, early, KANA_M)!
+    const sealed = autoProgression(dataset, early, earlyCtx, [], 'require')
+    expect(sealed.plan?.seals).toEqual({ offspring: 1 })
+    expect(sealed.plan?.sealCount).toBe(0)
+    expect(verifyAutoPlan(dataset, early, earlyCtx, sealed.targets, sealed.plan!)).toBe(true)
+    // Chapter 27: Advanced Lv 18 leaves two level-ups, too few for four advanced skills.
+    const late = kanaRun(27, ['Draconic Hex', 'Nohrian Trust', 'Dragon Ward', 'Hoshidan Unity'], 'Hoshido Noble (M)')
+    const lateCtx = unitContext(dataset, late, KANA_M)!
+    expect(autoProgression(dataset, late, lateCtx, [], 'require').plan).toBeNull()
+    const without = autoProgression(dataset, late, lateCtx, [], 'forbid')
+    expect(without.plan?.seals.master).toBe(1)
+    expect(verifyAutoPlan(dataset, late, lateCtx, without.targets, without.plan!)).toBe(true)
+  })
 })

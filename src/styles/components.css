@@ -2033,6 +2033,28 @@
   border-bottom-color: var(--scrim);
 }
 
+.join-chapter {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.join-chapter-select {
+  width: auto;
+  min-width: 128px;
+}
+
+.join-chapter-label {
+  font: var(--t-cell);
+  color: var(--ink-2);
+}
+
+.join-chapter-note {
+  font: var(--t-cell);
+  color: var(--ink-2);
+  text-align: right;
+}
+
 .progression-head {
   padding: 0 var(--s4) 8px 0;
 }

@@ -307,6 +307,9 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   the other slot is disabled ("From other parent"). Inherited skills also appear in the child's
   equip-slot picker. Directly under the heading, equipped skills that only a parent can pass on and
   that aren't inherited yet are listed with their notice.
+- **Recruitment** (children, v3.4): instead of a level field, a "Recruited chapter" select (Chapter
+  *earliest* … final; earliest = the later parent's chapter), with "Lv N · Offspring Seal → Advanced
+  Lv M" under it. Chapter 19+ adds an "Offspring Seal" group to the join row's reclass select.
 - **Automate progression** (v3.4): an outline button beside the first segment's heading (Base, or
   Special for Azura). It plans the reclasses that learn every equipped skill (and what children
   inherit) and end in the selected class, with the fewest seals, then the most levels in -faire
@@ -316,6 +319,9 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   when another equipped skill without a book comes from a class that teaches it too (that class is
   planned anyway). If Eternal Seals save seals (or are the only way), a sheet asks first ("Use an
   Eternal Seal?" / "Plan without"). The search runs in a Web Worker; the button reads "Planning…".
+  A child carrying an Offspring Seal is planned with it; if going without needs fewer seals (or is
+  the only way), a "Use the Offspring Seal?" sheet compares both ("Use the Offspring Seal" / "Plan
+  without it").
 - **Page foot** (v3.4): a pill of every seal, DLC class item and skill book the plan uses - 16px
   Icon Project icons and "x2", no text - with an info button that opens a dark tooltip (`--scrim`)
   listing them by name ("Heart Seal x2", "Warp skill book x1"). Below it, side by side in two

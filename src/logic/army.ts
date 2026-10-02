@@ -1,5 +1,6 @@
 import type { Dataset, RecruitmentEntry, Route, StatKey, UnitDef } from '../data/types'
 import type { RunPlan, UnitPlan } from '../state/model'
+import { childStart } from './childRecruit'
 import { corrinBuild, unitPlanFor } from '../state/model'
 import type { ClassPoolEntry } from './classes'
 import { classFamily, classPool, primaryBaseClass, sexedClassId } from './classes'
@@ -61,6 +62,8 @@ export interface ClassStart {
   chapter: string | null
   /** Paralogue, Xenologue, DLC and "or later" recruits join at a level set by when they're recruited. */
   variableLevel: boolean
+  /** Children: recruitment chapter (story position), its range, and the Offspring Seal's level if they carry one. */
+  child?: { chapter: number; earliest: number; final: number; offspringLevel: number | null }
 }
 
 const VARIABLE_JOIN = /^(Paralogue|Xenologue)|or later/
@@ -140,7 +143,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     corrinTalentClassId: build.talentClassId,
     fixedParentIsCorrin: fixedParentIsCorrin(dataset, unit),
   })
-  const start = classStart(dataset, run, unit)
+  const start = unit.fixedParent === null ? classStart(dataset, run, unit) : childStart(dataset, run, unit, variableParent ?? null, classStart(dataset, run, unit))
   const routePool = pool.filter((entry) => classOnRoute(dataset, entry.classId, run.route))
   const lastReclass = [...plan.reclasses].sort((a, b) => a.segment - b.segment || a.level - b.level).at(-1)?.classId
   return {

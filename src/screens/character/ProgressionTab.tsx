@@ -8,7 +8,7 @@ import { SkillCard } from '../../components/SkillCard'
 import { StatTable } from '../../components/StatTable'
 import { useToast } from '../../components/toast'
 import type { Dataset, UnitDef } from '../../data/types'
-import type { UnitContext } from '../../logic/army'
+import type { ClassStart, UnitContext } from '../../logic/army'
 import { displayName, skillsChildrenInherit, unitContext } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
 import type { LearnedSkill, LevelRow, Progression, ReclassSeal } from '../../logic/progression'
@@ -27,6 +27,7 @@ import type { SkillAccess, SkillAccessMap } from '../../logic/skillAccess'
 import { skillAccess, unreachableSkill } from '../../logic/skillAccess'
 
 const SEAL_LABEL: Record<ReclassSeal, string> = {
+  offspring: 'Offspring Seal',
   master: 'Master Seal',
   heart: 'Heart Seal',
   partner: 'Partner Seal',
@@ -34,7 +35,7 @@ const SEAL_LABEL: Record<ReclassSeal, string> = {
   dlc: 'DLC',
 }
 
-const SEAL_ORDER: ReclassSeal[] = ['master', 'heart', 'partner', 'friendship', 'dlc']
+const SEAL_ORDER: ReclassSeal[] = ['offspring', 'master', 'heart', 'partner', 'friendship', 'dlc']
 
 function withUnitPlan(run: RunPlan, unitId: string, update: (plan: RunPlan['units'][string]) => RunPlan['units'][string]): RunPlan {
   return { ...run, units: { ...run.units, [unitId]: update(run.units[unitId] ?? emptyUnitPlan()) } }
@@ -49,6 +50,8 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const [eternalOffer, setEternalOffer] = useState<AutoResult | null>(null)
   // Skills a book or a class could teach: the player picks before planning (owner, v3.4).
   const [bookChoice, setBookChoice] = useState<{ skills: number[]; book: number[] } | null>(null)
+  // A child with an Offspring Seal: the best plan with it, and the cheaper one without, to choose from.
+  const [offspringChoice, setOffspringChoice] = useState<{ withSeal: AutoResult | null; without: AutoResult } | null>(null)
   const progression = useMemo(() => buildProgression(dataset, run, ctx), [dataset, run, ctx])
   const unitId = ctx.unit.id
   const access = useMemo(() => skillAccess(dataset, run, ctx), [dataset, run, ctx])
@@ -90,12 +93,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
     showToast(autoSummary(dataset, access, result, plan))
   }
 
-  // The search runs in a worker (app/autoPlanner.ts); the button shows "Planning…" meanwhile.
-  const plan = async (bookSkills: number[]) => {
-    setBookChoice(null)
-    setAutomating(true)
-    const result = await planProgression(run, unitId, bookSkills)
-    setAutomating(false)
+  const finish = (result: AutoResult | null) => {
     if (!result || (!result.plan && !result.withEternal)) {
       showToast(`No path ends in ${classFamily(dataset.classesById.get(ctx.currentClassId)?.name ?? '?')} with every equipped skill.`)
       return
@@ -104,13 +102,45 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
     else if (result.plan) applyAuto(result.plan, result)
   }
 
+  // The search runs in a worker (app/autoPlanner.ts); the button shows "Planning…" meanwhile. A child
+  // carrying an Offspring Seal plans with it (owner, v3.4) unless going without needs fewer seals -
+  // then the player chooses.
+  const plan = async (bookSkills: number[]) => {
+    setBookChoice(null)
+    setAutomating(true)
+    if (!ctx.start.child?.offspringLevel) {
+      const result = await planProgression(run, unitId, bookSkills)
+      setAutomating(false)
+      finish(result)
+      return
+    }
+    const [withSeal, without] = await Promise.all([
+      planProgression(run, unitId, bookSkills, 'require'),
+      planProgression(run, unitId, bookSkills, 'forbid'),
+    ])
+    setAutomating(false)
+    // Compare without Eternal Seals first (those are offered on top); if neither fits without them,
+    // compare the Eternal Seal plans.
+    const cheaper = (a: AutoPlan | null | undefined, b: AutoPlan | null | undefined) => Boolean(a && (!b || a.sealCount < b.sealCount))
+    const skipWins = without && (without.plan || withSeal?.plan
+      ? cheaper(without.plan, withSeal?.plan)
+      : cheaper(without.withEternal, withSeal?.withEternal))
+    if (without && skipWins) setOffspringChoice({ withSeal, without })
+    else finish(withSeal)
+  }
+
   const automate = () => {
     const choices = bookOrClassChoices(dataset, run, ctx)
     if (choices.length) setBookChoice({ skills: choices, book: [] })
     else void plan([])
   }
 
-  const setReclass = (row: LevelRow, classId: number | null) => commit((plan) => ({ ...plan, reclasses: withReclass(plan.reclasses, row.segment, row.level, classId) }))
+  const setReclass = (row: LevelRow, classId: number | null, seal?: 'offspring') => commit((plan) => ({ ...plan, reclasses: withReclass(plan.reclasses, row.segment, row.level, classId, seal) }))
+
+  // A later chapter can make an earlier Offspring Seal pick illegal; commit() drops what no longer fits.
+  const setJoinChapter = (chapter: number) => commit(({ joinChapter: _old, ...plan }) => (
+    chapter === ctx.start.child?.earliest ? plan : { ...plan, joinChapter: chapter }
+  ))
 
   const setJoinLevel = (level: number) => commit(({ joinLevel: _old, ...plan }) => (
     level === ctx.start.defaultLevel ? plan : { ...plan, joinLevel: level }
@@ -140,7 +170,9 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
               </span>
             ) : null}
           </div>
-          {ctx.start.variableLevel ? (
+          {ctx.start.child ? (
+            <JoinChapterField child={ctx.start.child} level={ctx.start.level} disabled={readOnly} onChange={setJoinChapter} />
+          ) : ctx.start.variableLevel ? (
             <JoinLevelField key={ctx.start.level} level={ctx.start.level} cap={joinCap} disabled={readOnly} onCommit={setJoinLevel} />
           ) : <span className="join-level-fixed">Lv {ctx.start.level}</span>}
         </div>
@@ -202,7 +234,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
                     >
                       <Icon name="info" size={16} />
                     </button>
-                    <ReclassSelect dataset={dataset} row={row} first={segmentIndex === 0 && row === segment.rows[0]} disabled={readOnly} onChange={(classId) => setReclass(row, classId)} />
+                    <ReclassSelect dataset={dataset} row={row} first={segmentIndex === 0 && row === segment.rows[0]} disabled={readOnly} onChange={(classId, seal) => setReclass(row, classId, seal)} />
                   </li>
                   {expanded ? (
                     <li className="level-info">
@@ -226,6 +258,31 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
           </div>
         ) : null}
       </div>
+      {offspringChoice ? (
+        <Sheet title="Use the Offspring Seal?" onClose={() => setOffspringChoice(null)}>
+          <p className="eternal-offer">
+            {(() => {
+              const describe = (result: AutoResult | null) => {
+                if (result?.plan) return counted(result.plan.sealCount, 'seal')
+                if (result?.withEternal) return `${counted(result.withEternal.sealCount, 'seal')} and ${counted(result.withEternal.eternalSeals, 'Eternal Seal')}`
+                return null
+              }
+              const sealed = describe(offspringChoice.withSeal)
+              const unsealed = describe(offspringChoice.without)
+              const level = ctx.start.child?.offspringLevel
+              return sealed
+                ? `The Offspring Seal starts the advanced class at Lv ${level}: that path needs ${sealed}. Promoting at Lv 1 instead leaves more level-ups and needs ${unsealed}.`
+                : `The Offspring Seal starts the advanced class at Lv ${level}, too late to learn every equipped skill. Promoting at Lv 1 instead needs ${unsealed}.`
+            })()}
+          </p>
+          <div className="eternal-offer-actions">
+            {offspringChoice.withSeal?.plan || offspringChoice.withSeal?.withEternal ? (
+              <button type="button" className="btn primary" onClick={() => { const result = offspringChoice.withSeal; setOffspringChoice(null); finish(result) }}>Use the Offspring Seal</button>
+            ) : null}
+            <button type="button" className="btn outline" onClick={() => { const result = offspringChoice.without; setOffspringChoice(null); finish(result) }}>Plan without it</button>
+          </div>
+        </Sheet>
+      ) : null}
       {bookChoice ? (
         <Sheet title="Class or skill book?" onClose={() => setBookChoice(null)}>
           <p className="eternal-offer">These skills come from a class or from their skill book. Planning the class costs levels and maybe seals; the book costs the book.</p>
@@ -457,7 +514,30 @@ function JoinLevelField({ level, cap, disabled, onCommit }: { level: number; cap
   )
 }
 
-function ReclassSelect({ dataset, row, first, disabled, onChange }: { dataset: Dataset; row: LevelRow; first: boolean; disabled: boolean; onChange(classId: number | null): void }) {
+/**
+ * Children pick the main-story chapter their paralogue is done at (owner, v3.4): it sets their join
+ * level and, from Chapter 19, the Offspring Seal's level. The earliest is the later parent's chapter.
+ */
+function JoinChapterField({ child, level, disabled, onChange }: { child: NonNullable<ClassStart['child']>; level: number; disabled: boolean; onChange(chapter: number): void }) {
+  const chapters = Array.from({ length: child.final - child.earliest + 1 }, (_, index) => child.earliest + index)
+  return (
+    <div className="join-chapter">
+      <span className="join-chapter-label" aria-hidden="true">Recruited chapter</span>
+      <label className="reclass join-chapter-select" data-set="">
+        <span className="visually-hidden">Recruited chapter</span>
+        <select value={child.chapter} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))}>
+          {chapters.map((chapter) => <option key={chapter} value={chapter}>Chapter {chapter}</option>)}
+        </select>
+        <Icon name="chevronDown" size={16} />
+      </label>
+      <span className="join-chapter-note">
+        Lv {level}{child.offspringLevel ? ` · Offspring Seal → Advanced Lv ${child.offspringLevel}` : ''}
+      </span>
+    </div>
+  )
+}
+
+function ReclassSelect({ dataset, row, first, disabled, onChange }: { dataset: Dataset; row: LevelRow; first: boolean; disabled: boolean; onChange(classId: number | null, seal?: 'offspring'): void }) {
   const name = (id: number) => classFamily(dataset.classesById.get(id)?.name ?? '?')
   if (first && row.reclass === null && row.options.length === 0) {
     return <span className="reclass locked">{name(row.classId)}</span>
@@ -465,10 +545,16 @@ function ReclassSelect({ dataset, row, first, disabled, onChange }: { dataset: D
   return (
     <label className="reclass" data-set={row.reclass !== null ? '' : undefined}>
       <span className="visually-hidden">Reclass at level {row.level}</span>
+      {/* Values carry the seal: an Offspring Seal and a Master Seal can promote into the same class. */}
       <select
-        value={row.reclass ?? ''}
+        value={row.reclass === null ? '' : `${row.reclassSeal === 'offspring' ? 'o' : ''}${row.reclass}`}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
+        onChange={(event) => {
+          const value = event.target.value
+          if (value === '') onChange(null)
+          else if (value.startsWith('o')) onChange(Number(value.slice(1)), 'offspring')
+          else onChange(Number(value))
+        }}
       >
         <option value="">{first ? name(row.classId) : 'No reclass'}</option>
         {SEAL_ORDER.map((seal) => {
@@ -477,7 +563,7 @@ function ReclassSelect({ dataset, row, first, disabled, onChange }: { dataset: D
           return (
             <optgroup key={seal} label={SEAL_LABEL[seal]}>
               {options.map((option) => (
-                <option key={option.classId} value={option.classId}>
+                <option key={option.classId} value={`${seal === 'offspring' ? 'o' : ''}${option.classId}`}>
                   {name(option.classId)}{option.newSegment && option.level > 1 ? ` (Lv ${option.level})` : ''}
                 </option>
               ))}

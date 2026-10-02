@@ -81,6 +81,13 @@ an export named …" / `Cannot read properties of undefined` while `tsc` and tes
 - `npm run shots` (needs the dev server) writes 23 screens to `docs/screenshots/v3/`. Writing there
   directly often fails with `UNKNOWN: unknown error, open …png` (Windows file lock). Use
   `$env:SHOT_OUT="$env:LOCALAPPDATA\Temp\v31shots"`, then copy the PNGs over.
+- **Show captures in chat as they happen.** Post each screenshot the moment it is captured, in its
+  own short message, as a markdown image with a URL-encoded absolute path, e.g.
+  `![inherit picker](file:///C:/Users/jacob/AppData/Local/Temp/p34/b1/01-inherit-grouped.png)`, then
+  keep working. Send before/after shots as they occur - do not batch them into the final summary -
+  and not all 23. Paseo reads local files through its file RPC, so this is what makes the
+  screenshots visible to the owner; the Read tool alone renders in opencode's own UI but not in
+  Paseo's opencode chat.
 - A failed/timeout shot usually means a runtime crash — reproduce with a small Playwright script that
   logs `pageerror` (seed localStorage key `fates-expanded-planner:plans:v4`; copy the seeding block from
   `scripts/shots.mjs`).

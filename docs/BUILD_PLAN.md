@@ -81,6 +81,8 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   Eternal floor first; hard DLC cases 127 s → ~1.3 s) and a Web Worker; class-or-book question;
   equipped skills off the path assumed from their skill book and counted; seals pill with tooltip;
   Eternal Seal buttons side by side.
+  Round 5: children's recruitment chapter (level table, earliest = later parent), Offspring Seal as a
+  join-row promotion, automation plans with it and asks when skipping it is cheaper.
 
 ### Backlog
 

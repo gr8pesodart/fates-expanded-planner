@@ -60,6 +60,10 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   `progression.test.ts`.
 - **Automate progression (v3.4, `autoProgression.ts`, tests + `tools/audit/autoProgression.audit.ts`)**:
   see DATA.md; it must stay in step with buildProgression's learning rules (verifyAutoPlan replays).
+- **Children's chapter + Offspring Seal (v3.4, `childRecruit.ts`, tests in `progression.test.ts` and
+  `autoProgression.test.ts`)**: children join by recruitment chapter (never before the later parent);
+  level table and Offspring Seal rules (Chapter 19+: advanced Lv 2 per chapter past 18, join row
+  only, free in automation) are in DATA.md. Read `ctx.start.child`, never `joinLevel`, for children.
 - **Items / skill books (v3.4)**: item table layout and the 17 books in DATA.md › Items; books make
   their skill `available` with DLC on.
 - Duplicate branches fall back to the contributor's next (secondary) branch. Seals can't grant Nohr

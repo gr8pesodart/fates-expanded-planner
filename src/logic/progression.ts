@@ -8,7 +8,7 @@ import { classFamily, sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
 import { projectUnit } from './stats'
 
-export type ReclassSeal = 'master' | 'heart' | 'partner' | 'friendship' | 'dlc'
+export type ReclassSeal = 'offspring' | 'master' | 'heart' | 'partner' | 'friendship' | 'dlc'
 
 export interface ReclassOption {
   classId: number
@@ -33,6 +33,8 @@ export interface LevelRow {
   /** At most one skill: only recruitment grants several at once (Progression.startsWith). */
   learned: LearnedSkill[]
   reclass: number | null
+  /** How the reclass on this row is made (an Offspring Seal or a Master Seal can reach the same class). */
+  reclassSeal: ReclassSeal | null
   options: ReclassOption[]
   /** Average stats at this level, after any class change on this row. */
   expected: number[]
@@ -99,6 +101,25 @@ export function dlcClassesFor(dataset: Dataset, gender: 'male' | 'female'): Clas
     result.push(sexed)
   }
   return result
+}
+
+/**
+ * A child recruited from Chapter 19 carries an Offspring Seal: on the join row, before any other class
+ * change, it promotes their starting class to the advanced level its chapter sets.
+ */
+export function offspringOptions(dataset: Dataset, run: RunPlan, ctx: UnitContext): ReclassOption[] {
+  const level = ctx.start.child?.offspringLevel
+  const start = dataset.classesById.get(ctx.start.classId)
+  if (!level || start?.tier !== 'base') return []
+  return start.promotesTo
+    .map((promo) => sexedClassId(dataset, promo, ctx.unit.gender))
+    .filter((id) => classOnRoute(dataset, id, run.route))
+    .map((classId) => ({ classId, seal: 'offspring' as const, level, newSegment: true }))
+}
+
+/** The row option an event names: an Offspring Seal only when the event says so. */
+export function optionFor(options: ReclassOption[], event: Pick<Reclass, 'classId' | 'seal'>): ReclassOption | undefined {
+  return options.find((item) => item.classId === event.classId && (event.seal === 'offspring') === (item.seal === 'offspring'))
 }
 
 function sealFor(branch: UnitContext['pool'][number]['branch']): ReclassSeal {
@@ -269,9 +290,10 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
       }
       arrivedFromReclass = false
 
-      const options = reclassOptions(dataset, run, ctx, def.id, level)
+      const joinRow = segmentIndex === 0 && segment.rows.length === 0
+      const options = [...(joinRow ? offspringOptions(dataset, run, ctx) : []), ...reclassOptions(dataset, run, ctx, def.id, level)]
       const event = events.find((item) => item.segment === segmentIndex && item.level === level && !used.has(item))
-      const option = event ? options.find((item) => item.classId === event.classId) : undefined
+      const option = event ? optionFor(options, event) : undefined
       let reclass: number | null = null
       if (event && option) {
         used.add(event)
@@ -283,7 +305,7 @@ export function buildProgression(dataset: Dataset, run: RunPlan, ctx: UnitContex
         }
       }
 
-      segment.rows.push({ segment: segmentIndex, level, classId: def.id, learned, reclass, options, ...snapshot(classDef) })
+      segment.rows.push({ segment: segmentIndex, level, classId: def.id, learned, reclass, reclassSeal: reclass === null ? null : option?.seal ?? null, options, ...snapshot(classDef) })
 
       if (event && option?.newSegment) {
         level = option.level
@@ -343,9 +365,9 @@ export function finalClass(progression: Progression): number | null {
  * Set or clear the reclass on one row. Later reclasses are kept when still legal; the rest are
  * reported in `dropped` so the UI can say how many it removed.
  */
-export function withReclass(reclasses: Reclass[], segment: number, level: number, classId: number | null): Reclass[] {
+export function withReclass(reclasses: Reclass[], segment: number, level: number, classId: number | null, seal?: 'offspring'): Reclass[] {
   const others = reclasses.filter((item) => !(item.segment === segment && item.level === level))
-  return classId === null ? others : [...others, { segment, level, classId }]
+  return classId === null ? others : [...others, { segment, level, classId, ...(seal ? { seal } : {}) }]
 }
 
 export interface SealUse {
@@ -360,14 +382,14 @@ export function sealsUsed(progression: Progression): SealUse[] {
   const uses: SealUse[] = []
   for (const row of progression.segments.flatMap((segment) => segment.rows)) {
     if (row.reclass === null) continue
-    const seal = row.options.find((option) => option.classId === row.reclass)?.seal
+    const seal = row.reclassSeal
     if (!seal) continue
     const classId = seal === 'dlc' ? row.reclass : null
     const existing = uses.find((use) => use.seal === seal && use.classId === classId)
     if (existing) existing.count += 1
     else uses.push({ seal, classId, count: 1 })
   }
-  const order: SealUse['seal'][] = ['master', 'heart', 'partner', 'friendship', 'dlc', 'eternal']
+  const order: SealUse['seal'][] = ['offspring', 'master', 'heart', 'partner', 'friendship', 'dlc', 'eternal']
   if (progression.eternalSeals > 0) uses.push({ seal: 'eternal', classId: null, count: progression.eternalSeals })
   return uses.sort((a, b) => order.indexOf(a.seal) - order.indexOf(b.seal))
 }

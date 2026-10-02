@@ -241,6 +241,25 @@ The current planner therefore does not include inherited support rows in child p
   ways in), which the picker's Grouped view lists whole. Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
   else; skills nothing in the run gives are not listed. Picker filters (`SkillFilters`, per unit):
   `s` / `a` drop new S / A+ candidates, `p` drops other second parents once one is chosen.
+- **Children's recruitment chapter (v3.4, `logic/childRecruit.ts`)** - children pick the main-story
+  chapter (story position: the chapter to be played next) their paralogue is done at
+  (`UnitPlan.joinChapter`). Earliest = the later of the parents' recruitment chapters (a parent who
+  is a child counts by their own earliest chapter; owner rule), never before child paralogues open
+  (after Chapter 7; Birthright Paralogue 6 also needs Chapter 15). Join level by position (Fire
+  Emblem Wiki › Fight or Flight scaling; GameFAQs Conquest board 73313117: "Chapter 13 14 / Chapter
+  14 15 / Chapter 15 17 / Chapter 16 18 / Chapter 17 20"): Lv 10 through Chapter 11, 12 → 11,
+  13 → 12, 14 → 14, 15 → 15, 16 → 17, 17 → 18, 18+ → 20. Same on every route (a forum-only
+  Birthright chart disagrees; unconfirmed). Parents' levels don't change the join level.
+- **Offspring Seal (v3.4)** - children recruited from Chapter 19 join at base Lv 20 carrying one (Fire
+  Emblem Wiki › Offspring Seal: "will not appear if recruited from chapter 18 or earlier"). It promotes
+  the **starting base class** to one of its promotions at advanced Lv 2 × (chapter − 18): Chapter 19 → 2
+  … 27 → 18 (Fandom › Offspring Seal table; GameFAQs Conquest board 73499249: "Chapter 19 starts them
+  at level 2 promoted, each subsequent chapter adds 2"). Fixed at recruitment, not retroactive, and
+  unusable once another class-change item is used - so the planner offers it on the join row only
+  (`progression.ts › offspringOptions`; stored as `Reclass.seal = 'offspring'`, since a Master Seal can
+  reach the same class at Lv 1). It comes with the child, so it costs no seal in automation; a plan
+  requiring it and one forbidding it are both solved, and the player is asked when skipping it is
+  cheaper (a late seal leaves few level-ups for advanced skills). Research: Luna, 2026-10-02.
 - **Items (v3.4, `tools/assets/extract_item_icons.py` → `src/data/itemIcons.json`)** - GameData header
   word 11 (at 0x20) points at the item table; records start 0x10 later, 104 bytes each: +0 IID
   pointer, +16 u16 icon cell, +19 kind (11 seal / class-change item, 12 skill book), +56 seal type

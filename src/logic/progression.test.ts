@@ -5,7 +5,7 @@ import type { RunPlan } from '../state/model'
 import { emptyRun, emptyUnitPlan, withCorrinBuild } from '../state/model'
 import { unitContext } from './army'
 import type { LearnedSkill, Progression } from './progression'
-import { buildProgression, expectedFinal, findRow, routeSteps, tierCap } from './progression'
+import { buildProgression, expectedFinal, findRow, routeSteps, sealsUsed, tierCap } from './progression'
 
 let dataset: Dataset
 
@@ -121,17 +121,42 @@ describe('buildProgression', () => {
   })
 
   it('starts from the planned recruitment level for variable-level recruits only', () => {
-    const run = corrinRun([])
-    const kana = dataset.units.find((unit) => unit.fixedParent === CORRIN_F)!
+    const run = { ...corrinRun([]), route: 'revelation' as const }
+    const fuga = dataset.units.find((unit) => unit.name === 'Fuga')!
     const jakob = dataset.units.find((unit) => unit.name === 'Jakob')!
-    const planned = { ...run, units: { ...run.units, [kana.id]: { ...emptyUnitPlan(), joinLevel: 14 }, [jakob.id]: { ...emptyUnitPlan(), joinLevel: 14 } } }
-    const kanaCtx = unitContext(dataset, planned, kana.id)!
-    expect(kanaCtx.start.variableLevel).toBe(true)
-    expect(kanaCtx.start.level).toBe(14)
-    expect(buildProgression(dataset, planned, kanaCtx).segments[0].rows[0].level).toBe(14)
+    const planned = { ...run, units: { ...run.units, [fuga.id]: { ...emptyUnitPlan(), joinLevel: 14 }, [jakob.id]: { ...emptyUnitPlan(), joinLevel: 14 } } }
+    const fugaCtx = unitContext(dataset, planned, fuga.id)!
+    expect(fugaCtx.start.variableLevel).toBe(true)
+    expect(fugaCtx.start.level).toBe(14)
+    expect(buildProgression(dataset, planned, fugaCtx).segments[0].rows[0].level).toBe(14)
     const jakobCtx = unitContext(dataset, planned, jakob.id)!
     expect(jakobCtx.start.variableLevel).toBe(false)
     expect(jakobCtx.start.level).toBe(jakobCtx.start.defaultLevel)
+  })
+
+  it('joins children by recruitment chapter, never before the later parent, with an Offspring Seal from Chapter 19', () => {
+    const run = { ...corrinRun([]), route: 'revelation' as const }
+    const kana = dataset.units.find((unit) => unit.fixedParent === CORRIN_F)!
+    // Xander joins in Revelation Chapter 17, so Kana with Xander as second parent can't come before it.
+    const xander = dataset.units.find((unit) => unit.name === 'Xander')!
+    const married = { ...run, units: { [CORRIN_F]: { ...emptyUnitPlan(), sPartner: xander.id }, [xander.id]: { ...emptyUnitPlan(), sPartner: CORRIN_F } } }
+    const early = unitContext(dataset, { ...married, units: { ...married.units, [kana.id]: { ...emptyUnitPlan(), joinChapter: 9 } } }, kana.id)!
+    expect(early.start.child).toMatchObject({ earliest: 17, chapter: 17, offspringLevel: null })
+    expect(early.start.level).toBe(18)
+    const late = { ...married, units: { ...married.units, [kana.id]: { ...emptyUnitPlan(), joinChapter: 21 } } }
+    const lateCtx = unitContext(dataset, late, kana.id)!
+    expect(lateCtx.start.level).toBe(20)
+    expect(lateCtx.start.child?.offspringLevel).toBe(6)
+    const join = buildProgression(dataset, late, lateCtx).segments[0].rows[0]
+    const offspring = join.options.filter((option) => option.seal === 'offspring')
+    expect(offspring.length).toBeGreaterThan(0)
+    expect(offspring.every((option) => option.level === 6 && option.newSegment)).toBe(true)
+    // Taken: the Offspring Seal promotes to Advanced Lv 6 and is tallied as itself.
+    const promoted = { ...late, units: { ...late.units, [kana.id]: { ...emptyUnitPlan(), joinChapter: 21, reclasses: [{ segment: 0, level: 20, classId: offspring[0].classId, seal: 'offspring' as const }] } } }
+    const progression = buildProgression(dataset, promoted, unitContext(dataset, promoted, kana.id)!)
+    expect(progression.dropped).toEqual([])
+    expect(progression.segments[1].rows[0].level).toBe(6)
+    expect(sealsUsed(progression)).toEqual([{ seal: 'offspring', classId: null, count: 1 }])
   })
 
   it('never offers a promotion below Lv 10', () => {

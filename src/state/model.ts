@@ -14,6 +14,8 @@ export interface Reclass {
   segment: number
   level: number
   classId: number
+  /** The Offspring Seal's promotion (children recruited from Chapter 19), rather than a Master Seal into the same class. */
+  seal?: 'offspring'
 }
 
 export type Gender = 'male' | 'female'
@@ -68,6 +70,8 @@ export interface UnitPlan {
   friendshipPartners?: string[]
   /** Recruitment level for units whose join level depends on when they're recruited. */
   joinLevel?: number
+  /** Children: the main-story chapter (position) their paralogue is done at; sets level and Offspring Seal. */
+  joinChapter?: number
   /** Starred classes, listed first on the Profile and Stats tabs. */
   favouriteClasses?: number[]
   /** Children: starred second-parent candidates, listed first on the Parents tab. */

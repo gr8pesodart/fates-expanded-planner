@@ -1,6 +1,7 @@
 import { loadDataset } from '../data/loader'
 import type { RunPlan } from '../state/model'
 import { unitContext } from './army'
+import type { OffspringMode } from './autoProgression'
 import { autoProgression } from './autoProgression'
 
 /** Runs the automate-progression search off the main thread (a hard plan takes a second or two). */
@@ -10,17 +11,18 @@ export interface AutoRequest {
   run: RunPlan
   unitId: string
   bookSkills: number[]
+  offspring: OffspringMode
 }
 
 // Typed as a Worker: the app's tsconfig has the DOM lib, not the webworker one.
 const scope = self as unknown as Worker
 
 scope.onmessage = async (event: MessageEvent<AutoRequest>) => {
-  const { id, packId, run, unitId, bookSkills } = event.data
+  const { id, packId, run, unitId, bookSkills, offspring } = event.data
   try {
     const dataset = await loadDataset(packId)
     const ctx = unitContext(dataset, run, unitId)
-    const result = ctx ? autoProgression(dataset, run, ctx, bookSkills) : null
+    const result = ctx ? autoProgression(dataset, run, ctx, bookSkills, offspring) : null
     scope.postMessage({ id, result })
   } catch (error) {
     scope.postMessage({ id, result: null, error: String(error) })
