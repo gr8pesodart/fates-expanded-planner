@@ -80,13 +80,18 @@ function useInViewport(ref: { current: HTMLSpanElement | null }): boolean {
 const CLOCK_EPOCH = performance.now()
 const TICK_MS = 1000 / 60
 
-/** The frame showing at `now` on the shared clock, and the ms until it changes. */
+/**
+ * The frame showing at `now` on the shared clock, and the ms until it changes. Frames with a 0 delay
+ * are skipped, as the game does: Kitsune, Nine-Tails (F) and Blacksmith (F) end their scripts with
+ * 0-delay poses, and showing them for a tick flicked back through poses 2 and 1 before each restart.
+ */
 function frameAt(sequence: SpriteAnimationFrame[], now: number): { index: number; wait: number } {
-  const total = sequence.reduce((sum, frame) => sum + Math.max(1, frame[1]), 0)
+  const total = sequence.reduce((sum, frame) => sum + Math.max(0, frame[1]), 0)
+  if (total <= 0) return { index: 0, wait: TICK_MS }
   const elapsed = now - CLOCK_EPOCH
   let tick = Math.floor(elapsed / TICK_MS) % total
   for (let index = 0; index < sequence.length; index += 1) {
-    const delay = Math.max(1, sequence[index][1])
+    const delay = Math.max(0, sequence[index][1])
     if (tick < delay) return { index, wait: (delay - tick) * TICK_MS - (elapsed % TICK_MS) }
     tick -= delay
   }
