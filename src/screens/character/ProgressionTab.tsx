@@ -223,8 +223,8 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
         <SealTally items={tally} />
         {canEternal || progression.eternalSeals > 0 ? (
           <div className="eternal-row">
-            <button type="button" className="btn primary" title="+5 levels" disabled={readOnly || !canEternal} onClick={() => setEternal(progression.eternalSeals + 1)}>Use Eternal Seal</button>
             <button type="button" className="btn outline" disabled={readOnly || progression.eternalSeals === 0} onClick={() => setEternal(progression.eternalSeals - 1)}>Remove an Eternal Seal</button>
+            <button type="button" className="btn primary" title="+5 levels" disabled={readOnly || !canEternal} onClick={() => setEternal(progression.eternalSeals + 1)}>Use Eternal Seal</button>
           </div>
         ) : null}
       </div>

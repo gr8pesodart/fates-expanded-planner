@@ -32,7 +32,12 @@ export function SealTally({ items }: { items: readonly TallyItem[] }) {
       </button>
       {open ? (
         <div className="seal-tooltip" role="tooltip">
-          {items.map((item) => <span key={item.id}>{item.name} x{item.count}</span>)}
+          {items.map((item) => (
+            <span key={item.id} className="seal-tooltip-item">
+              {item.key ? <ItemIcon itemKey={item.key} /> : null}
+              {item.name} x{item.count}
+            </span>
+          ))}
         </div>
       ) : null}
     </div>
