@@ -2066,10 +2066,10 @@
   display: grid;
   gap: var(--s3);
   border-top: 1px solid var(--line);
-  padding: calc(var(--s5) + 15px + var(--s2) * 2) var(--s4) var(--s4);
+  padding: calc(21px + var(--s2) * 2) var(--s4) var(--s4);
 }
 
-/* The pill is 70px tall (28px button + 2 x --s5 + 2px border), so half of it rises above the
+/* The pill is 42px tall (28px button + 2 x --s2 + 2px border), so half of it rises above the
    border. The surface ring cuts a constant gap out of the border around the pill. */
 .progression-foot .seal-pill {
   position: absolute;
@@ -2081,7 +2081,7 @@
 
 /* The last chart section hands its border to the foot and leaves room for the pill's top half. */
 .panel-section:has(+ .progression-foot) {
-  padding-bottom: calc(var(--s5) + 15px + var(--s2) * 2);
+  padding-bottom: calc(21px + var(--s2) * 2);
   border-bottom: 0;
 }
 
@@ -2114,7 +2114,7 @@
   align-items: center;
   gap: var(--s2);
   min-height: 32px;
-  padding: var(--s5);
+  padding: var(--s2) var(--s4);
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-pill);
@@ -2173,12 +2173,12 @@
 }
 
 /* The tail is part of the tooltip's fill (same background, no seam) and points at the info button,
-   which sits 34px from the tooltip's right edge in both the Progression and Chart pills. */
+   which sits 26px from the tooltip's right edge in both the Progression and Chart pills. */
 .seal-tooltip::after {
   content: "";
   position: absolute;
   top: 100%;
-  right: 28px;
+  right: 20px;
   width: 12px;
   height: var(--s2);
   background: var(--seal-tooltip-bg);
@@ -2205,7 +2205,7 @@
    of the fade), the icons scrolling under the fixed info button, whose surface plate fades into
    the list (owner, v3.5). The right edge sits midway in the page margin (--s3). */
 .chart-seal-float {
-  --seal-fade: 72px;
+  --seal-fade: 64px;
   position: fixed;
   right: calc(var(--s3) / 2);
   bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom));
@@ -2227,9 +2227,9 @@
   border-radius: var(--r-pill);
   /* Span border to border so scrolling content clips at the pill edge, not the start inset; the
      padding moves onto the scroller, and the right side also reaches under the button and fade. */
-  margin-left: calc(-1 * var(--s5));
-  margin-right: calc(-1 * (var(--s5) + 28px + var(--s2)));
-  padding-left: var(--s5);
+  margin-left: calc(-1 * var(--s4));
+  margin-right: calc(-1 * (var(--s4) + 28px + var(--s2)));
+  padding-left: var(--s4);
   padding-right: var(--seal-fade);
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -2255,7 +2255,7 @@
   z-index: 1;
   width: var(--seal-fade);
   border-radius: 0 var(--r-pill) var(--r-pill) 0;
-  background: linear-gradient(90deg, transparent, var(--surface) 33%);
+  background: linear-gradient(90deg, transparent, var(--surface) 37%);
   pointer-events: none;
 }
 

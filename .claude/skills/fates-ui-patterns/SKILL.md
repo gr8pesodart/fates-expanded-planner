@@ -72,7 +72,7 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Roster: the list is the swipe surface; every row's `StatTable` gets `slide` = { index, prev, next }
   (v3.4 strip: the neighbouring lenses' tables are rendered either side, so a drag shows them; on
   commit the track remounts centred and eases in from `--swipe-from`). SlideSwap is gone.
-- **Progression foot (v3.4)**: `SealTally` is a pill (icons + "x2" only, uniform `--s5` padding, 70px
+- **Progression foot (v3.4)**: `SealTally` is a pill (icons + "x2" only, `--s2`/`--s4` padding, 42px
   tall, surface fill) with an info button opening a dark `--scrim` tooltip list whose rows show the
   item sprite inline with the name. On the Progression page the foot owns the chart's bottom border
   (`border-top`) and the pill hangs on it at the right screen edge, centred with
@@ -87,7 +87,7 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   line capped at half the viewport (`50vw`), the right edge midway in the page margin, the icons
   scrolling border-to-border (scrollbar hidden; the float sits outside the chart pager's swipe
   surface, so native touch scroll works) under the fixed info button, whose `::after` surface
-  gradient (`--seal-fade: 72px` covers the button inside the wider padding) fades the list out;
+  gradient (`--seal-fade: 64px` covers the button) fades the list out;
   `flex: none` keeps the button from being squeezed. The shared tooltip (same component on the
   Progression foot) hugs its contents and right-aligns to the pill in both instances, is
   semi-transparent (`color-mix(--scrim 92%, transparent)`), carries `--shadow-float`, builds its
