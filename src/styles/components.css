@@ -2136,12 +2136,12 @@
 .seal-tooltip {
   position: absolute;
   bottom: calc(100% + var(--s2));
-  left: 0;
+  right: 0;
   z-index: 6;
   display: grid;
   gap: 2px;
-  /* At least the pill's width so the tail below always meets a Progression or Chart pill. */
-  min-width: max(100%, 180px);
+  width: max-content;
+  max-width: calc(100vw - var(--s5));
   padding: var(--s3) var(--s4);
   border-radius: var(--r-md);
   background: var(--seal-tooltip-bg);
@@ -2152,14 +2152,13 @@
   animation: seal-pop 160ms var(--ease);
 }
 
-/* The tail points at the info button, which sits 19px from the pill's inner right edge in both
-   instances; :has keeps it tied to the conditionally rendered tooltip. */
-.seal-pill:has(.seal-tooltip)::before {
+/* The tail is part of the tooltip's fill (same background, no seam) and points at the info button,
+   which sits 18px from the tooltip's right edge in both the Progression and Chart pills. */
+.seal-tooltip::after {
   content: "";
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   right: 12px;
-  z-index: 6;
   width: 12px;
   height: var(--s2);
   background: var(--seal-tooltip-bg);
@@ -2238,12 +2237,6 @@
   position: relative;
   z-index: 2;
   flex: none;
-}
-
-/* Right-aligned pill: the tooltip opens inwards, not off the screen edge. */
-.chart-seal-float .seal-tooltip {
-  left: auto;
-  right: -1px;
 }
 
 @media (min-width: 1024px) {
