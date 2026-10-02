@@ -1,14 +1,15 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useMemo, useRef } from 'react'
 import { usePlanner } from '../app/plannerContext'
 import { usePickers } from '../app/pickerStore'
 import { useUi } from '../app/ui'
 import type { ChartTab } from '../app/ui'
 import type { RosterEntry } from '../app/selectors'
 import { useSortedRoster } from '../app/selectors'
-import { ClassSprite, Portrait, SkillIcon } from '../components/art'
+import { ClassSprite, SkillIcon } from '../components/art'
 import { EditButton, Rail, StarButton } from '../components/controls'
 import { StatTable } from '../components/StatTable'
 import { SwapButton } from '../components/SwapButton'
+import { PagerPage, TabPager } from '../components/TabPager'
 import { preloadSplashArt } from '../data/art'
 import { SortIcon } from '../components/SortIcon'
 import { chartCards } from '../logic/chart'
@@ -17,6 +18,8 @@ import { lensRow } from '../logic/lenses'
 import { buildProgression, routeSteps } from '../logic/progression'
 import { toggleFavourite } from '../logic/relationships'
 import { navigate } from '../lib/router'
+import { useSwipePager } from '../lib/swipe'
+import { useMountedTabs } from '../lib/useMountedTabs'
 import { useScrolled } from '../lib/useScrolled'
 
 const TABS: { id: ChartTab; label: string }[] = [
@@ -25,6 +28,7 @@ const TABS: { id: ChartTab; label: string }[] = [
   { id: 'progression', label: 'Progression' },
   { id: 'pairUp', label: 'Skills + Pair Up' },
 ]
+const TAB_IDS = TABS.map((tab) => tab.id)
 
 /** What a chart row shows under its name line, per tab. */
 interface RowParts {
@@ -55,6 +59,33 @@ export function ChartScreen() {
   const { sentinelRef, scrolled } = useScrolled()
   const byId = new Map(entries.map((entry) => [entry.unitId, entry]))
   const cards = chartCards(entries.map((entry) => entry.unitId), run, chartLinkPairs)
+  const pagesRef = useRef<HTMLDivElement>(null)
+  const tabIndex = TABS.findIndex((tab) => tab.id === chartTab)
+  // Tabs swipe like the character page: each tab is a full chart, mounted once seen.
+  useSwipePager(pagesRef, tabIndex, TABS.length, (next) => setChartTab(TABS[next].id))
+  const mounted = useMountedTabs(chartTab, TAB_IDS, 600)
+  const chartList = (tab: ChartTab) => (
+    <ul className="chart-list">
+      {cards.map((card) => {
+        if (card.kind === 'solo') {
+          const entry = byId.get(card.unitId)
+          return entry ? <li key={card.unitId} className="chart-card"><ChartRow entry={entry} parts={partsFor(tab, 'solo')} /></li> : null
+        }
+        const front = byId.get(card.front)
+        const back = byId.get(card.back)
+        if (!front || !back) return null
+        return (
+          <li key={`${card.front}+${card.back}`} className="chart-card pair">
+            <ChartRow entry={front} parts={partsFor(tab, 'front')} />
+            <div className="chart-swap">
+              <SwapButton unitId={card.front} frontName={front.name} backName={back.name} />
+            </div>
+            <ChartRow entry={back} parts={partsFor(tab, 'back')} />
+          </li>
+        )
+      })}
+    </ul>
+  )
   return (
     <section className="screen chart" aria-labelledby="chart-title">
       <span ref={sentinelRef} className="sticky-sentinel" aria-hidden="true" />
@@ -70,26 +101,15 @@ export function ChartScreen() {
         </div>
         <Rail variant="tabs" label="Chart shows" items={TABS} active={chartTab} onSelect={setChartTab} />
       </div>
-      <ul className="chart-list">
-        {cards.map((card) => {
-          if (card.kind === 'solo') {
-            const entry = byId.get(card.unitId)
-            return entry ? <li key={card.unitId} className="chart-card"><ChartRow entry={entry} parts={partsFor(chartTab, 'solo')} /></li> : null
-          }
-          const front = byId.get(card.front)
-          const back = byId.get(card.back)
-          if (!front || !back) return null
-          return (
-            <li key={`${card.front}+${card.back}`} className="chart-card pair">
-              <ChartRow entry={front} parts={partsFor(chartTab, 'front')} />
-              <div className="chart-swap">
-                <SwapButton unitId={card.front} frontName={front.name} backName={back.name} />
-              </div>
-              <ChartRow entry={back} parts={partsFor(chartTab, 'back')} />
-            </li>
-          )
-        })}
-      </ul>
+      <div ref={pagesRef} className="chart-pages" data-swipe>
+        <TabPager index={tabIndex}>
+          {TABS.map((tab) => (
+            <PagerPage key={tab.id} active={tab.id === chartTab} label={tab.label}>
+              {mounted.has(tab.id) ? chartList(tab.id) : null}
+            </PagerPage>
+          ))}
+        </TabPager>
+      </div>
     </section>
   )
 }
@@ -107,7 +127,6 @@ function ChartRow({ entry, parts }: { entry: RosterEntry; parts: RowParts }) {
     <div className="chart-row" onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
       <div className="chart-row-top">
         <div className="roster-id">
-          <Portrait unitId={unitId} name={name} className="chip-24" />
           <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
           <span className="unit-name">{name}</span>
           <StarButton heart on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((next) => toggleFavourite(next, unitId))} />

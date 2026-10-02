@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { ClassSprite, Portrait } from '../components/art'
 import { Icon } from '../components/icons'
 import type { SlotKind } from '../components/slots'
@@ -7,14 +8,16 @@ import { Sheet } from '../components/Sheet'
 import { Rail, Segmented, StarButton, Switch } from '../components/controls'
 import { SortIcon } from '../components/SortIcon'
 import { SkillCard } from '../components/SkillCard'
-import { SkillNotice } from '../components/SkillNotice'
+import { ConflictNotice, SkillNotice } from '../components/SkillNotice'
+import { PagerPage, TabPager } from '../components/TabPager'
+import { useMountedTabs } from '../lib/useMountedTabs'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import { displayName, unitContext } from '../logic/army'
-import { classFamily } from '../logic/classes'
+import { classFamily, sexedClassId } from '../logic/classes'
 import { blankColumns } from '../logic/lenses'
 import type { ClassPoolEntry } from '../logic/classes'
 import { dlcClassesFor } from '../logic/progression'
-import type { SkillAccess, SkillGroup } from '../logic/skillAccess'
+import type { ClassAccess, SkillAccess, SkillFilters, SkillGroup } from '../logic/skillAccess'
 import { SKILL_GROUP_ORDER, skillAccess } from '../logic/skillAccess'
 import type { RosterSort } from '../logic/rosterSort'
 import { directionOfSort } from '../logic/rosterSort'
@@ -26,9 +29,9 @@ import { SKILL_SLOTS, emptyUnitPlan } from '../state/model'
 import { applyBond, bondOf, usePickers } from './pickerStore'
 import type { SkillTarget } from './pickerStore'
 import { usePlanner } from './plannerContext'
-import { useUi } from './ui'
+import { useSkillFilters, useUi } from './ui'
 import type { SkillPickerTab } from './ui'
-import { SlideSwap } from '../components/SlideSwap'
+import { acquiredVia, skillRules } from './unitViews'
 import { useSwipePager } from '../lib/swipe'
 import { candidatesFor } from './selectors'
 
@@ -166,39 +169,78 @@ const PICKER_TABS: { id: SkillPickerTab; label: string }[] = [
   { id: 'grouped', label: 'Grouped' },
   { id: 'ungrouped', label: 'Ungrouped' },
 ]
+const PICKER_TAB_IDS = PICKER_TABS.map((item) => item.id)
 
 /**
- * Marks sticky group headings once they're pinned so their bottom border fades in. A pinned heading
- * sits 1px above the sheet body's top edge (`top: -11px`), so "pinned" = top above that edge. (An
- * IntersectionObserver can't tell: the full-bleed headings are never fully inside the body, so
- * pinned and unpinned ratios fall between the same thresholds.)
+ * Grouped view's table of contents (owner, v3.4): a sticky pill rail in place of sticky group
+ * headings. The pill follows the scroll; tapping one scrolls its group to just under the rail.
  */
-function useStuckHeadings(ref: { current: HTMLElement | null }, tab: SkillPickerTab, list: unknown): void {
+function GroupToc({ groups }: { groups: readonly SkillGroup[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [active, setActive] = useState<SkillGroup>(groups[0])
+  // While a tapped pill's smooth scroll runs, the groups it passes don't take the highlight.
+  const jumping = useRef<number | null>(null)
+  const key = groups.join(' ')
   useEffect(() => {
-    const root = ref.current?.closest('.sheet-body')
-    if (!root) return
+    const toc = ref.current
+    const scroller = toc?.closest('.pager-page')
+    if (!toc || !scroller) return
+    const list = key.split(' ') as SkillGroup[]
     let frame = 0
     const update = () => {
       frame = 0
-      const edge = root.getBoundingClientRect().top
-      root.querySelectorAll<HTMLElement>('.skill-pick-group > .pick-heading').forEach((heading) => {
-        const box = heading.getBoundingClientRect()
-        heading.toggleAttribute('data-stuck', box.top < edge && box.bottom > edge)
-      })
+      if (jumping.current !== null) return
+      const edge = toc.getBoundingClientRect().bottom + 1
+      let current = list[0]
+      for (const group of list) {
+        const section = scroller.querySelector(`[data-group="${group}"]`)
+        if (section && section.getBoundingClientRect().top <= edge) current = group
+      }
+      // A short last group can't reach the top; at the very bottom it's the one being read.
+      if (scroller.scrollTop > 0 && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) current = list[list.length - 1]
+      setActive(current)
     }
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(update) }
     update()
-    root.addEventListener('scroll', onScroll, { passive: true })
+    scroller.addEventListener('scroll', onScroll, { passive: true })
     return () => {
-      root.removeEventListener('scroll', onScroll)
+      scroller.removeEventListener('scroll', onScroll)
       cancelAnimationFrame(frame)
     }
-  }, [ref, tab, list])
+  }, [key])
+  const jump = (group: SkillGroup) => {
+    const toc = ref.current
+    const scroller = toc?.closest('.pager-page')
+    const section = scroller?.querySelector(`[data-group="${group}"]`)
+    if (!toc || !scroller || !section) return
+    setActive(group)
+    const top = section.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - toc.offsetHeight
+    if (jumping.current !== null) window.clearTimeout(jumping.current)
+    const release = () => {
+      if (jumping.current !== null) window.clearTimeout(jumping.current)
+      jumping.current = null
+      scroller.removeEventListener('scrollend', release)
+      // Re-sync the highlight with where the scroll actually ended.
+      scroller.dispatchEvent(new Event('scroll'))
+    }
+    scroller.addEventListener('scrollend', release)
+    jumping.current = window.setTimeout(release, 1200)
+    scroller.scrollTo({ top, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }
+  return (
+    <div ref={ref} className="skill-toc">
+      <Rail variant="pills" label="Skill groups" items={groups.map((group) => ({ id: group, label: GROUP_TITLE[group] }))} active={active} onSelect={jump} />
+    </div>
+  )
 }
 
-/** S / A+ (Corrin: A) relationship toggles for what counts as a way in; a small menu beside close. */
-function SkillFilterMenu({ corrin }: { corrin: boolean }) {
-  const { skillFilters, setSkillFilters } = useUi()
+/**
+ * Which relationships count as a way in, kept per character: new S / A+ (Corrin: A) partners and,
+ * for a child whose second parent is chosen, other second parents. A small menu beside close.
+ */
+function SkillFilterMenu({ unitId, corrin, parent }: { unitId: string; corrin: boolean; parent: boolean }) {
+  const filters = useSkillFilters(unitId)
+  const setSkillFilters = useUi((state) => state.setSkillFilters)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -207,7 +249,8 @@ function SkillFilterMenu({ corrin }: { corrin: boolean }) {
     document.addEventListener('pointerdown', away)
     return () => document.removeEventListener('pointerdown', away)
   }, [open])
-  const filtered = !skillFilters.s || !skillFilters.a
+  const set = (next: Partial<SkillFilters>) => setSkillFilters(unitId, { ...filters, ...next })
+  const filtered = !filters.s || !filters.a || (parent && !filters.p)
   return (
     <div ref={ref} className="filter-menu-wrap">
       <button type="button" className="icon-btn" aria-label="Filter skills" aria-expanded={open} data-active={filtered || undefined} onClick={() => setOpen(!open)}>
@@ -217,12 +260,18 @@ function SkillFilterMenu({ corrin }: { corrin: boolean }) {
         <div className="filter-menu" role="dialog" aria-label="Skill filters">
           <label className="switch-row">
             <span className="sub-title">S rank flexible</span>
-            <Switch checked={skillFilters.s} onChange={(s) => setSkillFilters({ ...skillFilters, s })} />
+            <Switch checked={filters.s} onChange={(s) => set({ s })} />
           </label>
           <label className="switch-row">
             <span className="sub-title">{corrin ? 'A rank' : 'A+ rank'} flexible</span>
-            <Switch checked={skillFilters.a} onChange={(a) => setSkillFilters({ ...skillFilters, a })} />
+            <Switch checked={filters.a} onChange={(a) => set({ a })} />
           </label>
+          {parent ? (
+            <label className="switch-row">
+              <span className="sub-title">Parent flexible</span>
+              <Switch checked={filters.p} onChange={(p) => set({ p })} />
+            </label>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -233,7 +282,8 @@ function SkillFilterMenu({ corrin }: { corrin: boolean }) {
  * Every skill the unit could hold in this run, and those it can't (skillAccess.ts). Tabs: Starred
  * (the unit's starred skills), Grouped (by how far the plan is from them, then by teaching class —
  * a skill several classes teach is listed under each) and Ungrouped (one list with the Profile's
- * coloured notices). Picking a skill equipped in another slot swaps the two slots.
+ * coloured notices). Picking a skill equipped in another slot swaps the two slots. The tabs sit side
+ * by side in a pager and stay mounted, each scrolling on its own.
  */
 function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: number; onClose(): void }) {
   const { dataset, run, mutate, readOnly } = usePlanner()
@@ -241,102 +291,137 @@ function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: num
   const toggleSkillClass = useUi((state) => state.toggleSkillClass)
   const tab = useUi((state) => state.skillPickerTab)
   const setTab = useUi((state) => state.setSkillPickerTab)
-  const filters = useUi((state) => state.skillFilters)
+  const filters = useSkillFilters(unitId)
   const ctx = useMemo(() => unitContext(dataset, run, unitId), [dataset, run, unitId])
   const access = useMemo(() => (ctx ? skillAccess(dataset, run, ctx, filters) : null), [dataset, run, ctx, filters])
   const bodyRef = useRef<HTMLDivElement>(null)
   const tabIndex = PICKER_TABS.findIndex((item) => item.id === tab)
   useSwipePager(bodyRef, tabIndex, PICKER_TABS.length, (next) => setTab(PICKER_TABS[next].id))
-  useStuckHeadings(bodyRef, tab, access)
-  if (!ctx || !access) return null
-  const plan = run.units[unitId] ?? emptyUnitPlan()
-  const current = plan.skills[slot]
-  const starred = new Set(plan.favouriteSkills ?? [])
+  const mounted = useMountedTabs(tab, PICKER_TAB_IDS, 260)
 
-  const choose = (skillId: number | null) => {
-    mutate((next) => {
-      const unitPlan = next.units[unitId] ?? emptyUnitPlan()
-      const skills = Array.from({ length: SKILL_SLOTS }, (_, index) => unitPlan.skills[index] ?? null)
-      const other = skillId === null ? -1 : skills.findIndex((id, index) => id === skillId && index !== slot)
-      if (other >= 0) skills[other] = skills[slot]
-      skills[slot] = skillId
-      return { ...next, units: { ...next.units, [unitId]: { ...unitPlan, skills } } }
-    })
-    onClose()
-  }
+  // Built once per plan change, not per tab change: switching tabs then only moves the pager.
+  const pages = useMemo(() => {
+    if (!ctx || !access) return null
+    const plan = run.units[unitId] ?? emptyUnitPlan()
+    const current = plan.skills[slot]
+    const others = plan.skills.filter((_, index) => index !== slot)
+    const starred = new Set(plan.favouriteSkills ?? [])
+    const corrin = ctx.unit.isCorrin
 
-  const card = (item: SkillAccess, level: number | null, coloured: boolean) => {
-    const skill = dataset.skillsById.get(item.skillId)
-    if (!skill) return null
-    const equippedElsewhere = plan.skills.some((id, index) => id === item.skillId && index !== slot)
-    return (
-      <div className="pick-skill">
+    const choose = (skillId: number | null) => {
+      mutate((next) => {
+        const unitPlan = next.units[unitId] ?? emptyUnitPlan()
+        const skills = Array.from({ length: SKILL_SLOTS }, (_, index) => unitPlan.skills[index] ?? null)
+        const other = skillId === null ? -1 : skills.findIndex((id, index) => id === skillId && index !== slot)
+        if (other >= 0) skills[other] = skills[slot]
+        skills[slot] = skillId
+        return { ...next, units: { ...next.units, [unitId]: { ...unitPlan, skills } } }
+      })
+      onClose()
+    }
+
+    /** `grouped`: the class is the heading, so the tag is just the level and notices are per class. */
+    const card = (item: SkillAccess, grouped: boolean, level: number | null = item.level) => {
+      const skill = dataset.skillsById.get(item.skillId)
+      if (!skill) return null
+      const elsewhere = plan.skills.findIndex((id, index) => id === item.skillId && index !== slot)
+      const rules = skillRules(dataset, item.skillId, others)
+      return (
         <SkillCard
           skill={{ id: skill.id, name: skill.name, description: skill.description }}
           selected={item.skillId === current}
-          muted={equippedElsewhere}
-          tag={[level !== null ? `Lv ${level}` : null, equippedElsewhere ? 'Equipped · tap to swap' : null].filter(Boolean).join(' · ') || undefined}
-          notice={coloured ? <SkillNotice access={item} corrin={ctx.unit.isCorrin} /> : undefined}
+          muted={elsewhere >= 0}
+          faded={item.group === 'unavailable'}
+          label={item.skillId === current ? 'Equipped' : elsewhere >= 0 ? `Equipped in slot ${elsewhere + 1} · tap to swap` : undefined}
+          tag={grouped ? (level !== null ? `Lv ${level}` : undefined) : acquiredVia(dataset, run, ctx, item) ?? undefined}
+          caution={rules.caution}
+          notice={<>{grouped ? null : <SkillNotice access={item} corrin={corrin} />}<ConflictNotice names={rules.conflicts} /></>}
           onClick={() => choose(item.skillId)}
+          aside={(
+            <StarButton
+              on={starred.has(item.skillId)}
+              name={skill.name}
+              disabled={readOnly}
+              onToggle={() => mutate((next) => toggleFavouriteSkill(next, unitId, item.skillId))}
+            />
+          )}
         />
-        <StarButton
-          className="pick-skill-star"
-          on={starred.has(item.skillId)}
-          name={skill.name}
-          disabled={readOnly}
-          onToggle={() => mutate((next) => toggleFavouriteSkill(next, unitId, item.skillId))}
-        />
-      </div>
-    )
-  }
+      )
+    }
 
-  // Grouped lists whole classes in their own status, so a skill two classes teach shows twice.
-  const grouped = SKILL_GROUP_ORDER.map((group) => ({ group, classes: access.classes.filter((record) => record.group === group) }))
-    .filter((item) => item.classes.length)
+    const classHead = (record: ClassAccess, group: SkillGroup) => {
+      const def = record.classId !== null ? dataset.classesById.get(record.classId) : undefined
+      // Inheritable only: the parents who pass it on (current parents first), in their own version of
+      // the class. Kana's possible second parents can run long, so two sprites and a count.
+      const parents = group === 'inheritable' ? record.inheritFrom : []
+      const sprites = !def ? null : parents.length
+        ? parents.slice(0, 2).map((parent) => <ClassSprite key={parent.id} unitId={parent.id} classId={sexedClassId(dataset, def.id, parent.gender)} name={`${displayName(parent, run)}: ${def.name}`} size={32} />)
+        : <ClassSprite unitId={unitId} classId={def.id} name={def.name} size={32} />
+      return (
+        <>
+          {sprites ? <span className="skill-class-sprites">{sprites}{parents.length > 2 ? <span className="skill-class-more">+{parents.length - 2}</span> : null}</span> : null}
+          <span className="skill-class-name">{def ? classFamily(def.name) : 'Inherited'}</span>
+        </>
+      )
+    }
 
-  const content = tab === 'grouped' ? (
-    grouped.map(({ group, classes }) => (
-      <section key={group} className="skill-pick-group" aria-label={GROUP_TITLE[group]}>
-        <h3 className="pick-heading">{GROUP_TITLE[group]}</h3>
-        {classes.map((record) => {
-          const { classId } = record
-          const key = `${group}:${classId ?? 'inherited'}`
-          const open = !collapsed?.includes(key)
-          const def = classId !== null ? dataset.classesById.get(classId) : undefined
-          return (
-            <div key={key} className="skill-pick-class">
-              <button type="button" className="skill-class-head" aria-expanded={open} onClick={() => toggleSkillClass(unitId, key)}>
-                {def ? <ClassSprite unitId={unitId} classId={def.id} name={def.name} size={32} /> : null}
-                <span className="skill-class-name">{def ? classFamily(def.name) : 'Inherited'}</span>
-                <Icon name="chevronDown" size={20} className="skill-class-chevron" />
-              </button>
-              {/* Always rendered so collapsing can animate its height (grid-template-rows 0fr ↔ 1fr). */}
-              <div className="skill-class-body" data-open={open || undefined} inert={!open}>
-                <div className="pick-list">
-                  {/* Only acquisition guidance here: the group heading already says "Not in progression". */}
-                  {group === 'available' || group === 'progression' ? null : <SkillNotice access={record} grey perClass corrin={ctx.unit.isCorrin} />}
-                  {record.skills.map(({ skillId, level }) => {
-                    const item = access.byId.get(skillId)
-                    return item ? <Fragment key={skillId}>{card(item, level, false)}</Fragment> : null
-                  })}
+    const groups = SKILL_GROUP_ORDER.map((group) => ({ group, classes: access.classes.filter((record) => record.group === group) }))
+      .filter((item) => item.classes.length)
+    const grouped = (
+      <>
+        <GroupToc groups={groups.map((item) => item.group)} />
+        {groups.map(({ group, classes }) => (
+          <section key={group} className="skill-pick-group" data-group={group} aria-label={GROUP_TITLE[group]}>
+            <h3 className="pick-heading">{GROUP_TITLE[group]}</h3>
+            {classes.map((record) => {
+              const key = `${group}:${record.classId ?? 'inherited'}`
+              const open = !collapsed?.includes(key)
+              return (
+                <div key={key} className="skill-pick-class">
+                  <button
+                    type="button"
+                    className="skill-class-head"
+                    aria-expanded={open}
+                    data-faded={group === 'locked' || group === 'unavailable' || undefined}
+                    onClick={() => toggleSkillClass(unitId, key)}
+                  >
+                    {classHead(record, group)}
+                    <Icon name="chevronDown" size={20} className="skill-class-chevron" />
+                  </button>
+                  {/* Always rendered so collapsing can animate its height (grid-template-rows 0fr ↔ 1fr). */}
+                  <div className="skill-class-body" data-open={open || undefined} inert={!open}>
+                    <div className="pick-list">
+                      <SkillNotice access={record} grey perClass corrin={corrin} />
+                      {record.skills.map(({ skillId, level }) => {
+                        const item = access.byId.get(skillId)
+                        return item ? <Fragment key={skillId}>{card(item, true, level)}</Fragment> : null
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )
-        })}
-      </section>
-    ))
-  ) : (
-    <div className="pick-list">
-      {tab === 'starred' && !access.list.some((item) => starred.has(item.skillId))
-        ? <p className="empty-note">Star skills in the other tabs to keep them here.</p>
-        : null}
-      {access.list
-        .filter((item) => tab === 'ungrouped' || starred.has(item.skillId))
-        .map((item) => <Fragment key={item.skillId}>{card(item, item.level, true)}</Fragment>)}
-    </div>
-  )
+              )
+            })}
+          </section>
+        ))}
+      </>
+    )
+    const flat = (only: (item: SkillAccess) => boolean, empty: ReactNode) => {
+      const items = access.list.filter(only)
+      return (
+        <div className="pick-list">
+          {items.length ? items.map((item) => <Fragment key={item.skillId}>{card(item, false)}</Fragment>) : empty}
+        </div>
+      )
+    }
+    return {
+      starred: flat((item) => starred.has(item.skillId), <p className="empty-note">Star skills in the other tabs to keep them here.</p>),
+      grouped,
+      ungrouped: flat(() => true, null),
+      clear: current != null ? <button type="button" className="text-btn" onClick={() => choose(null)}>Clear</button> : null,
+    }
+  }, [ctx, access, run, unitId, slot, dataset, mutate, onClose, readOnly, collapsed, toggleSkillClass])
 
+  if (!ctx || !pages) return null
   return (
     <Sheet
       title={`Skill ${slot + 1} for ${displayName(ctx.unit, run)}`}
@@ -344,19 +429,28 @@ function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: num
       toolbar={<Rail variant="tabs" label="Skill list" items={PICKER_TABS} active={tab} onSelect={setTab} />}
       actions={(
         <>
-          {current != null ? <button type="button" className="text-btn" onClick={() => choose(null)}>Clear</button> : null}
-          <SkillFilterMenu corrin={ctx.unit.isCorrin} />
+          {pages.clear}
+          <SkillFilterMenu unitId={unitId} corrin={ctx.unit.isCorrin} parent={ctx.isChild && ctx.variableParent !== null} />
         </>
       )}
     >
       <div ref={bodyRef} className="skill-pick-body" data-swipe>
-        <SlideSwap index={tabIndex}>{content}</SlideSwap>
+        <TabPager fill index={tabIndex}>
+          {PICKER_TABS.map((item) => (
+            <PagerPage key={item.id} active={item.id === tab} label={item.label} className={`skill-pick-page ${item.id}`}>
+              {mounted.has(item.id) ? pages[item.id] : null}
+            </PagerPage>
+          ))}
+        </TabPager>
       </div>
     </Sheet>
   )
 }
 
-/** A child's inherited skill: the chosen parent's inheritable skills. */
+/**
+ * A child's inherited skill: the chosen parent's inheritable skills, the ones the parent has equipped
+ * first (a child inherits an equipped skill).
+ */
 function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: 'inheritFixed' | 'inheritVariable'; onClose(): void }) {
   const { dataset, run, mutate } = usePlanner()
   const ctx = unitContext(dataset, run, unitId)
@@ -372,6 +466,9 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
   const current = plan[field]
   const seen = new Set<number>()
   const unique = entries.filter((entry) => (seen.has(entry.skillId) ? false : (seen.add(entry.skillId), true)))
+  const donorEquipped = donorCtx?.plan.skills ?? []
+  const equippedFirst = [...unique.filter((entry) => donorEquipped.includes(entry.skillId)), ...unique.filter((entry) => !donorEquipped.includes(entry.skillId))]
+  const donorName = donor ? displayName(donor, run) : 'Parent B'
 
   const choose = (skillId: number | null) => {
     mutate((next) => {
@@ -383,13 +480,13 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
 
   return (
     <Sheet
-      title={`Inherited from ${donor ? displayName(donor, run) : 'Parent B'}`}
+      title={`Inherited from ${donorName}`}
       onClose={onClose}
       actions={current != null ? <button type="button" className="text-btn" onClick={() => choose(null)}>Clear</button> : null}
     >
       {!donor ? <p className="empty-note">Choose a second parent on the Parents tab first.</p> : null}
       <div className="pick-list">
-        {unique.map((entry) => {
+        {equippedFirst.map((entry) => {
           const skill = dataset.skillsById.get(entry.skillId)
           if (!skill) return null
           const fromOther = entry.skillId === otherInherited
@@ -399,8 +496,10 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
               skill={{ id: skill.id, name: skill.name, description: skill.description }}
               selected={entry.skillId === current}
               disabled={fromOther}
+              label={donorEquipped.includes(entry.skillId) ? `Equipped by ${donorName}` : undefined}
               onClick={() => choose(entry.skillId)}
               tag={<>{entry.label}{fromOther ? ' · From other parent' : ''}</>}
+              caution={skillRules(dataset, entry.skillId, []).caution}
             />
           )
         })}

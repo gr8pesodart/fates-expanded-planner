@@ -1,9 +1,12 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
 import type { LensId } from '../logic/lenses'
 import type { GenerationFilter, RosterSort } from '../logic/rosterSort'
 import { DEFAULT_ROSTER_SORT, directionOfSort } from '../logic/rosterSort'
 import type { ParentSort } from '../logic/parents'
+import type { SkillFilters } from '../logic/skillAccess'
+import { ALL_WAYS } from '../logic/skillAccess'
 
 export type ChartTab = 'full' | 'skills' | 'progression' | 'pairUp'
 export type SkillPickerTab = 'starred' | 'grouped' | 'ungrouped'
@@ -21,8 +24,8 @@ interface UiState {
   chartGeneration: GenerationFilter
   chartTab: ChartTab
   skillPickerTab: SkillPickerTab
-  /** Skill picker: count new S / A+ relationships as ways in. */
-  skillFilters: { s: boolean; a: boolean }
+  /** Skill picker, per unit: count new S / A+ relationships and other second parents as ways in. */
+  skillFilters: Record<string, SkillFilters>
   /** Skill picker: collapsed class groups per unit, as `${group}:${classId}`. */
   collapsedSkillClasses: Record<string, string[]>
   classLens: LensId
@@ -43,7 +46,7 @@ interface UiState {
   setChartGeneration(value: GenerationFilter): void
   setChartTab(tab: ChartTab): void
   setSkillPickerTab(tab: SkillPickerTab): void
-  setSkillFilters(filters: { s: boolean; a: boolean }): void
+  setSkillFilters(unitId: string, filters: SkillFilters): void
   toggleSkillClass(unitId: string, key: string): void
   setClassLens(lens: LensId): void
   setClassFilter(filter: UiState['classFilter']): void
@@ -61,7 +64,7 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   chartGeneration: 'all',
   chartTab: 'skills',
   skillPickerTab: 'grouped',
-  skillFilters: { s: true, a: true },
+  skillFilters: {},
   collapsedSkillClasses: {},
   classLens: 'baseStats',
   classFilter: 'base',
@@ -80,7 +83,7 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   setChartGeneration: (chartGeneration) => set({ chartGeneration }),
   setChartTab: (chartTab) => set({ chartTab }),
   setSkillPickerTab: (skillPickerTab) => set({ skillPickerTab }),
-  setSkillFilters: (skillFilters) => set({ skillFilters }),
+  setSkillFilters: (unitId, filters) => set({ skillFilters: { ...get().skillFilters, [unitId]: filters } }),
   toggleSkillClass: (unitId, key) => {
     const current = get().collapsedSkillClasses[unitId] ?? []
     const next = current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
@@ -112,8 +115,15 @@ export const useUi = create<UiState>()(persist((set, get) => ({
       parentEffective: persisted.parentEffective ?? false,
       chartTab: persisted.chartTab ?? 'skills',
       skillPickerTab: persisted.skillPickerTab ?? 'grouped',
-      skillFilters: persisted.skillFilters ?? { s: true, a: true },
+      // v3.3 kept one global { s, a }; v3.4 keeps them per unit.
+      skillFilters: persisted.skillFilters && !('s' in persisted.skillFilters) ? persisted.skillFilters : {},
       collapsedSkillClasses: persisted.collapsedSkillClasses ?? {},
     }
   },
 }))
+
+/** A unit's skill picker filters (all relationships count until changed). */
+export function useSkillFilters(unitId: string): SkillFilters {
+  const stored = useUi((state) => state.skillFilters[unitId])
+  return useMemo(() => ({ ...ALL_WAYS, ...stored }), [stored])
+}

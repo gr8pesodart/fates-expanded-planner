@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { usePlanner } from '../app/plannerContext'
 import { Portrait } from '../components/art'
 import { StarButton } from '../components/controls'
 import { Icon } from '../components/icons'
+import { PagerPage, TabPager } from '../components/TabPager'
+import { useMountedTabs } from '../lib/useMountedTabs'
+import { useActiveInView } from '../lib/useActiveInView'
 import { portraitArt, splashArt } from '../data/art'
 import { displayName, unitContext } from '../logic/army'
 import { toggleFavourite } from '../logic/relationships'
@@ -113,9 +116,9 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
       <div ref={panelRef} className="char-panel" data-swipe>
         <TabPager index={activeIndex}>
           {tabs.map((item) => (
-            <section key={item} className="pager-page" role="tabpanel" aria-label={TAB_LABEL[item]} data-active={item === active} aria-hidden={item !== active || undefined} inert={item !== active}>
+            <PagerPage key={item} active={item === active} label={TAB_LABEL[item]}>
               {mounted.has(item) ? tabContent(item, ctx) : null}
-            </section>
+            </PagerPage>
           ))}
         </TabPager>
       </div>
@@ -133,48 +136,11 @@ function tabContent(tab: CharacterTab, ctx: NonNullable<ReturnType<typeof unitCo
   }
 }
 
-/**
- * Tabs stay mounted once shown, so a swipe reveals the neighbour's real content instead of it
- * popping in. The opening tab renders first; the rest mount once the page has slid in.
- */
-function useMountedTabs(active: CharacterTab, tabs: CharacterTab[]): Set<CharacterTab> {
-  const [mounted, setMounted] = useState<Set<CharacterTab>>(() => new Set([active]))
-  if (!mounted.has(active)) setMounted(new Set([...mounted, active]))
-  const all = tabs.join(' ')
-  useEffect(() => {
-    const timer = window.setTimeout(() => setMounted(new Set(all.split(' ') as CharacterTab[])), 480)
-    return () => window.clearTimeout(timer)
-  }, [all])
-  return mounted
-}
-
-/**
- * Horizontal strip of every tab. The strip follows the drag (`--swipe-dx`, set by useSwipePager on
- * the swipe surface) and eases to the active page; the viewport takes the active page's height so
- * shorter tabs don't inherit a longer one's scroll length.
- */
-function TabPager({ index, children }: { index: number; children: ReactNode }) {
-  const viewportRef = useRef<HTMLDivElement | null>(null)
-  useLayoutEffect(() => {
-    const viewport = viewportRef.current
-    const page = viewport?.querySelectorAll<HTMLElement>('.pager-page')[index]
-    if (!viewport || !page) return
-    const measure = () => viewport.style.setProperty('--pager-h', `${page.offsetHeight}px`)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(page)
-    return () => observer.disconnect()
-  }, [index])
-  return (
-    <div ref={viewportRef} className="pager" style={{ '--page': index } as CSSProperties}>
-      <div className="pager-track">{children}</div>
-    </div>
-  )
-}
-
 function CharacterTabs({ unitId, name, tabs, active }: { unitId: string; name: string; tabs: CharacterTab[]; active: CharacterTab }) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  useActiveInView(ref, active)
   return (
-    <div className="char-tabs" role="tablist" aria-label={`${name} sections`}>
+    <div ref={ref} className="char-tabs" role="tablist" aria-label={`${name} sections`}>
       {tabs.map((item) => (
         <button
           key={item}

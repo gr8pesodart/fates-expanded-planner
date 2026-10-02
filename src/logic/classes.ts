@@ -21,23 +21,29 @@ export function classFamily(name: string): string {
   return name.replace(/\s*\((M|F)\)$/, '')
 }
 
+// Gender-locked classes under their own names. Fire Emblem Wiki › Reclass: "Male characters that would
+// reclass to Shrine Maiden, Priestess, or Maid instead reclass to Monk, Great Master, or Butler,
+// respectively; and vice versa for female characters." (Nohr Prince/ss is never sealed or inherited,
+// but Kana's parent may hold it.)
+const NAMED_PAIRS: [male: string, female: string][] = [
+  ['Monk', 'Shrine Maiden'],
+  ['Great Master', 'Priestess'],
+  ['Butler', 'Maid'],
+  ['Nohr Prince', 'Nohr Princess'],
+]
+
 /** Resolve a class id to the variant matching the unit's gender. */
 export function sexedClassId(dataset: Dataset, classId: number, gender: 'male' | 'female'): number {
   const def = dataset.classesById.get(classId)
   if (!def) return classId
-  const family = classFamily(def.name)
-  const suffix = gender === 'male' ? '(M)' : '(F)'
-  if (def.name.endsWith(suffix) || !def.name.endsWith('(M)') === !def.name.endsWith('(F)')) {
-    // Already correct or gender-neutral.
-    if (def.name.endsWith(suffix)) return classId
-    if (!def.name.endsWith('(M)') && !def.name.endsWith('(F)')) return classId
-  }
-  for (const candidate of dataset.classes) {
-    if (classFamily(candidate.name) === family && candidate.name.endsWith(suffix)) {
-      return candidate.id
-    }
-  }
-  return classId
+  const pair = NAMED_PAIRS.find((names) => names.includes(classFamily(def.name)))
+  const wanted = pair
+    ? (name: string) => classFamily(name) === pair[gender === 'male' ? 0 : 1]
+    : (name: string) => classFamily(name) === classFamily(def.name) && name.endsWith(gender === 'male' ? '(M)' : '(F)')
+  // Gender-neutral classes (no suffix, no pair) stay as they are.
+  if (!pair && !/\((M|F)\)$/.test(def.name)) return classId
+  if (wanted(def.name)) return classId
+  return dataset.classes.find((candidate) => wanted(candidate.name))?.id ?? classId
 }
 
 /** Base class of a class (itself when already a base/neutral class). */

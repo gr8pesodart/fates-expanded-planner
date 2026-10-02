@@ -15,7 +15,8 @@ import { fixedParentIsCorrin } from './stats'
  * Where a skill stands for one unit, in the order the skill picker lists them:
  *  - progression: learned on the planned class path (or already chosen as an inherited skill)
  *  - available:   a class the unit can take now teaches it, but the plan doesn't reach it
- *  - inheritable: only a current parent can pass it on (second generation)
+ *  - inheritable: only inheritance can give it: from a current parent, or from another possible second
+ *                 parent when no relationship would teach it (second generation)
  *  - locked:      needs a relationship the plan doesn't have (S, A+ / A, another parent)
  *  - unavailable: nothing in this run gives it (another route, no partner provides it); DLC classes are
  *                 left out entirely while DLC is off
@@ -24,13 +25,17 @@ export type SkillGroup = 'progression' | 'available' | 'inheritable' | 'locked' 
 
 export const SKILL_GROUP_ORDER: readonly SkillGroup[] = ['progression', 'available', 'inheritable', 'locked', 'unavailable']
 
-/** Picker filters: whether new S / A+ (Corrin: A) relationships count as a way in. */
+/**
+ * Picker filters: whether new S / A+ (Corrin: A) relationships, and (children with a second parent
+ * already chosen) other second parents, count as a way in.
+ */
 export interface SkillFilters {
   s: boolean
   a: boolean
+  p: boolean
 }
 
-export const ALL_WAYS: SkillFilters = { s: true, a: true }
+export const ALL_WAYS: SkillFilters = { s: true, a: true, p: true }
 
 /** What a notice needs: the status, the class (and level) and every way in. */
 export interface AccessNotice {
@@ -45,7 +50,7 @@ export interface AccessNotice {
   viaParent: UnitDef[]
   /** Only these relationships together teach it (a duplicate branch falls back), locked only. */
   viaCombo: RelationChange[][]
-  /** Parents who can pass it on: current parents (inheritable) or other possible ones (locked). */
+  /** Parents who can pass it on: current parents or other possible second parents. */
   inheritFrom: UnitDef[]
 }
 
@@ -92,7 +97,7 @@ const cache = new WeakMap<RunPlan, Map<string, SkillAccessMap>>()
 export function skillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, filters: SkillFilters = ALL_WAYS): SkillAccessMap {
   let perRun = cache.get(run)
   if (!perRun) cache.set(run, (perRun = new Map()))
-  const key = `${ctx.unit.id}|${filters.s ? 's' : ''}${filters.a ? 'a' : ''}`
+  const key = `${ctx.unit.id}|${filters.s ? 's' : ''}${filters.a ? 'a' : ''}${filters.p ? 'p' : ''}`
   const cached = perRun.get(key)
   if (cached) return cached
   const result = computeSkillAccess(dataset, run, ctx, filters)
@@ -128,6 +133,23 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
     return record
   }
   const levelIn = (classId: number, skillId: number) => learnset(dataset, classId).find((item) => item.id === skillId)?.level ?? null
+  // A parent's class in the child's gender, so Corrin (F)'s Nohr Princess and Kana (M)'s Nohr Prince
+  // are one class - unless that version doesn't teach the skill (Troubadour's Demoiselle / Gentilhomme).
+  const inChildGender = (classId: number, skillId: number) => {
+    const own = sexedClassId(dataset, classId, ctx.unit.gender)
+    return levelIn(own, skillId) !== null ? own : classId
+  }
+  /** Skills only inheritance gives join `inheritable`; ones a relationship would teach just note the parent. */
+  const inherited = (parent: UnitDef, skillId: number, parentClassId: number | undefined, level: number | undefined) => {
+    const classId = parentClassId === undefined ? null : inChildGender(parentClassId, skillId)
+    const access = byId.get(skillId) ?? entry(skillId, 'inheritable', classId, level ?? null)
+    if (access && (access.group === 'inheritable' || access.group === 'locked') && !access.inheritFrom.includes(parent)) access.inheritFrom.push(parent)
+    if (classId === null) return
+    const record = classes.get(String(classId)) ?? cls(classId, 'inheritable', [])
+    if (!record || (record.group !== 'inheritable' && record.group !== 'locked')) return
+    if (record.group === 'inheritable' && !record.skills.some((skill) => skill.skillId === skillId)) record.skills.push({ skillId, level: level ?? null })
+    if (!record.inheritFrom.includes(parent)) record.inheritFrom.push(parent)
+  }
 
   // 1. On the planned path, plus skills already chosen to inherit.
   const progression = buildProgression(dataset, run, ctx)
@@ -156,14 +178,7 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
     if (!parent) continue
     const parentCtx = unitContext(dataset, run, parent.id)
     if (!parentCtx) continue
-    for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) {
-      const access = entry(item.skillId, 'inheritable', item.classId ?? null, item.level ?? null)
-      if (access && !access.inheritFrom.includes(parent)) access.inheritFrom.push(parent)
-      const record = item.classId === undefined ? null : cls(item.classId, 'inheritable', [])
-      if (!record) continue
-      if (!record.skills.some((skill) => skill.skillId === item.skillId)) record.skills.push({ skillId: item.skillId, level: item.level ?? null })
-      if (!record.inheritFrom.includes(parent)) record.inheritFrom.push(parent)
-    }
+    for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) inherited(parent, item.skillId, item.classId, item.level)
   }
 
   // 4. What other relationships would open. Each candidate is tried on top of the current plan;
@@ -192,7 +207,8 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
       : roster.filter((unit) => unit.id !== ctx.aPlusPartner?.id && aPlusEligible(dataset, ctx.unit, unit, ctx.sPartner?.id))
     ).map((unit) => ({ role: 'a' as const, unit })),
   ]
-  const parentCandidates = fixedParent ? supportPartners(dataset, fixedParent.id, 'romantic')
+  // With "parent flexible" off, a child whose second parent is chosen only counts that parent.
+  const parentCandidates = fixedParent && (filters.p || !ctx.variableParent) ? supportPartners(dataset, fixedParent.id, 'romantic')
     .map((edge) => dataset.unitsById.get(edgePartner(edge, fixedParent.id)))
     .filter((unit): unit is UnitDef => unit !== undefined && onRoster.has(unit.id) && unit.id !== ctx.variableParent?.id)
     // Only Corrin can marry into the second generation.
@@ -271,16 +287,12 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
     }
   }
 
-  // What other possible second parents could pass on.
+  // What other possible second parents could pass on (after the relationships, so a skill one of them
+  // would teach stays under Requires support, noting the parent).
   for (const parent of parentCandidates) {
     const parentCtx = unitContext(dataset, run, parent.id)
     if (!parentCtx) continue
-    for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) {
-      const access = entry(item.skillId, 'locked', item.classId ?? null, item.level ?? null)
-      if (access && !access.inheritFrom.includes(parent)) access.inheritFrom.push(parent)
-      const record = item.classId === undefined ? null : cls(item.classId, 'locked')
-      if (record && !record.inheritFrom.includes(parent)) record.inheritFrom.push(parent)
-    }
+    for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) inherited(parent, item.skillId, item.classId, item.level)
   }
 
   // 5. Everything else no relationship in this run gives, by the class that would teach it. With DLC

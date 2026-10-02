@@ -223,7 +223,9 @@ The current planner therefore does not include inherited support rows in child p
   class's Mov; a path that never leaves a base class is flagged (`progression.ts › expectedFinal`).
 - **Skill access (v3.3, `skillAccess.ts`)** — every skill a unit could hold in the run, classified in
   order: learned on the planned path (or chosen to inherit) → taught by a class the unit has now →
-  only a current parent can pass it on → needs a relationship not in the plan (each roster S
+  only inheritance gives it (a current parent, or - v3.4, owner - another possible second parent
+  when no relationship would teach it; a parent's class is read in the child's gender unless that
+  version doesn't teach the skill) → needs a relationship not in the plan (each roster S
   partner, A+ partner — Corrin: same-gender A-rank partner — and, for children, each other possible
   second parent tried one at a time on top of the current plan, plus what those parents could pass
   on), then **combinations**: a duplicate branch falls back to the contributor's next class, so e.g.
@@ -237,7 +239,20 @@ The current planner therefore does not include inherited support rows in child p
   Everything else is **unavailable**, by class (no reason given; DLC classes are omitted while DLC is
   off). Classes are also tracked on their own (`ClassAccess`: a class's first status and
   ways in), which the picker's Grouped view lists whole. Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
-  else; skills nothing in the run gives are not listed.
+  else; skills nothing in the run gives are not listed. Picker filters (`SkillFilters`, per unit):
+  `s` / `a` drop new S / A+ candidates, `p` drops other second parents once one is chosen.
+- **Gender-locked class counterparts (v3.4, `classes.ts › sexedClassId`)** - besides the (M)/(F)
+  pairs, four pairs have their own names: Monk ↔ Shrine Maiden, Great Master ↔ Priestess, Butler ↔
+  Maid, Nohr Prince ↔ Nohr Princess. Fire Emblem Wiki › Reclass: "Male characters that would reclass
+  to Shrine Maiden, Priestess, or Maid instead reclass to Monk, Great Master, or Butler,
+  respectively; and vice versa for female characters." Before v3.4 the planner gave e.g. Rinkah with
+  S Azama Monk / Great Master (194 wrong-gender pool entries across the roster's S pairs); pinned in
+  `classes.test.ts`.
+- **Exclusive skills (v3.4, `skills.ts › conflictingSkills`)** - the seven stat Takers
+  (Strengthtaker … Resistancetaker) each say "Can't use with other Takers." in the game's own
+  description (Fire Emblem Wiki › Speedtaker: "Does not overlap with another -taker skill"); the
+  planner reads that text from the pack, so Lifetaker (no such line) is unaffected. Two equipped
+  Takers get a red notice; pinned in `skills.test.ts`.
 - **Progression** — join class/level from `recruitment.json` (falls back to the primary base class
   at Lv 1). A character's own level cap (GameData +134, `units.json › levelCap`) raises promoted
   segments: Jakob and Felicia join promoted (Butler / Maid) with cap 40 — four built-in Eternal

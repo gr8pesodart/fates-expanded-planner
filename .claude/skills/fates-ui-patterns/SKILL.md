@@ -29,9 +29,10 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   when the hero tabs scroll away (IntersectionObserver) and out (240ms ease-in). An earlier version put
   the rail inside the panel and it "hopped" when scrolling back up.
 - Tabs: `navigate(..., { replace: true })`; switching preserves scroll.
-- **Tab pager (v3.3)**: all tabs sit side by side in `TabPager` (`.pager` > `.pager-track` >
-  `.pager-page`), mounted once shown (`useMountedTabs`: the opening tab first, the rest after 480ms,
-  when the slide-in is done). The track translates by `--page` and the live `--swipe-dx` from
+- **Tab pager (v3.3; shared `components/TabPager.tsx` since v3.4)**: all tabs sit side by side in
+  `TabPager` (`.pager` > `.pager-track` > `PagerPage`), mounted once shown (`lib/useMountedTabs`: the
+  opening tab first, the rest after a delay). Also used by the Chart (tab swipes) and the skill
+  picker (`fill`: pages fill the fixed-height sheet and each scrolls itself). The track translates by `--page` and the live `--swipe-dx` from
   `useSwipePager(panelRef, …)`; the viewport takes the active page's height (ResizeObserver →
   `--pager-h`) with `overflow: clip` (not hidden — sticky must keep working inside). Owner asked for
   this because SlideSwap only rendered the neighbour on commit ("content pops in mid swipe").
@@ -58,6 +59,16 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - `SlideSwap`: on `index` change the old content slides out one side while the new enters from the
   other; the outgoing layer keeps its React key (no remount). Uses React's "store info from previous
   renders" state pattern — **don't read refs during render** (oxlint `react(refs)` fails the lint).
+  Now only used by the Roster's StatTables; it doesn't clip (v3.4: tables slide off the page edge,
+  `.screen.roster/.chart { overflow-x: clip }` does it). The skill picker moved off SlideSwap to the
+  pager (owner: SlideSwap swipes felt slow - it re-rendered both lists on every tab change).
+- **Touch-action trap (v3.4)**: a swipe surface whose children are their own scroll containers (the
+  picker's `fill` pager pages) must put `touch-action: pan-y` on those children too - touch-action
+  stops at the nearest scroll container, so the browser kept horizontal drags and the pager never
+  saw them. Test swipes with CDP `Input.dispatchTouchEvent` (see `fates-dev-workflow`).
+- **Rails (v3.4)**: `Rail` pills tween colours; `variant="tabs"` draws one `.rail-indicator` (a 1px
+  bar moved with `translateX` + `scaleX`, so it slides on the compositor). `lib/useActiveInView`
+  smooth-scrolls a rail (and the character tab pills) to keep the selection centred.
 - Roster: the list is the swipe surface; every row's `StatTable` gets `slideIndex` (lens index) so all
   tables slide together. Lens-rail taps animate the same way.
 
@@ -81,20 +92,32 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - `RelationCard stale`: a re-activated Corrin's partner who moved on — greyed card, one-line
   "Unavailable" caption (`--bad-ink`) in place of "Gains X"; full reason in title/aria-label.
 - `SkillNotice` (`components/SkillNotice.tsx`, Figma 3:4348): inset under a `SkillCard` (`notice`
-  prop) from `logic/skillAccess.ts`: yellow "Not in progression" (`--warn-tint/-ink`), red "Not
-  accessible" (`--bad-tint/-ink`) with Via S / A+ (Corrin: A) / Parent portraits and "Can be inherited
-  from". `grey` in the skill picker (owner: the group headings already carry the colour meaning).
-- `SkillCard muted`: dimmed but tappable (picker: equipped in another slot → picking swaps slots).
+  prop) from `logic/skillAccess.ts`. Tones (owner v3.4): **blue** `info` "Not in progression",
+  **yellow** `warn` "Only inheritable from A or B" / "Requires support" (Via S / A+ (Corrin: A) /
+  Parent portraits, "Can also be inherited from" minus parents already listed), **red** `bad` "Not
+  accessible". No class/level in the notice - that's the card's accent `tag`
+  (`unitViews.ts › acquiredVia`, "Swordmaster Lv 5"). `ConflictNotice` = red "Not compatible with
+  equipped X" (stat Takers, `unitViews.ts › skillRules`). `grey perClass` in the picker's Grouped
+  view returns null for Not in progression / Not accessible (the heading says it).
+- `SkillCard`: `label` (caps, above the description), `tag` (accent, under it), `caution` (muted),
+  `muted` (equipped elsewhere → picking swaps), `faded` (not accessible: grey card, icon 50%),
+  `aside` (picker star): with an aside the card is a div and its `.skill-card-main` button stretches
+  over it (`::after`), so the star is centred beside the description and can be its own button.
+  Personal skill lock is inline (`LockedName`, wraps with the first word).
 - Skill picker (`app/pickers.tsx › EquipSkillPicker`): `Sheet toolbar` = tab Rail (Starred / Grouped /
-  Ungrouped, `ui.skillPickerTab`), swipe via `useSwipePager` on `.skill-pick-body` + `SlideSwap`;
-  stars outside the card button (`.pick-skill`); `SkillFilterMenu` popover in `Sheet actions`. Sticky
-  group headings sit 1px above the body edge; `useStuckHeadings` marks pinned ones from a scroll
-  listener — not IntersectionObserver: the full-bleed headings are never fully inside the body, so
-  pinned and unpinned ratios fall between the same thresholds. Class bodies collapse by animating
-  `grid-template-rows` 0fr↔1fr (always rendered, `inert` when closed). Sheets are fixed at 88dvh when
-  they hold the picker. Chart, New Run, Runs and pickers are lazy chunks (main bundle limit).
+  Ungrouped, `ui.skillPickerTab`); body = `TabPager fill` (all three mounted, each page scrolls on its
+  own); page contents are one `useMemo` keyed on the plan, not the tab, so a tab change only moves the
+  pager. Grouped: `GroupToc` sticky pill rail (scroll-spy on the page; tapping smooth-scrolls and
+  suppresses the spy until `scrollend`/1.2s) - owner replaced sticky headings with it. Inheritable
+  only heads show the parents' sprites (≤2 + "+N"); Requires support / Not accessible heads are faded.
+  `SkillFilterMenu` (per unit, `ui.skillFilters[unitId]` via `useSkillFilters`; "Parent flexible" only
+  for a child with a second parent). Class bodies collapse by animating `grid-template-rows` 0fr↔1fr
+  (always rendered, `inert` when closed). Sheets are fixed at 88dvh when they hold the picker. Inherit
+  picker: the parent's equipped skills first. Chart, New Run, Runs and pickers are lazy chunks.
 - Chart tabs (`ui.chartTab`): Full / Skills / Progression / Skills + Pair Up; `partsFor(tab, role)`
-  decides skills / class path (`progression.ts › routeSteps`) / effective pair-up table per row. The
+  decides skills / class path (`progression.ts › routeSteps`) / effective pair-up table per row.
+  v3.4: each tab is a full chart in a `TabPager` (swipe to change tab). Rows use the normal `--s3`
+  inset; only the class sprite is pulled left by `--s2` (a zero-width portrait chip used to fake it). The
   swap button lives in a zero-height `.chart-swap` between the rows so uneven rows don't misplace it.
 - Class sprites: sizes in multiples of 32 only (see `fates-sprites`).
 

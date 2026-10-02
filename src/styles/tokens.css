@@ -31,6 +31,11 @@
   --warn-soft: #efe39b;
   --warn-tint: color-mix(in oklab, var(--warn-soft) 70%, #ffffff);
   --warn-ink: color-mix(in oklab, var(--warn) 72%, #1b1b1b);
+  /* Blue at the same weight for the mildest notice ("Not in progression", owner v3.4). */
+  --info: #5b7fd0;
+  --info-soft: #bccbf0;
+  --info-tint: color-mix(in oklab, var(--info-soft) 70%, #ffffff);
+  --info-ink: color-mix(in oklab, var(--info) 72%, #1b1b1b);
   --stat-low: #842334;
   --stat-mid: #8a6a00;
   --stat-high: #12803f;

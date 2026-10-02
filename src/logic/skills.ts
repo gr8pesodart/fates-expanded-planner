@@ -75,12 +75,36 @@ export function skillPool(
       if (level === null) return
       const prefix = SOURCE_PREFIX[source]
       const base = classEntry.branch === 'own' ? '' : `${classEntry.sourceLabel} — `
-      const label = prefix ? `${base}${classDef.name} Lv ${level}` : `${classDef.name} Lv ${level}`
+      const label = `${prefix ? base : ''}${classFamily(classDef.name)} Lv ${level}`
       push({ skillId, source, label, classId: classDef.id, level })
     })
   }
 
   return result
+}
+
+// The game's own rule text on every stat Taker (Strengthtaker…Resistancetaker); Lifetaker lacks it.
+const TAKER_RULE = "Can't use with other Takers"
+const exclusiveSets = new WeakMap<Dataset, number[]>()
+
+function takers(dataset: Dataset): number[] {
+  let ids = exclusiveSets.get(dataset)
+  if (!ids) {
+    ids = [...dataset.skillsById.values()].filter((skill) => skill.description?.replace(/\s+/g, ' ').includes(TAKER_RULE)).map((skill) => skill.id)
+    exclusiveSets.set(dataset, ids)
+  }
+  return ids
+}
+
+/** Whether the skill can't be equipped alongside others of its kind (the stat Takers). */
+export function isExclusiveSkill(dataset: Dataset, skillId: number): boolean {
+  return takers(dataset).includes(skillId)
+}
+
+/** The equipped skills `skillId` can't be used with ("Can't use with other Takers."). */
+export function conflictingSkills(dataset: Dataset, skillId: number, equipped: readonly (number | null | undefined)[]): number[] {
+  if (!isExclusiveSkill(dataset, skillId)) return []
+  return [...new Set(equipped.filter((id): id is number => id != null && id !== skillId && isExclusiveSkill(dataset, id)))]
 }
 
 /**

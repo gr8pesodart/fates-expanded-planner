@@ -14,8 +14,8 @@ import type { LearnedSkill, LevelRow, ReclassSeal } from '../../logic/progressio
 import { buildProgression, tierCap, withReclass } from '../../logic/progression'
 import type { Reclass, RunPlan } from '../../state/model'
 import { emptyUnitPlan } from '../../state/model'
-import { skillView } from '../../app/unitViews'
-import { SkillNotice } from '../../components/SkillNotice'
+import { acquiredVia, skillRules, skillView } from '../../app/unitViews'
+import { ConflictNotice, SkillNotice } from '../../components/SkillNotice'
 import type { SkillAccess } from '../../logic/skillAccess'
 import { skillAccess, unreachableSkill } from '../../logic/skillAccess'
 
@@ -97,7 +97,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
       {ctx.isChild ? (
         <section className="panel-section" aria-labelledby="inherit-title">
           <h2 id="inherit-title" className="section-title">Inherited Skills</h2>
-          {toInherit.length ? <EquippedNotes dataset={dataset} items={toInherit} corrin={ctx.unit.isCorrin} label="Equipped skills only a parent can pass on" /> : null}
+          {toInherit.length ? <EquippedNotes ctx={ctx} items={toInherit} label="Equipped skills only a parent can pass on" /> : null}
           <div className="inherit-cards">
             <InheritCard
               dataset={dataset}
@@ -119,7 +119,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
       {offPath.length ? (
         <section className="panel-section" aria-labelledby="offpath-title">
           <h2 id="offpath-title" className="section-title">Not in Progression</h2>
-          <EquippedNotes dataset={dataset} items={offPath} corrin={ctx.unit.isCorrin} label="Equipped skills this path doesn't teach" />
+          <EquippedNotes ctx={ctx} items={offPath} label="Equipped skills this path doesn't teach" />
         </section>
       ) : null}
       {progression.segments.map((segment, segmentIndex) => (
@@ -169,12 +169,22 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   )
 }
 
-function EquippedNotes({ dataset, items, corrin, label }: { dataset: Dataset; items: SkillAccess[]; corrin: boolean; label: string }) {
+function EquippedNotes({ ctx, items, label }: { ctx: UnitContext; items: SkillAccess[]; label: string }) {
+  const { dataset, run } = usePlanner()
   return (
     <div className="skill-list" aria-label={label}>
-      {items.map((item) => (
-        <SkillCard key={item.skillId} skill={skillView(dataset, item.skillId)} notice={<SkillNotice access={item} corrin={corrin} />} />
-      ))}
+      {items.map((item) => {
+        const rules = skillRules(dataset, item.skillId, ctx.plan.skills)
+        return (
+          <SkillCard
+            key={item.skillId}
+            skill={skillView(dataset, item.skillId)}
+            tag={acquiredVia(dataset, run, ctx, item)}
+            caution={rules.caution}
+            notice={<><SkillNotice access={item} corrin={ctx.unit.isCorrin} /><ConflictNotice names={rules.conflicts} /></>}
+          />
+        )
+      })}
     </div>
   )
 }

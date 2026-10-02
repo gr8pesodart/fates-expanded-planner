@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
+import { useActiveInView } from '../lib/useActiveInView'
 import type { ReactNode } from 'react'
 import { Icon } from './icons'
 
@@ -9,7 +10,10 @@ export interface RailItem<T extends string | number> {
   icon?: ReactNode
 }
 
-/** Horizontal scroller of lens/class choices; keeps the active item in view. */
+/**
+ * Horizontal scroller of lens/class choices; keeps the active item in view. Pills tween their colours;
+ * tabs share one underline that slides and resizes to the active tab.
+ */
 export function Rail<T extends string | number>({ items, active, onSelect, variant, label, className = '' }: {
   items: readonly RailItem<T>[]
   active: T
@@ -19,14 +23,30 @@ export function Rail<T extends string | number>({ items, active, onSelect, varia
   className?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
+  const indicatorRef = useRef<HTMLSpanElement>(null)
+  useActiveInView(ref, active)
+  const labels = items.map((item) => item.label).join('|')
+  useLayoutEffect(() => {
     const rail = ref.current
-    const node = rail?.querySelector<HTMLElement>('[aria-selected="true"]')
-    if (!rail || !node) return
-    // Scroll the rail only: scrollIntoView would also scroll the page to a rail below the fold.
-    const offset = node.getBoundingClientRect().left - rail.getBoundingClientRect().left
-    rail.scrollTo({ left: rail.scrollLeft + offset - (rail.clientWidth - node.offsetWidth) / 2, behavior: 'smooth' })
-  }, [active])
+    const indicator = indicatorRef.current
+    if (!rail || !indicator) return
+    const place = () => {
+      const node = rail.querySelector<HTMLElement>('[aria-selected="true"]')
+      indicator.hidden = !node
+      if (!node) return
+      // A 1px bar scaled to the tab: transform only, so the slide stays on the compositor.
+      indicator.style.transform = `translateX(${node.offsetLeft}px) scaleX(${node.offsetWidth})`
+    }
+    place()
+    // The first placement (and font or size changes) shouldn't animate in from the left edge.
+    const frame = requestAnimationFrame(() => { indicator.dataset.ready = '' })
+    const observer = new ResizeObserver(place)
+    for (const node of rail.children) observer.observe(node)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [active, labels])
   return (
     <div ref={ref} className={`rail rail-${variant} ${className}`} role="tablist" aria-label={label}>
       {items.map((item) => (
@@ -42,6 +62,7 @@ export function Rail<T extends string | number>({ items, active, onSelect, varia
           {item.label}
         </button>
       ))}
+      {variant === 'tabs' ? <span ref={indicatorRef} className="rail-indicator" aria-hidden="true" /> : null}
     </div>
   )
 }

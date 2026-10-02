@@ -257,9 +257,11 @@
   flex: none;
   scroll-snap-align: center;
   white-space: nowrap;
+  transition: color 200ms var(--ease), background-color 200ms var(--ease), border-color 200ms var(--ease);
 }
 
 .rail-tabs {
+  position: relative;
   gap: 4px;
   padding: 10px var(--s3) 0;
 }
@@ -274,7 +276,26 @@
 
 .rail-tabs .rail-item[aria-selected="true"] {
   color: var(--ink);
-  border-bottom-color: var(--accent);
+}
+
+/* One underline for the whole rail: a 1px bar that Rail moves and scales onto the active tab. */
+.rail-indicator {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+.rail-indicator[data-ready] {
+  transition: transform 280ms var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-item, .rail-indicator[data-ready], .char-tabs button { transition: none; }
 }
 
 .rail-pills {
@@ -835,22 +856,24 @@
   font: 700 17px/1.25 var(--f-ui);
 }
 
-/* Group headings stay pinned at the top of the sheet while their group scrolls (owner, v3.3). */
-.skill-pick-group > .pick-heading {
+/* Grouped view: a sticky pill rail is the table of contents (owner, v3.4), not sticky headings. */
+.skill-toc {
   position: sticky;
-  /* Over the sheet body's top padding, plus 1px so a pinned heading is never fully inside the body:
-     that's how useStuckHeadings tells it's pinned, and its border fades in. */
-  top: calc(-1 * var(--s3) - 1px);
+  top: 0;
   z-index: 2;
-  margin-inline: calc(-1 * var(--s5));
-  padding: calc(var(--s2) + var(--s3) + 1px) var(--s5) var(--s2);
-  border-bottom: 1px solid transparent;
+  margin: 0 calc(-1 * var(--s5)) var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
   background: var(--surface);
-  transition: border-color 150ms var(--ease);
 }
 
-.skill-pick-group > .pick-heading[data-stuck] {
-  border-bottom-color: var(--line);
+.skill-toc .rail-pills {
+  margin: 0;
+  padding: 0 var(--s5);
+}
+
+.skill-pick-group > .pick-heading {
+  padding-top: var(--s2);
 }
 
 /* Picker tabs sit under the sheet title; the list scrolls beneath them. */
@@ -868,19 +891,32 @@
   height: 88dvh;
 }
 
-.pick-skill {
-  position: relative;
+/* Its tabs are pager pages that each scroll on their own, so the body itself doesn't scroll. */
+.sheet-body:has(> .skill-pick-body) {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  overflow: hidden;
+  padding: 0;
 }
 
-/* Room for the star beside the description; notices still span the card's full inner width. */
-.pick-skill > .skill-card > .skill-card-desc {
-  padding-right: 28px;
+.skill-pick-body {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
 }
 
-.pick-skill-star {
-  position: absolute;
-  top: 18px;
-  right: var(--s4);
+/* Each page scrolls itself, so it must leave horizontal drags to the swipe pager (touch-action stops
+   at the nearest scroll container). */
+.skill-pick-page {
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  padding: var(--s3) var(--s5) calc(var(--s5) + env(safe-area-inset-bottom));
+}
+
+.skill-pick-page.grouped {
+  padding-top: 0;
 }
 
 .filter-menu .switch-row {
@@ -927,6 +963,32 @@
 .skill-class-name {
   flex: 1;
   font: var(--t-sub);
+}
+
+/* Inheritable only: the parents' sprites, overlapped like the Avatar talent cards. */
+.skill-class-sprites {
+  display: flex;
+  flex: none;
+}
+
+.skill-class-sprites .sprite + .sprite {
+  margin-left: -12px;
+}
+
+.skill-class-more {
+  align-self: center;
+  margin-left: 2px;
+  font: var(--t-cell);
+  color: var(--ink-2);
+}
+
+/* Requires support and Not accessible: classes the plan can't reach yet. */
+.skill-class-head[data-faded] .skill-class-sprites {
+  opacity: 0.5;
+}
+
+.skill-class-head[data-faded] .skill-class-name {
+  color: var(--ink-2);
 }
 
 .skill-class-chevron {
@@ -1148,6 +1210,7 @@
   color: var(--on-dark);
   background: rgb(0 0 0 / 0.45);
   border-radius: var(--r-pill);
+  transition: color 200ms var(--ease), background-color 200ms var(--ease);
 }
 
 .char-tabs button[aria-selected="true"] {
@@ -1445,11 +1508,63 @@
 }
 
 .skill-card-name {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
+  display: block;
   font: 700 12px/1.2 var(--f-ui);
+}
+
+/* A personal skill's lock is set like the name's first character and wraps with its first word. */
+.skill-card-first {
+  white-space: nowrap;
+}
+
+/* The picker's cards hold a star: the card is a div, its main button covers it all (::after). */
+.skill-card.has-aside {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.skill-card-main {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.skill-card-main::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.skill-card-aside {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+}
+
+.skill-card-label {
+  font: 700 10px/1.2 var(--f-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.skill-card-caution {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+/* Not accessible in this run (picker): a grey card, the icon at half strength. */
+.skill-card.faded {
+  background: var(--surface-2);
+  border-color: var(--surface-2);
+}
+
+.skill-card.faded .skill-icon {
+  opacity: 0.5;
 }
 
 .skill-card.empty .skill-card-name {
@@ -1478,7 +1593,7 @@
   color: var(--accent-strong);
 }
 
-.skill-card.muted > :not(.skill-notice) {
+.skill-card.muted > :not(.skill-notice, .skill-card-aside) {
   opacity: 0.45;
 }
 
@@ -1492,6 +1607,11 @@
   background: var(--surface-2);
   color: var(--ink-2);
   font: 400 12px/1.35 var(--f-ui);
+}
+
+.skill-notice[data-tone="info"] {
+  background: var(--info-tint);
+  color: var(--info-ink);
 }
 
 .skill-notice[data-tone="warn"] {
@@ -1514,6 +1634,7 @@
   flex: none;
 }
 
+.skill-notice[data-tone="info"] .skill-notice-icon { color: var(--info); }
 .skill-notice[data-tone="warn"] .skill-notice-icon { color: var(--warn); }
 .skill-notice[data-tone="bad"] .skill-notice-icon { color: var(--bad); }
 
@@ -1566,7 +1687,8 @@
 }
 
 .skill-card-lock {
-  flex: none;
+  margin-right: 3px;
+  vertical-align: -1px;
   color: var(--ink-2);
 }
 
@@ -1924,7 +2046,12 @@
 .chart-row {
   display: grid;
   gap: var(--s2);
-  padding: var(--s4) var(--s3) var(--s4) calc(var(--s3) - var(--s2));
+  padding: var(--s4) var(--s3);
+}
+
+/* Only the sprite sits further left (its frame has transparent margins); everything else keeps the inset. */
+.chart-row .roster-id > .sprite:first-child {
+  margin-left: calc(-1 * var(--s2));
 }
 
 /* Compact class path ("Lv 10: Samurai → Lv 20: Swordmaster"), in a grey inset like the skill notices. */
@@ -2413,7 +2540,11 @@
 
 .slide-swap {
   position: relative;
-  /* clip, not hidden: hidden would make this a scroll container and break sticky descendants. */
+}
+
+/* Sliding stat tables run off the page edge, not their row's padding (owner, v3.4): the screen clips. */
+.screen.roster,
+.screen.chart {
   overflow-x: clip;
 }
 
@@ -2477,6 +2608,18 @@
 .pager-page {
   flex: 0 0 100%;
   min-width: 0;
+}
+
+/* A pager filling a fixed-height parent (the skill picker): every page is as tall as the viewport. */
+.pager.fill {
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pager.fill > .pager-track {
+  height: 100%;
+  align-items: stretch;
 }
 
 @media (prefers-reduced-motion: reduce) {

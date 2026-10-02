@@ -3,7 +3,7 @@ import { loadDataset } from '../data/loader'
 import type { Dataset } from '../data/types'
 import { emptyRun } from '../state/model'
 import { unitContext } from './army'
-import { inheritableSkillPool, skillPool } from './skills'
+import { conflictingSkills, inheritableSkillPool, isExclusiveSkill, skillPool } from './skills'
 
 let dataset: Dataset
 
@@ -33,5 +33,17 @@ describe('inheritable skills', () => {
     const families = (unitId: string) => unitContext(dataset, run, unitId)!.pool.map((entry) => dataset.classesById.get(entry.classId)?.name)
     expect(families(azura.id)).toContain('Songstress')
     expect(families(shigure.id)).not.toContain('Songstress')
+  })
+})
+
+describe('exclusive skills', () => {
+  const id = (name: string) => [...dataset.skillsById.values()].find((skill) => skill.name === name)!.id
+  it('stops two stat Takers being used together ("Can\'t use with other Takers."), but not Lifetaker', () => {
+    const takers = ['Strengthtaker', 'Magictaker', 'Skilltaker', 'Speedtaker', 'Lucktaker', 'Defensetaker', 'Resistancetaker']
+    expect(takers.every((name) => isExclusiveSkill(dataset, id(name)))).toBe(true)
+    expect(isExclusiveSkill(dataset, id('Lifetaker'))).toBe(false)
+    expect(conflictingSkills(dataset, id('Strengthtaker'), [id('Speedtaker'), id('Lifetaker'), null])).toEqual([id('Speedtaker')])
+    expect(conflictingSkills(dataset, id('Strengthtaker'), [id('Strengthtaker')])).toEqual([])
+    expect(conflictingSkills(dataset, id('Lifetaker'), [id('Speedtaker')])).toEqual([])
   })
 })

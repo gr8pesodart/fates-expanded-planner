@@ -1,9 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { loadDataset } from '../data/loader'
 import type { Dataset } from '../data/types'
+import { edgePartner, supportPartners } from '../data/types'
 import { emptyRun, emptyUnitPlan, withCorrinBuild } from '../state/model'
 import type { RunPlan } from '../state/model'
 import { armyUnits, unitContext } from './army'
+import { classFamily } from './classes'
 import { setBond } from './relationships'
 import { skillAccess } from './skillAccess'
 
@@ -15,6 +17,7 @@ beforeAll(async () => {
 
 const CORRIN_F = 'PID_プレイヤー女'
 const JAKOB = 'PID_ジョーカー'
+const KANA_M = 'PID_カンナ男'
 const classId = (name: string) => dataset.classes.find((item) => item.name === name)!.id
 const skillId = (name: string) => [...dataset.skillsById.values()].find((skill) => skill.name === name)!.id
 
@@ -92,19 +95,47 @@ describe('skillAccess', () => {
     expect(all.classes.some((record) => record.group === 'unavailable' && dataset.classesById.get(record.classId!)?.name.startsWith('Hoshido Noble'))).toBe(true)
     const noDlc: RunPlan = { ...run, dlc: false }
     expect(skillAccess(dataset, noDlc, unitContext(dataset, noDlc, CORRIN_F)!).classes.some((record) => record.classId !== null && dataset.classesById.get(record.classId)?.dlc)).toBe(false)
-    const noS = skillAccess(dataset, run, ctx, { s: false, a: true })
+    const noS = skillAccess(dataset, run, ctx, { s: false, a: true, p: true })
     expect(noS.list.some((item) => item.group === 'locked' && item.viaS.length)).toBe(false)
     expect(noS.list.filter((item) => item.group === 'unavailable').length).toBeGreaterThan(all.list.filter((item) => item.group === 'unavailable').length)
   })
 
-  it('lists a child\'s parent-only skills as inheritable, from a current parent', () => {
+  it("lists a child's inheritance-only skills as inheritable, from a current or another possible parent", () => {
     const run = corrinRun()
     for (const unit of armyUnits(dataset, run).filter((item) => item.fixedParent !== null)) {
       const ctx = unitContext(dataset, run, unit.id)!
-      const parents = new Set([unit.fixedParent, ctx.variableParent?.id])
+      const fixed = dataset.unitsById.get(unit.fixedParent!)!
+      const possible = new Set([fixed.id, ctx.variableParent?.id, ...supportPartners(dataset, fixed.id, 'romantic').map((edge) => edgePartner(edge, fixed.id))])
       for (const item of skillAccess(dataset, run, ctx).list) {
-        if (item.group === 'inheritable') expect(item.inheritFrom.every((parent) => parents.has(parent.id))).toBe(true)
+        if (item.group === 'inheritable') expect(item.inheritFrom.every((parent) => possible.has(parent.id))).toBe(true)
       }
     }
+  })
+
+  it("treats a parent's class in the other gender as the child's own (Kana and Corrin's Nohr Princess)", () => {
+    const run = setBond(corrinRun(), CORRIN_F, 'sPartner', JAKOB)
+    const kana = unitContext(dataset, run, KANA_M)!
+    const families = skillAccess(dataset, run, kana).classes
+      .filter((record) => record.classId !== null)
+      .map((record) => classFamily(dataset.classesById.get(record.classId!)!.name))
+    expect(families.filter((name) => name === 'Nohr Prince' || name === 'Nohr Princess')).toHaveLength(1)
+    expect(families.filter((name) => name === 'Nohr Noble')).toHaveLength(1)
+  })
+
+  it('puts skills only another possible parent could pass on under Inheritable only; the parent filter drops them', () => {
+    const run = setBond(corrinRun(), CORRIN_F, 'sPartner', JAKOB)
+    const kana = unitContext(dataset, run, KANA_M)!
+    const current = (id: string) => id === CORRIN_F || id === JAKOB
+    const all = skillAccess(dataset, run, kana)
+    expect(all.list.some((item) => item.group === 'inheritable' && item.inheritFrom.some((parent) => !current(parent.id)))).toBe(true)
+    const strict = skillAccess(dataset, run, kana, { s: true, a: true, p: false })
+    for (const item of strict.list) {
+      expect(item.viaParent).toEqual([])
+      expect(item.inheritFrom.every((parent) => current(parent.id))).toBe(true)
+    }
+    // Without a second parent there is nothing to be flexible about: every candidate still counts.
+    const single = corrinRun()
+    const open = skillAccess(dataset, single, unitContext(dataset, single, KANA_M)!, { s: true, a: true, p: false })
+    expect(open.list.some((item) => item.viaParent.length > 0)).toBe(true)
   })
 })

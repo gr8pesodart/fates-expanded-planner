@@ -16,6 +16,12 @@ knowledge that isn't obvious from the code. Sibling skills: `fates-mechanics` (v
   `git`, `grep`, `sed`, `python`.
 - Python 3.13 is on PATH. Printing Japanese PIDs from Python in PowerShell needs
   `$env:PYTHONIOENCODING='utf-8'` (default cp1252 raises `UnicodeEncodeError`).
+- Long Bash heredocs (`<<'EOF'`) holding JSX/CSS with apostrophes sometimes fail outright
+  ("unexpected EOF while looking for matching `'`"). For multi-file scripted edits, Write the Python
+  script to `scripts/_*.py`, run it, delete it.
+- Picker sheets persist across hash navigation: a Playwright script that opens a picker and then
+  `goto`s another screen clicks into the scrim. Hash-only `goto` also doesn't reload, so patching
+  localStorage needs `page.reload()`.
 - Python heredocs inside Bash mangle escaped apostrophes: a JS string like `'Corrin\'s'` written from a
   `<<'EOF'` heredoc lost its backslash twice and broke the test file. Use double-quoted JS strings or
   the Edit tool.

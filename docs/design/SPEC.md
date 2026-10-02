@@ -47,9 +47,11 @@ active or selected state uses the route accent.** "Darkened when selected" becom
 | `--rel-pair` | `#5eb761` | pair-up slot (`#69d06d`) |
 | `--good` / `--good-soft` | `#5eb761` / `#9ed2a0` | boon fill / boon outline |
 | `--bad` / `--bad-soft` | `#be5555` / `#f5adad` | bane fill / bane outline |
-| `--bad-tint` / `--bad-ink` | `--bad-soft` 70% on white / `--bad` 72% on ink | "Not accessible" skill notice fill / text (Figma 3:4348) |
+| `--bad-tint` / `--bad-ink` | `--bad-soft` 70% on white / `--bad` 72% on ink | "Not accessible" and incompatible-skill notice fill / text (Figma 3:4348) |
 | `--warn` / `--warn-soft` | `#b39d2d` / `#efe39b` | a yellow matched to `--bad` / `--bad-soft` |
-| `--warn-tint` / `--warn-ink` | `--warn-soft` 70% on white / `--warn` 72% on ink | "Not in progression" skill notice fill / text |
+| `--warn-tint` / `--warn-ink` | `--warn-soft` 70% on white / `--warn` 72% on ink | "Only inheritable" / "Requires support" skill notice fill / text |
+| `--info` / `--info-soft` | `#5b7fd0` / `#bccbf0` | a blue matched to `--bad` / `--bad-soft` (v3.4) |
+| `--info-tint` / `--info-ink` | `--info-soft` 70% on white / `--info` 72% on ink | "Not in progression" skill notice fill / text |
 | `--stat-low` / `--stat-mid` / `--stat-high` | `#842334` / `#8a6a00` / `#12803f` | dynamic stat colouring (text colour, not fill; each stop ≥ 4.5:1 on `--surface-2`) |
 
 Relationship hues are **semantic** (which slot this is), not selection, so they stay fixed on every
@@ -232,14 +234,19 @@ areas may extend past the visible chip.
   (per unit, always on) and lead the Stats tab's class rail with an inline star. Tapping a card
   selects it: `--accent-strong` fill, white text and a "SELECTED" tag. Selection sets the unit's
   current class (the same field as the Roster class popup).
-- **Skills** (Figma `3:4348`): the personal skill first (locked card), then five equip slots. A
-  skill the plan doesn't reach carries an inset notice under the card: **yellow** "Not in
-  progression: *Class Lv N*" (`--warn-tint` / `--warn-ink`) when a class the unit already has teaches
-  it; **red** "Not accessible: *Class Lv N*" (`--bad-tint` / `--bad-ink`) when it needs another
-  relationship, listing the portraits that would unlock it ("Via S Rank", "Via A+ Rank" — "Via A
-  Rank" for Corrin — and "Via Parent") and "Can be inherited from *Name*". A child's skill only a
-  parent can pass on reads "Only inheritable … Inherit from *Parent*". Tapping a slot opens the
-  skill picker. An empty slot shows a dashed placeholder, a `+` icon in the round icon well, and "Empty slot".
+- **Skills** (Figma `3:4348`): the personal skill first (locked card; the lock is set inline as the
+  name's first character and wraps with its first word), then five equip slots. Under every
+  description an accent tag says where the skill is learned ("*Swordmaster* Lv 5", or "Inherited
+  from *Parent*"); stat Takers add a muted "Can't be equipped with another Taker". A skill the plan
+  doesn't reach carries an inset notice under the card, its tone rising with the distance (owner,
+  v3.4): **blue** "Not in progression" (`--info-tint` / `--info-ink`) when a class the unit already
+  has teaches it; **yellow** (`--warn-tint` / `--warn-ink`) "Only inheritable from *A* or *B*", or
+  "Requires support" with the portraits that would unlock it ("Via S Rank", "Via A+ Rank" - "Via A
+  Rank" for Corrin - and "Via Parent") and "Can also be inherited from *Name*" (parents already
+  listed as a way in left out); **red** (`--bad-tint` / `--bad-ink`) "Not accessible", and "Not
+  compatible with equipped *Speedtaker*" when two Takers are equipped. The notice no longer names
+  the class or level (that's the tag). Tapping a slot opens the skill picker. An empty slot shows a
+  dashed placeholder, a `+` icon in the round icon well, and "Empty slot".
 
 ### Parents tab — children only
 
@@ -385,26 +392,37 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
 - **Class popup**: classes available to the unit, grouped by source (Own, Parent, Partner Seal,
   Friendship Seal, Talent, DLC) as sprite + name rows. The current class has an accent check.
 - **Skill picker** (equip slots): a fixed-height sheet (88dvh) with a filter button beside close and
-  an underline tab rail under the title — **Starred**, **Grouped** (default), **Ungrouped** —
-  swipeable like the Roster's lenses.
+  an underline tab rail under the title - **Starred**, **Grouped** (default), **Ungrouped**. The
+  three tabs sit side by side in a swipe pager like the character page (v3.4): all stay mounted,
+  each scrolls on its own and keeps its position, and the neighbour is visible while dragging.
   - Every skill in the game appears: groups in order **In progression**, **Not in progression**,
     **Inheritable only** (children), **Requires support** (an S / A+ / A partner or another second
     parent; combinations shown "Only together: S *Jakob* & A+ *Elise*", minimal ones only) and **Not
     accessible** (nothing in this run gives it — no reason shown; DLC classes are left out entirely
     while DLC is off).
-  - *Grouped*: medium headings that stick to the top of the sheet (a 1px `--line` bottom border fades
-    in once pinned), then each **class** whole in its own status, with sprite and an animated
-    collapse chevron (collapsed state per unit) — so a skill two classes teach (Locktouch: Outlaw and
-    Ninja) is listed under both. One grey guidance notice under each class heading (none for In / Not
-    in progression); cards carry only "Lv N".
-  - *Ungrouped*: one list, each card with the Profile's coloured notice. *Starred*: the unit's starred
-    skills, same coloured notices.
-  - Every card has a star at its right edge, in line with the icon and name (per unit); notices span
-    the card's full inner width. A skill equipped in another slot is muted
-    ("Equipped · tap to swap"); picking it swaps the slots.
-  - Filter menu: "S rank flexible" and "A+ rank flexible" ("A rank flexible" for Corrin); switching
-    one off treats new relationships of that kind as unavailable.
-  The inherit-slot pickers keep the simple list of that parent's inheritable skills.
+  - *Grouped*: a sticky **pill rail** at the top is the table of contents (v3.4; group headings no
+    longer stick): the active pill follows the scroll, tapping one scrolls its group under the rail.
+    Then medium group headings and each **class** whole in its own status, with sprite and an
+    animated collapse chevron (collapsed state per unit) - so a skill two classes teach (Locktouch:
+    Outlaw and Ninja) is listed under both. A parent's class in the other gender counts as the
+    child's own (Corrin's Nohr Princess = Kana's Nohr Prince) unless that version doesn't teach the
+    skill (Troubadour's Demoiselle / Gentilhomme). Grey per-class notices only where the heading
+    doesn't say it all: Inheritable only - "Skills can only be inherited from *A* (or *B*)", the
+    head showing the parents' sprites (two at most, overlapped like the Avatar talent cards, then
+    "+N"); Requires support - the ways in with no lead line, then "Skills can also be inherited from
+    *Name*". Requires support and Not accessible heads show the sprite at 50% and the name in
+    `--ink-2`. Cards carry only "Lv N".
+  - *Ungrouped*: one list, each card with the Profile's tag and coloured notice. *Starred*: the
+    unit's starred skills, same.
+  - Not accessible skills are grey cards (`--surface-2`) with the icon at 50%.
+  - Every card has a star centred beside the description (the card is a div whose main button covers
+    it). The equipped skill is labelled "EQUIPPED" above its description; one equipped in another
+    slot is muted ("EQUIPPED IN SLOT N · TAP TO SWAP"); picking it swaps the slots.
+  - Filter menu, saved per character: "S rank flexible", "A+ rank flexible" ("A rank flexible" for
+    Corrin) and, for a child whose second parent is chosen, "Parent flexible"; switching one off
+    treats new relationships of that kind (other second parents) as unavailable.
+  The inherit-slot pickers list that parent's inheritable skills, the ones the parent has equipped
+  first ("EQUIPPED BY *Parent*").
 
 ## Desktop (≥ 1024px; the mock is mobile-only)
 

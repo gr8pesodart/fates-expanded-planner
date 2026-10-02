@@ -52,6 +52,9 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 ## Class inheritance and seals — `classes.ts › classPool`, `army.ts`
 
+- **Gendered class names (v3.4, `sexedClassId`)**: Monk ↔ Shrine Maiden, Great Master ↔ Priestess,
+  Butler ↔ Maid, Nohr Prince ↔ Nohr Princess swap by gender like the (M)/(F) pairs (Fire Emblem Wiki ›
+  Reclass). Before v3.4 women with S Azama got Monk. Pinned in `classes.test.ts`.
 - Duplicate branches fall back to the contributor's next (secondary) branch. Seals can't grant Nohr
   Prince(ss)/Wolfskin/Kitsune/Villager → secondary instead — **this applies to Corrin's A ranks too**:
   Kaden/Selkie → Diviner, Keaton/Velouria → Fighter (Serenes › Class Changing: "the character will
@@ -93,9 +96,13 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 ## Skill access — `skillAccess.ts` (tests: `skillAccess.test.ts`)
 
+- **Exclusive skills (v3.4, `skills.ts › conflictingSkills`)**: the seven stat Takers carry "Can't use
+  with other Takers." in their game description; the planner keys off that text (Lifetaker lacks it).
 - Groups, in picker order (UI: In progression / Not in progression / Inheritable only / Requires
-  relationship / Not accessible): progression (learned on the planned path / chosen inherited) → available
-  (current pool + DLC classes) → inheritable (a current parent's inheritable pool) → locked (each
+  support / Not accessible): progression (learned on the planned path / chosen inherited) → available
+  (current pool + DLC classes) → inheritable (a current parent's inheritable pool, and - v3.4 owner
+  ruling - skills **only** another possible second parent could pass on; a parent's class is read in
+  the child's gender unless that version doesn't teach the skill) → locked (each
   roster S partner / A+ partner / Corrin A-rank partner / other second parent tried one at a time on
   top of the current plan, plus those parents' inheritable pools). Never lists the unit's personal
   skill; skills nothing in the run gives are omitted. Combinations are evaluated where the single
@@ -105,7 +112,8 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   Combinations are kept minimal (no superset of a working combination). `unavailable` covers the rest
   (owner: no reasons; DLC classes left out while DLC is off). `classes` (per-class status + ways) drives the picker's Grouped view so a skill shows
   under every class teaching it (owner: Locktouch under Outlaw and Ninja). `SkillFilters` (picker
-  toggles) drop new S or A+ candidates from the analysis.
+  toggles, per unit) drop new S or A+ candidates (`s`, `a`) or, once a child's second parent is
+  chosen, the other possible second parents (`p`) from the analysis.
 
 ## Hair colour — `hair.ts › hairColourOf` (tests: `hair.test.ts`)
 

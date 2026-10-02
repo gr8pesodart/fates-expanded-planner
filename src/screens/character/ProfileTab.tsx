@@ -10,7 +10,7 @@ import type { SlotKind } from '../../components/slots'
 import { RelationCard, UnitLink } from '../../components/relations'
 import { slotLabel } from '../../components/slots'
 import { SkillCard } from '../../components/SkillCard'
-import { SkillNotice } from '../../components/SkillNotice'
+import { ConflictNotice, SkillNotice } from '../../components/SkillNotice'
 import { skillAccess, unreachableSkill } from '../../logic/skillAccess'
 import { StatTable } from '../../components/StatTable'
 import type { Dataset, UnitDef } from '../../data/types'
@@ -19,7 +19,7 @@ import { armyUnits, displayName, personalSkill } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
 import { CLASS_CARD_LENSES, colourReferenceClassIds, lensDef, lensRow } from '../../logic/lenses'
 import { favouriteClassesFirst, setPairRole, toggleFavouriteClass } from '../../logic/relationships'
-import { sealGain, skillView, unitClassIds } from '../../app/unitViews'
+import { acquiredVia, sealGain, skillRules, skillView, unitClassIds } from '../../app/unitViews'
 import { emptyUnitPlan, SKILL_SLOTS } from '../../state/model'
 import type { RunPlan } from '../../state/model'
 import { navigate } from '../../lib/router'
@@ -177,12 +177,15 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
           {Array.from({ length: SKILL_SLOTS }, (_, slot) => {
             const skillId = ctx.plan.skills[slot]
             const status = skillId == null ? null : access.byId.get(skillId) ?? unreachableSkill(skillId)
+            const rules = skillId == null ? null : skillRules(dataset, skillId, ctx.plan.skills)
             return (
               <SkillCard
                 key={slot}
                 skill={skillView(dataset, skillId)}
                 disabled={readOnly}
-                notice={status ? <SkillNotice access={status} corrin={ctx.unit.isCorrin} /> : null}
+                tag={status ? acquiredVia(dataset, run, ctx, status) : undefined}
+                caution={rules?.caution}
+                notice={status ? <><SkillNotice access={status} corrin={ctx.unit.isCorrin} /><ConflictNotice names={rules?.conflicts ?? []} /></> : null}
                 onClick={() => openPicker({ skill: { unitId, slot } })}
               />
             )

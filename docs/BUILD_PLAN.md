@@ -56,6 +56,18 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   from the ROM (`MyUnitEdit.bin` colour table); sprite animations share one clock at native
   loop lengths (same-length loops in sync). Skill picker v2: Starred / Grouped / Ungrouped tabs, stars, S / A+ filters, Requires
   relationship + Not accessible groups, classes listed whole (shared skills under each class).
+- v3.4 (branch `v3`, 2026-10-02, owner notes "3.4 notes"): skill picker on the shared `TabPager`
+  (tabs kept mounted, each scrolling on its own), per-character S / A+ filters plus "Parent
+  flexible", Grouped table-of-contents pill rail (no sticky headings), parent sprites and
+  "Skills can (only / also) be inherited from" wording, gender-merged parent classes, other-parent
+  inheritance under Inheritable only, faded Requires support / Not accessible heads, grey cards for
+  not accessible skills, "Equipped" label above the description, star centred beside it (outline no
+  longer clipped). Notice tones blue / yellow / red (`--info` tokens); class + level moved into an
+  accent tag under every description. Stat Takers: muted rule + red conflict notice. Gendered class
+  names (Monk/Shrine Maiden etc.) now swap by gender in every pool (was a bug). Inline personal-skill
+  lock. Chart: tab swipes (same pager), sprite-only left shift. Inherit picker lists the parent's
+  equipped skills first. Rails: pill colours tween, one sliding underline for tab rails; character
+  tab pills tween and scroll into view. Roster stat tables slide off the page edge, not the row.
 
 ### Backlog
 
