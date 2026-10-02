@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-02T05:34:10Z",
+  "generatedAt": "2026-10-02T19:23:46Z",
   "source": "Installed GameData item table + Fates Icon Project (regular) item sheet (tools/assets/extract_item_icons.py)",
   "seals": {
     "master": "master",
@@ -156,22 +156,22 @@
     },
     "class-124": {
       "file": "assets/items/class-124.webp",
-      "name": "Lodestar item",
+      "name": "Hero's Brand",
       "source": "Icon Project icon/Icon.bch.lz#item[1,22] (icon 353; item 356 IID_英雄王の紋章, work/merge GameData)"
     },
     "class-126": {
       "file": "assets/items/class-126.webp",
-      "name": "Great Lord item",
+      "name": "Exalt's Brand",
       "source": "Icon Project icon/Icon.bch.lz#item[2,22] (icon 354; item 357 IID_聖痕の紋章, work/merge GameData)"
     },
     "class-127": {
       "file": "assets/items/class-127.webp",
-      "name": "Grandmaster item",
+      "name": "Fell Brand",
       "source": "Icon Project icon/Icon.bch.lz#item[3,22] (icon 355; item 359 IID_邪痕の紋章, work/merge GameData)"
     },
     "class-125": {
       "file": "assets/items/class-125.webp",
-      "name": "Vanguard item",
+      "name": "Vanguard Brand",
       "source": "Icon Project icon/Icon.bch.lz#item[6,22] (icon 358; item 362 IID_神将の紋章, work/merge GameData)"
     },
     "book-158": {
@@ -194,5 +194,18 @@
       "name": "Warp book",
       "source": "Icon Project icon/Icon.bch.lz#item[10,22] (icon 362; item 393 IID_ワープの書, work/merge GameData)"
     }
-  }
+  },
+  "limits": {
+    "book-138": 1,
+    "book-139": 0,
+    "book-140": 0,
+    "book-122": 0,
+    "book-120": 0,
+    "class-124": 1,
+    "class-126": 1
+  },
+  "festivalUnlimited": [
+    "class-124",
+    "class-126"
+  ]
 }

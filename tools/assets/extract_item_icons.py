@@ -51,6 +51,38 @@ KIND_BOOK = 12
 SEAL_KEYS = {0: "master", 1: "heart", 2: "partner", 3: "friendship", 4: "eternal", 6: "offspring"}
 SEAL_CLASS_CHANGE = 5
 
+# The amiibo / DLC crests have no English MIID_ text in the dump; their localised names (research,
+# 2026-10-02: Serenes Forest DLC map rewards, Japan DLC list).
+CREST_NAMES = {
+    "IID_英雄王の紋章": "Hero's Brand",
+    "IID_聖痕の紋章": "Exalt's Brand",
+    "IID_邪痕の紋章": "Fell Brand",
+    "IID_神将の紋章": "Vanguard Brand",
+}
+
+# Copies a player can get in one save (research, 2026-10-02; curated, not in the game data). Missing
+# keys are unlimited: shop stock (Level 3 Rod/Staff store) or repeatable DLC rewards.
+#  - Hero's Brand / Exalt's Brand: Before Awakening's one-time reward ("1 in standard English
+#    releases"; the repeatable Festival of Bonds maps are Japan-only).
+#  - Paragon: Another Gift from Anna's first-time gift.
+#  - Armor Shield, Beast Shield, Winged Shield, Bold Stance: item records with no released source.
+# Sources: https://serenesforest.net/fire-emblem-fates/miscellaneous/downloadable-content/maps/ ,
+# https://serenesforest.net/fire-emblem-fates/miscellaneous/downloadable-content/japan/ ,
+# https://fireemblem.fandom.com/wiki/List_of_Skills_in_Fire_Emblem_Fates
+LIMIT_BY_IID = {
+    "IID_英雄王の紋章": 1,
+    "IID_聖痕の紋章": 1,
+    "IID_エリートの書": 1,
+    "IID_鎧盾の書": 0,
+    "IID_獣盾の書": 0,
+    "IID_翼盾の書": 0,
+    "IID_攻防一体の陣の書": 0,
+}
+
+# Japan's Festival of Bonds DLC maps (Nohrian / Hoshidan) hand out these brands repeatedly; a run
+# with the festival maps has no limit on them.
+FESTIVAL_UNLIMITED = {"IID_英雄王の紋章", "IID_聖痕の紋章"}
+
 
 def fail(message: str) -> None:
     print(f"error: {message}", file=sys.stderr)
@@ -110,11 +142,17 @@ def main() -> None:
     columns = sheet.width // CELL
 
     entries: dict[str, dict] = {}
+    limits: dict[str, int] = {}
+    festival: list[str] = []
     seals: dict[str, str] = {}
     class_items: dict[str, str] = {}
     books: dict[str, str] = {}
 
     def add(key: str, item: dict, name: str) -> None:
+        if item["iid"] in LIMIT_BY_IID:
+            limits[key] = LIMIT_BY_IID[item["iid"]]
+        if item["iid"] in FESTIVAL_UNLIMITED:
+            festival.append(key)
         column, row = item["icon"] % columns, item["icon"] // columns
         icon = sheet.crop((column * CELL, row * CELL, (column + 1) * CELL, (row + 1) * CELL))
         os.makedirs(args.out, exist_ok=True)
@@ -136,7 +174,7 @@ def main() -> None:
             key = f"class-{class_id}"
             class_items[str(class_id)] = key
             # The amiibo classes' items have no English name; name them after their class.
-            add(key, item, english or f"{class_names.get(class_id, class_id)} item")
+            add(key, item, english or CREST_NAMES.get(item["iid"]) or f"{class_names.get(class_id, class_id)} item")
         elif item["kind"] == KIND_BOOK:
             skill_id = item["arg"]
             key = f"book-{skill_id}"
@@ -154,6 +192,8 @@ def main() -> None:
         "classItems": class_items,
         "books": books,
         "items": entries,
+        "limits": limits,
+        "festivalUnlimited": festival,
     }
     with open(args.manifest, "w", encoding="utf-8", newline="\n") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)

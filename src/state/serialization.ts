@@ -27,6 +27,7 @@ function isCorrinBuild(value: unknown): value is CorrinBuild {
 function isRunPlan(value: unknown): value is RunPlan {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') return false
   if (typeof value.modpackId !== 'string' || typeof value.dlc !== 'boolean') return false
+  if (value.festivalDlc !== undefined && typeof value.festivalDlc !== 'boolean') return false
   if (value.mods !== undefined && (!Array.isArray(value.mods) || !value.mods.every((id) => typeof id === 'string'))) return false
   if (typeof value.route !== 'string' || !ROUTE_IDS.has(value.route)) return false
   if (typeof value.createdAt !== 'string' || typeof value.updatedAt !== 'string') return false

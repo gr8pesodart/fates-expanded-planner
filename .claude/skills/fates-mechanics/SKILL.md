@@ -64,6 +64,11 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   `autoProgression.test.ts`)**: children join by recruitment chapter (never before the later parent);
   level table and Offspring Seal rules (Chapter 19+: advanced Lv 2 per chapter past 18, join row
   only, free in automation) are in DATA.md. Read `ctx.start.child`, never `joinLevel`, for children.
+- **Automation priorities (owner, 2026-10-03)**: seals (Offspring Seal free), then levels in the
+  selected class, then focus-weapon levels (faire weapon, else
+  the selected class's single weapon, else player-picked weapons: all before any), then Str-or-Mag
+  growth, then Spd/Def/Res growth (stats chosen by effective growth in the selected class). Limited
+  items (Hero's / Exalt's Brand, Paragon book) are capped run-wide; dominance compares their use too.
 - **Items / skill books (v3.4)**: item table layout and the 17 books in DATA.md › Items; books make
   their skill `available` with DLC on.
 - Duplicate branches fall back to the contributor's next (secondary) branch. Seals can't grant Nohr

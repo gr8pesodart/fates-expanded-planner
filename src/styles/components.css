@@ -2074,10 +2074,61 @@
   font: var(--t-body);
 }
 
-.eternal-offer-actions {
+/* Sheet buttons share the width; the primary action sits on the right (owner, v3.4). */
+.eternal-offer-actions,
+.sheet-actions {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--s2);
+  margin-top: var(--s4);
+}
+
+.sheet-heading {
+  font: var(--t-sub);
+  color: var(--ink);
+}
+
+.sheet-note {
+  margin: 0 0 var(--s3);
+  font: var(--t-note);
+  color: var(--ink-2);
+}
+
+.route-options {
+  display: grid;
+  gap: var(--s2);
+}
+
+.route-option {
+  display: grid;
+  gap: 4px;
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  text-align: left;
+}
+
+.route-option:hover {
+  border-color: var(--accent);
+}
+
+.route-option-label {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--s2);
+  font: var(--t-sub);
+}
+
+.route-option-tag {
+  font: var(--t-cell);
+  color: var(--accent-strong);
+}
+
+.route-option-cost {
+  font: var(--t-note);
+  color: var(--ink-2);
 }
 
 /* End of the Progression page: the seals pill hangs on the chart's bottom border at the right,
@@ -2156,6 +2207,14 @@
   align-items: center;
   gap: 3px;
   font: var(--t-cell);
+}
+
+.seal-tally-item[data-over] {
+  color: var(--bad);
+}
+
+.seal-tooltip-limit {
+  color: var(--on-dark-2);
 }
 
 .seal-tally-name {

@@ -17,7 +17,7 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
   const [step, setStep] = useState(0)
   const update = setDraft
   const finish = () => {
-    createRun({ name: draft.name.trim() || 'New run', modpackId: draft.modpackId, mods: draft.mods, dlc: draft.dlc, route: draft.route, corrin: draft.corrin })
+    createRun({ name: draft.name.trim() || 'New run', modpackId: draft.modpackId, mods: draft.mods, dlc: draft.dlc, festivalDlc: draft.festivalDlc, route: draft.route, corrin: draft.corrin })
     navigate({ name: 'roster' }, { replace: true })
   }
   return (
@@ -67,6 +67,13 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
                 <span className="muted block">DLC classes, skills and Anna</span>
               </span>
               <Switch checked={draft.dlc} onChange={(dlc) => update({ ...draft, dlc })} />
+            </label>
+            <label className="switch-row">
+              <span>
+                <span className="sub-title">Festival of Bonds DLC</span>
+                <span className="muted block">Japan's festival maps: unlimited Hero's and Exalt's Brands</span>
+              </span>
+              <Switch checked={Boolean(draft.dlc && draft.festivalDlc)} disabled={!draft.dlc} onChange={(festivalDlc) => update({ ...draft, festivalDlc })} />
             </label>
           </>
         ) : null}

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Icon } from '../components/icons'
+import { Switch } from '../components/controls'
 import { useToast } from '../components/toast'
 import { selectedModIds } from '../data/modProfiles'
 import { ModChecklist } from '../components/ModChecklist'
@@ -82,6 +83,21 @@ function RunCard({ run, active, onSelect, deletable }: { run: RunPlan; active: b
               <input value={run.name} onChange={(event) => updateRun(run.id, { name: event.target.value })} />
             </label>
             <ModChecklist profileId={run.modpackId} value={run.mods} onChange={(mods) => updateRun(run.id, { mods })} />
+            {/* Same rows as the mod list above, so the run's switches read as one list. */}
+            <label className="mod-option">
+              <span className="mod-option-copy">
+                <span className="mod-option-name">DLC</span>
+                <span className="muted mod-option-effect">DLC classes, skills and Anna</span>
+              </span>
+              <Switch checked={run.dlc} onChange={(dlc) => updateRun(run.id, { dlc })} />
+            </label>
+            <label className="mod-option">
+              <span className="mod-option-copy">
+                <span className="mod-option-name">Festival of Bonds DLC</span>
+                <span className="muted mod-option-effect">Japan's festival maps: unlimited Hero's and Exalt's Brands</span>
+              </span>
+              <Switch checked={Boolean(run.dlc && run.festivalDlc)} disabled={!run.dlc} onChange={(festivalDlc) => updateRun(run.id, { festivalDlc })} />
+            </label>
             <div className="run-menu-actions">
               <button type="button" className="text-btn" onClick={() => void share()}><Icon name="share" size={18} />Share link</button>
               <button type="button" className="text-btn" onClick={() => duplicateRun(run.id)}>Duplicate</button>

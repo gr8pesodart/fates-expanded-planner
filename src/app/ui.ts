@@ -26,6 +26,9 @@ interface UiState {
   skillPickerTab: SkillPickerTab
   /** Skill picker, per unit: count new S / A+ relationships and other second parents as ways in. */
   skillFilters: Record<string, SkillFilters>
+  /** Automate progression: weapon columns each unit's plan favours (when the player picked them). */
+  weaponFocus: Record<string, number[]>
+  setWeaponFocus(unitId: string, weapons: number[]): void
   /** Skill picker: collapsed class groups per unit, as `${group}:${classId}`. */
   collapsedSkillClasses: Record<string, string[]>
   classLens: LensId
@@ -66,6 +69,8 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   skillPickerTab: 'grouped',
   skillFilters: {},
   collapsedSkillClasses: {},
+  weaponFocus: {},
+  setWeaponFocus: (unitId, weapons) => set({ weaponFocus: { ...get().weaponFocus, [unitId]: weapons } }),
   classLens: 'baseStats',
   classFilter: 'base',
   parentSort: DEFAULT_PARENT_SORT,
@@ -118,6 +123,7 @@ export const useUi = create<UiState>()(persist((set, get) => ({
       // v3.3 kept one global { s, a }; v3.4 keeps them per unit.
       skillFilters: persisted.skillFilters && !('s' in persisted.skillFilters) ? persisted.skillFilters : {},
       collapsedSkillClasses: persisted.collapsedSkillClasses ?? {},
+      weaponFocus: persisted.weaponFocus ?? {},
     }
   },
 }))

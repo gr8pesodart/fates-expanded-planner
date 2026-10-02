@@ -14,6 +14,10 @@ interface ItemManifest {
   /** Skill id -> its skill book's item key. */
   books: Record<string, string>
   items: Record<string, { file: string; name: string; source: string }>
+  /** Copies one save can get (curated research); missing = unlimited (shop stock, repeatable DLC). */
+  limits: Record<string, number>
+  /** Limited items the Festival of Bonds DLC maps hand out repeatedly (Hero's / Exalt's Brand). */
+  festivalUnlimited: string[]
 }
 
 const ITEMS = manifestJson as ItemManifest
@@ -21,8 +25,17 @@ const ITEMS = manifestJson as ItemManifest
 const ASSETS_ENABLED = import.meta.env.VITE_ASSETS !== 'off'
 const BASE_URL = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`
 
-/** Skills a skill book teaches (DLC items), by skill id. */
-export const SKILL_BOOKS: ReadonlySet<number> = new Set(Object.keys(ITEMS.books).map(Number))
+/** How many of an item one save can get; null = unlimited. A run with the festival DLC lifts the brands' limit. */
+export function itemLimit(key: string, run?: { dlc: boolean; festivalDlc?: boolean }): number | null {
+  if (run?.dlc && run.festivalDlc && ITEMS.festivalUnlimited.includes(key)) return null
+  return ITEMS.limits[key] ?? null
+}
+
+/**
+ * Skills a skill book teaches (DLC items), by skill id - only books a player can actually get
+ * (Armor Shield, Beast Shield, Winged Shield and Bold Stance have item records but no source).
+ */
+export const SKILL_BOOKS: ReadonlySet<number> = new Set(Object.entries(ITEMS.books).filter(([, key]) => itemLimit(key) !== 0).map(([id]) => Number(id)))
 
 export function itemName(key: string): string {
   return ITEMS.items[key]?.name ?? key

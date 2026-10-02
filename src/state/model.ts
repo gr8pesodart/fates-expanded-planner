@@ -86,6 +86,8 @@ export interface RunPlan {
   modpackId: string
   mods?: string[]
   dlc: boolean
+  /** Japan's Festival of Bonds DLC maps: Hero's and Exalt's Brand become repeatable (no per-save limit). */
+  festivalDlc?: boolean
   route: Route
   corrin: CorrinPlan
   favourites: string[]
@@ -105,6 +107,7 @@ export interface RunPatch {
   modpackId?: string
   mods?: string[]
   dlc?: boolean
+  festivalDlc?: boolean
   route?: Route
   corrin?: CorrinPlan
 }

@@ -1,4 +1,4 @@
-import type { AutoResult, OffspringMode } from '../logic/autoProgression'
+import type { AutoOptions, AutoResult } from '../logic/autoProgression'
 import type { AutoRequest } from '../logic/autoProgression.worker'
 import type { RunPlan } from '../state/model'
 
@@ -10,12 +10,12 @@ const pending = new Map<number, (result: AutoResult | null) => void>()
  * Automate progression in a Web Worker so the page keeps responding while it searches (hard plans
  * take a second or more on a phone). Falls back to the main thread where workers aren't available.
  */
-export async function planProgression(run: RunPlan, unitId: string, bookSkills: number[], offspring: OffspringMode = 'allow'): Promise<AutoResult | null> {
+export async function planProgression(run: RunPlan, unitId: string, options: AutoOptions): Promise<AutoResult | null> {
   if (typeof Worker === 'undefined') {
     const [{ loadDataset }, { unitContext }, { autoProgression }] = await Promise.all([import('../data/loader'), import('../logic/army'), import('../logic/autoProgression')])
     const dataset = await loadDataset(run.modpackId)
     const ctx = unitContext(dataset, run, unitId)
-    return ctx ? autoProgression(dataset, run, ctx, bookSkills, offspring) : null
+    return ctx ? autoProgression(dataset, run, ctx, options) : null
   }
   if (!worker) {
     worker = new Worker(new URL('../logic/autoProgression.worker.ts', import.meta.url), { type: 'module' })
@@ -25,7 +25,7 @@ export async function planProgression(run: RunPlan, unitId: string, bookSkills: 
     }
   }
   const id = (nextId += 1)
-  const request: AutoRequest = { id, packId: run.modpackId, run, unitId, bookSkills, offspring }
+  const request: AutoRequest = { id, packId: run.modpackId, run, unitId, options }
   return new Promise((resolve) => {
     pending.set(id, resolve)
     worker!.postMessage(request)

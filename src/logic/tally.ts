@@ -1,5 +1,5 @@
 import type { Dataset } from '../data/types'
-import { bookItemKey, classItemKey, itemName, sealItemKey } from '../data/itemIcons'
+import { bookItemKey, classItemKey, itemLimit, itemName, sealItemKey } from '../data/itemIcons'
 import type { RunPlan } from '../state/model'
 import type { UnitContext } from './army'
 import { skillBooksUsed } from './autoProgression'
@@ -13,6 +13,8 @@ export interface TallyItem {
   key: string | null
   name: string
   count: number
+  /** Copies one save can get (Hero's Brand: 1); null = unlimited. */
+  limit: number | null
 }
 
 interface UnitTally {
@@ -21,6 +23,7 @@ interface UnitTally {
 }
 
 const SEAL_LABEL: Record<ReclassSeal, string> = {
+  offspring: 'Offspring Seal',
   master: 'Master Seal',
   heart: 'Heart Seal',
   partner: 'Partner Seal',
@@ -28,10 +31,10 @@ const SEAL_LABEL: Record<ReclassSeal, string> = {
   dlc: 'DLC',
 }
 
-const SEAL_ORDER: SealUse['seal'][] = ['master', 'heart', 'partner', 'friendship', 'dlc', 'eternal']
+const SEAL_ORDER: SealUse['seal'][] = ['offspring', 'master', 'heart', 'partner', 'friendship', 'dlc', 'eternal']
 
 /** Seals, class items and skill books the plans use, summed per item and in seal order, books last. */
-export function tallyItems(dataset: Dataset, units: readonly UnitTally[]): TallyItem[] {
+export function tallyItems(dataset: Dataset, units: readonly UnitTally[], run?: RunPlan): TallyItem[] {
   const seals = new Map<string, { use: SealUse; count: number }>()
   const books = new Map<number, number>()
   for (const unit of units) {
@@ -58,11 +61,12 @@ export function tallyItems(dataset: Dataset, units: readonly UnitTally[]): Tally
           key,
           name: key ? itemName(key) : SEAL_LABEL[use.seal as ReclassSeal] ?? 'Seal',
           count,
+          limit: key ? itemLimit(key, run) : null,
         }
       }),
     ...[...books].map(([skillId, count]): TallyItem => {
       const key = bookItemKey(skillId) ?? null
-      return { id: `book:${skillId}`, key, name: `${dataset.skillsById.get(skillId)?.name ?? '?'} skill book`, count }
+      return { id: `book:${skillId}`, key, name: `${dataset.skillsById.get(skillId)?.name ?? '?'} skill book`, count, limit: key ? itemLimit(key, run) : null }
     }),
   ]
 }
@@ -72,5 +76,5 @@ export function runTallyItems(dataset: Dataset, run: RunPlan, contexts: readonly
   return tallyItems(dataset, contexts.map((ctx) => {
     const progression = buildProgression(dataset, run, ctx)
     return { progression, books: skillBooksUsed(run, ctx, learnedSkillIds(progression)) }
-  }))
+  }), run)
 }

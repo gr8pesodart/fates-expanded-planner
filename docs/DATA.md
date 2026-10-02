@@ -280,8 +280,12 @@ The current planner therefore does not include inherited support rows in child p
   children plan to inherit from it (minus its own inherited picks and the personal skill). Level-by-
   level search over (class, level, row reclass unused, skills known) mirroring buildProgression,
   entering only classes that teach a target or promote into one; ends at the cap in the selected
-  class. Cost, lexicographic: seals, then level-ups in classes wielding an equipped -faire weapon,
-  then Str/Mag/Spd/Def/Res class growth. Seal budget grows from a floor (first feasible budget is
+  class. Cost, lexicographic (owner priorities, 2026-10-03): seals (an Offspring Seal is free: it
+  comes with the child); then level-ups in the selected class; then level-ups in classes
+  wielding the focus weapons (an equipped -faire skill's weapon; else the selected class's weapon if
+  it has one; else the weapons the player picks, classes wielding all of them before classes wielding
+  any); then class growth in Str or Mag, whichever has the higher effective growth in the selected
+  class; then in Spd, Def or Res, whichever is highest there. Seal budget grows from a floor (first feasible budget is
   optimal). Pruning, all exact: (1) Pareto dominance per (class, level, row event) - a state that
   knows a superset of skills (bitmask) at a no-worse lexicographic cost dominates, because a
   level-up then learns the same skill or one the other still lacks, and lexicographic order
@@ -297,6 +301,20 @@ The current planner therefore does not include inherited support rows in child p
   can teach is asked about (`bookOrClassChoices`), unless another equipped skill without a book
   pins the same class. `npm run audit:skills` replays every roster unit's plan and the hard cases
   through buildProgression.
+- **Per-save item limits (research 2026-10-02, curated in `extract_item_icons.py › LIMIT_BY_IID`,
+  manifest `limits`)** - Hero's Brand (Lodestar) and Exalt's Brand (Great Lord): 1 per save (Before
+  Awakening's one-time reward; the repeatable Festival of Bonds maps are Japan-only); Paragon's book:
+  1 (Another Gift from Anna); Armor Shield, Beast Shield, Winged Shield and Bold Stance books: 0 (item
+  records with no released source), so they aren't ways in. Everything else is unlimited: Level 3
+  Rod/Staff shop stock (Master/Heart/Partner/Friendship/Eternal) or repeatable DLC rewards (Dread
+  Scroll, Ebon Wing, Sighting Lens, Witch's Mark, Fell Brand, Vanguard Brand, the other books).
+  Automation caps a limited item at the limit minus the other units' current plans; the seals pill
+  turns a count over the limit red. A run with the **Festival of Bonds DLC** switch on (Japan's
+  repeatable festival maps; `RunPlan.festivalDlc`, manifest `festivalUnlimited`) has no limit on the
+  two brands. Names: the four crests are Hero's / Exalt's / Fell / Vanguard
+  Brand (no English MIID_ text in the dump). Not modelled (yet): shop stock before Level 3 (after
+  Chapter 20: Master Seals 2 then 7, Heart/Partner/Friendship 1 then 3, no Eternal Seals) - Serenes
+  Forest › Rod Store / Staff Store.
 - **Skill books on the Progression page (v3.4, `skillBooksUsed`)** - with DLC on, an equipped skill
   the path doesn't teach but a book does is assumed learned from the book and counted with the
   seals.

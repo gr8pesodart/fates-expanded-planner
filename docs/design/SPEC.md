@@ -314,17 +314,23 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   Special for Azura). It plans the reclasses that learn every equipped skill (and what children
   inherit) and end in the selected class, with the fewest seals, then the most levels in -faire
   weapon classes, then the best Str/Mag/Spd/Def/Res growth; a toast reports the seals and any skill
-  left to a skill book or out of reach. Before planning, a "Class or skill book?" sheet asks about
-  each equipped skill a book could teach instead (Class / Skill book segmented control) - except
-  when another equipped skill without a book comes from a class that teaches it too (that class is
-  planned anyway). If Eternal Seals save seals (or are the only way), a sheet asks first ("Use an
+  left to a skill book or out of reach. When no -faire skill is equipped and the selected class
+  wields several weapons, a "Weapons to favour" sheet comes first (a Switch per weapon; picks
+  remembered per unit). Then every route is planned: with and without the skill books that could
+  stand in for a class (not offered when another equipped skill without a book pins that class), and
+  for a child with an Offspring Seal, with it and - only when cheaper - without. Several routes open
+  a "Choose a route" sheet: one bordered button per route, its label ("Warp by class", "Warp from
+  its skill book", "Offspring Seal (Advanced Lv 18)") over its cost in `--t-note`, the cheapest
+  tagged "Fewest seals". Sheet buttons share the width, primary on the right; sheet notes use
+  `--t-note` (400 13/1.4, `--ink-2`) under `--t-sub` headings. If Eternal Seals save seals (or are the only way), a sheet asks first ("Use an
   Eternal Seal?" / "Plan without"). The search runs in a Web Worker; the button reads "Planning…".
   A child carrying an Offspring Seal is planned with it; if going without needs fewer seals (or is
   the only way), a "Use the Offspring Seal?" sheet compares both ("Use the Offspring Seal" / "Plan
   without it").
 - **Page foot** (v3.4): a pill of every seal, DLC class item and skill book the plan uses - 16px
   Icon Project icons and "x2", no text - with an info button that opens a dark tooltip (`--scrim`)
-  listing them by name ("Heart Seal x2", "Warp skill book x1"). Below it, side by side in two
+  listing them by name ("Heart Seal x2", "Warp skill book x1"); a count over an item's per-save
+  limit (Hero's Brand, Exalt's Brand, Paragon's book: 1) is red, with "(1 per save)" in the tooltip. Below it, side by side in two
   equal columns: **Use Eternal Seal** (`btn primary`, accent; disabled until the last segment
   reaches its cap) and **Remove an Eternal Seal** (outline, muted while none are used).
 - **Skill books** (DLC on): an equipped skill the path never teaches but a book does is assumed to

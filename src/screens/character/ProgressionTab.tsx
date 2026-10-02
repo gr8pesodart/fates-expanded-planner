@@ -3,7 +3,7 @@ import { usePickers } from '../../app/pickerStore'
 import { usePlanner } from '../../app/plannerContext'
 import { SkillIcon } from '../../components/art'
 import { Icon } from '../../components/icons'
-import { Segmented } from '../../components/controls'
+import { Switch } from '../../components/controls'
 import { SkillCard } from '../../components/SkillCard'
 import { StatTable } from '../../components/StatTable'
 import { useToast } from '../../components/toast'
@@ -17,8 +17,9 @@ import { ItemIcon } from '../../components/ItemIcon'
 import { Sheet } from '../../components/Sheet'
 import { SealTally } from '../../components/SealTally'
 import { tallyItems } from '../../logic/tally'
-import type { AutoPlan, AutoResult } from '../../logic/autoProgression'
-import { bookOrClassChoices, skillBooksUsed } from '../../logic/autoProgression'
+import type { AutoPlan, AutoResult, OffspringMode } from '../../logic/autoProgression'
+import { bookOrClassChoices, skillBooksUsed, WEAPON_NAMES, weaponChoices } from '../../logic/autoProgression'
+import { useUi } from '../../app/ui'
 import { planProgression } from '../../app/autoPlanner'
 import { bookItemKey, classItemKey, itemName, sealItemKey } from '../../data/itemIcons'
 import type { Reclass, RunPlan } from '../../state/model'
@@ -51,9 +52,13 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const [automating, setAutomating] = useState(false)
   const [eternalOffer, setEternalOffer] = useState<AutoResult | null>(null)
   // Skills a book or a class could teach: the player picks before planning (owner, v3.4).
-  const [bookChoice, setBookChoice] = useState<{ skills: number[]; book: number[] } | null>(null)
+  // Before planning: skills a book or a class could teach, and (no -faire skill, several weapons in
+  // the selected class) which weapons to favour. Weapon picks are remembered per unit.
+  const [setup, setSetup] = useState<{ weapons: number[]; picked: number[] } | null>(null)
+  const savedWeapons = useUi((state) => state.weaponFocus[ctx.unit.id])
+  const setWeaponFocus = useUi((state) => state.setWeaponFocus)
   // A child with an Offspring Seal: the best plan with it, and the cheaper one without, to choose from.
-  const [offspringChoice, setOffspringChoice] = useState<{ withSeal: AutoResult | null; without: AutoResult } | null>(null)
+  const [routes, setRoutes] = useState<RouteOption[] | null>(null)
   const progression = useMemo(() => buildProgression(dataset, run, ctx), [dataset, run, ctx])
   const unitId = ctx.unit.id
   const access = useMemo(() => skillAccess(dataset, run, ctx), [dataset, run, ctx])
@@ -70,7 +75,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const toInherit = equipped.filter((item) => item.group === 'inheritable')
   // Equipped skills the path doesn't teach come from their skill book (DLC on), counted with the seals.
   const booksUsed = useMemo(() => skillBooksUsed(run, ctx, learnedSkillIds(progression)), [run, ctx, progression])
-  const tally = useMemo(() => tallyItems(dataset, [{ progression, books: booksUsed }]), [dataset, progression, booksUsed])
+  const tally = useMemo(() => tallyItems(dataset, [{ progression, books: booksUsed }], run), [dataset, progression, booksUsed, run])
 
   /** Applies a plan change, then removes reclasses the new path can no longer reach. */
   const commit = (update: (plan: RunPlan['units'][string]) => RunPlan['units'][string]) => {
@@ -104,36 +109,36 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
     else if (result.plan) applyAuto(result.plan, result)
   }
 
-  // The search runs in a worker (app/autoPlanner.ts); the button shows "Planning…" meanwhile. A child
-  // carrying an Offspring Seal plans with it (owner, v3.4) unless going without needs fewer seals -
-  // then the player chooses.
-  const plan = async (bookSkills: number[]) => {
-    setBookChoice(null)
+  // The search runs in a worker (app/autoPlanner.ts); the button shows "Planning…" meanwhile. Every
+  // route the player might want is planned: with and without the skill books that could stand in for
+  // a class, and for a child carrying an Offspring Seal, with it (free, owner v3.4) and - only when
+  // cheaper - without. One route is applied; several are offered with their costs.
+  const plan = async (weapons: number[]) => {
+    setSetup(null)
     setAutomating(true)
-    if (!ctx.start.child?.offspringLevel) {
-      const result = await planProgression(run, unitId, bookSkills)
-      setAutomating(false)
-      finish(result)
-      return
-    }
-    const [withSeal, without] = await Promise.all([
-      planProgression(run, unitId, bookSkills, 'require'),
-      planProgression(run, unitId, bookSkills, 'forbid'),
-    ])
+    const bookChoices = bookOrClassChoices(dataset, run, ctx)
+    const bookSets: number[][] = bookChoices.length ? [[], bookChoices] : [[]]
+    const modes: OffspringMode[] = ctx.start.child?.offspringLevel ? ['require', 'forbid'] : ['allow']
+    const results = await Promise.all(bookSets.flatMap((bookSkills) => modes.map((offspring) => planProgression(run, unitId, { bookSkills, weapons, offspring }))))
     setAutomating(false)
-    // Compare without Eternal Seals first (those are offered on top); if neither fits without them,
-    // compare the Eternal Seal plans.
-    const cheaper = (a: AutoPlan | null | undefined, b: AutoPlan | null | undefined) => Boolean(a && (!b || a.sealCount < b.sealCount))
-    const skipWins = without && (without.plan || withSeal?.plan
-      ? cheaper(without.plan, withSeal?.plan)
-      : cheaper(without.withEternal, withSeal?.withEternal))
-    if (without && skipWins) setOffspringChoice({ withSeal, without })
-    else finish(withSeal)
+    const options: RouteOption[] = []
+    bookSets.forEach((books, bookIndex) => {
+      const byMode = modes.map((mode, modeIndex) => ({ mode, result: results[bookIndex * modes.length + modeIndex] }))
+      const kept = byMode.length === 2 && !skipsOffspring(byMode[0].result, byMode[1].result) ? [byMode[0]] : byMode
+      for (const { mode, result } of kept) {
+        if (!result || (!result.plan && !result.withEternal)) continue
+        options.push({ id: `${bookIndex}:${mode}`, label: routeLabel(dataset, bookChoices, books, mode, ctx.start.child?.offspringLevel ?? null), cost: routeCost(dataset, result, books), result })
+      }
+    })
+    if (!options.length) finish(null)
+    else if (options.length === 1) finish(options[0].result)
+    else setRoutes(options)
   }
 
   const automate = () => {
-    const choices = bookOrClassChoices(dataset, run, ctx)
-    if (choices.length) setBookChoice({ skills: choices, book: [] })
+    const weapons = weaponChoices(dataset, ctx)
+    const picked = (savedWeapons ?? weapons).filter((column) => weapons.includes(column))
+    if (weapons.length) setSetup({ weapons, picked })
     else void plan([])
   }
 
@@ -260,54 +265,53 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
           </div>
         ) : null}
       </div>
-      {offspringChoice ? (
-        <Sheet title="Use the Offspring Seal?" onClose={() => setOffspringChoice(null)}>
-          <p className="eternal-offer">
-            {(() => {
-              const describe = (result: AutoResult | null) => {
-                if (result?.plan) return counted(result.plan.sealCount, 'seal')
-                if (result?.withEternal) return `${counted(result.withEternal.sealCount, 'seal')} and ${counted(result.withEternal.eternalSeals, 'Eternal Seal')}`
-                return null
-              }
-              const sealed = describe(offspringChoice.withSeal)
-              const unsealed = describe(offspringChoice.without)
-              const level = ctx.start.child?.offspringLevel
-              return sealed
-                ? `The Offspring Seal starts the advanced class at Lv ${level}: that path needs ${sealed}. Promoting at Lv 1 instead leaves more level-ups and needs ${unsealed}.`
-                : `The Offspring Seal starts the advanced class at Lv ${level}, too late to learn every equipped skill. Promoting at Lv 1 instead needs ${unsealed}.`
-            })()}
-          </p>
-          <div className="eternal-offer-actions">
-            {offspringChoice.withSeal?.plan || offspringChoice.withSeal?.withEternal ? (
-              <button type="button" className="btn primary" onClick={() => { const result = offspringChoice.withSeal; setOffspringChoice(null); finish(result) }}>Use the Offspring Seal</button>
-            ) : null}
-            <button type="button" className="btn outline" onClick={() => { const result = offspringChoice.without; setOffspringChoice(null); finish(result) }}>Plan without it</button>
-          </div>
-        </Sheet>
-      ) : null}
-      {bookChoice ? (
-        <Sheet title="Class or skill book?" onClose={() => setBookChoice(null)}>
-          <p className="eternal-offer">These skills come from a class or from their skill book. Planning the class costs levels and maybe seals; the book costs the book.</p>
-          <div className="book-choices">
-            {bookChoice.skills.map((skillId) => {
-              const book = bookChoice.book.includes(skillId)
+      {routes ? (
+        <Sheet title="Choose a route" onClose={() => setRoutes(null)}>
+          <p className="sheet-note">Each route learns every equipped skill and ends in {classFamily(dataset.classesById.get(ctx.currentClassId)?.name ?? '?')}.</p>
+          <div className="route-options">
+            {routes.map((option) => {
+              const fewest = routeSeals(option.result) === Math.min(...routes.map((item) => routeSeals(item.result)))
               return (
-                <div key={skillId} className="book-choice">
-                  <SkillIcon skillId={skillId} name={dataset.skillsById.get(skillId)?.name ?? '?'} size={24} />
-                  <span className="book-choice-name">{dataset.skillsById.get(skillId)?.name}</span>
-                  <Segmented
-                    label={`Learn ${dataset.skillsById.get(skillId)?.name} by`}
-                    value={book ? 'book' : 'class'}
-                    options={[{ id: 'class', label: 'Class' }, { id: 'book', label: 'Skill book' }]}
-                    onChange={(next) => setBookChoice({ ...bookChoice, book: next === 'book' ? [...bookChoice.book, skillId] : bookChoice.book.filter((id) => id !== skillId) })}
-                  />
-                </div>
+                <button key={option.id} type="button" className="route-option" onClick={() => { setRoutes(null); finish(option.result) }}>
+                  <span className="route-option-label">{option.label}{fewest ? <span className="route-option-tag">Fewest seals</span> : null}</span>
+                  <span className="route-option-cost">{option.cost}</span>
+                </button>
               )
             })}
           </div>
-          <div className="eternal-offer-actions">
-            <button type="button" className="btn primary" onClick={() => void plan(bookChoice.book)}>Plan</button>
-            <button type="button" className="btn outline" onClick={() => setBookChoice(null)}>Cancel</button>
+          <div className="sheet-actions">
+            <button type="button" className="btn outline" onClick={() => setRoutes(null)}>Cancel</button>
+          </div>
+        </Sheet>
+      ) : null}
+      {setup ? (
+        <Sheet title="Weapons to favour" onClose={() => setSetup(null)}>
+          <p className="sheet-note">
+            {classFamily(dataset.classesById.get(ctx.currentClassId)?.name ?? '?')} wields several. Among the cheapest paths, the plan spends the most levels in classes wielding all of these, then any of them.
+          </p>
+          <div className="sort-toggles">
+            {setup.weapons.map((column) => (
+              <label key={column} className="switch-row">
+                <span className="sheet-heading">{WEAPON_NAMES[column]}</span>
+                <Switch
+                  checked={setup.picked.includes(column)}
+                  onChange={(on) => setSetup({ ...setup, picked: on ? [...setup.picked, column] : setup.picked.filter((item) => item !== column) })}
+                />
+              </label>
+            ))}
+          </div>
+          <div className="sheet-actions">
+            <button type="button" className="btn outline" onClick={() => setSetup(null)}>Cancel</button>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                setWeaponFocus(unitId, setup.picked)
+                void plan(setup.picked)
+              }}
+            >
+              Plan
+            </button>
           </div>
         </Sheet>
       ) : null}
@@ -319,18 +323,62 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
               ? ` would save ${savedSeals(dataset, eternalOffer.plan, eternalOffer.withEternal)}.`
               : ' would make room for every equipped skill; without, no path learns them all.'}
           </p>
-          <div className="eternal-offer-actions">
-            <button type="button" className="btn primary" onClick={() => { applyAuto(eternalOffer.withEternal!, eternalOffer); setEternalOffer(null) }}>
-              Use {eternalOffer.withEternal.eternalSeals === 1 ? 'an Eternal Seal' : `${eternalOffer.withEternal.eternalSeals} Eternal Seals`}
-            </button>
+          <div className="sheet-actions">
             <button type="button" className="btn outline" onClick={() => { if (eternalOffer.plan) applyAuto(eternalOffer.plan, eternalOffer); setEternalOffer(null) }}>
               {eternalOffer.plan ? 'Plan without' : 'Cancel'}
+            </button>
+            <button type="button" className="btn primary" onClick={() => { applyAuto(eternalOffer.withEternal!, eternalOffer); setEternalOffer(null) }}>
+              Use {eternalOffer.withEternal.eternalSeals === 1 ? 'an Eternal Seal' : `${eternalOffer.withEternal.eternalSeals} Eternal Seals`}
             </button>
           </div>
         </Sheet>
       ) : null}
     </>
   )
+}
+
+interface RouteOption {
+  id: string
+  label: string
+  cost: string
+  result: AutoResult
+}
+
+/** Seals a route needs (its plan without Eternal Seals, else the Eternal Seal one), for comparing. */
+function routeSeals(result: AutoResult): number {
+  return (result.plan ?? result.withEternal)?.sealCount ?? Infinity
+}
+
+/**
+ * Skipping a child's Offspring Seal is only worth offering when it needs fewer seals - compared
+ * without Eternal Seals first, or between the Eternal Seal plans when neither fits without.
+ */
+function skipsOffspring(withSeal: AutoResult | null, without: AutoResult | null): boolean {
+  const cheaper = (a: AutoPlan | null | undefined, b: AutoPlan | null | undefined) => Boolean(a && (!b || a.sealCount < b.sealCount))
+  if (!without) return false
+  return without.plan || withSeal?.plan ? cheaper(without.plan, withSeal?.plan) : cheaper(without.withEternal, withSeal?.withEternal)
+}
+
+function routeLabel(dataset: Dataset, bookChoices: number[], books: number[], mode: OffspringMode, offspringLevel: number | null): string {
+  const names = (ids: number[]) => ids.map((id) => dataset.skillsById.get(id)?.name ?? '?').join(', ')
+  const parts = [
+    bookChoices.length ? (books.length ? `${names(books)} from ${books.length === 1 ? 'its skill book' : 'their skill books'}` : `${names(bookChoices)} by class`) : null,
+    mode === 'require' ? `Offspring Seal (Advanced Lv ${offspringLevel})` : mode === 'forbid' ? 'No Offspring Seal (promote at Lv 1)' : null,
+  ]
+  return parts.filter(Boolean).join(' · ')
+}
+
+/** "1 Master Seal, 1 Heart Seal + Warp skill book": what a route uses. */
+function routeCost(dataset: Dataset, result: AutoResult, books: number[]): string {
+  const best = result.plan ?? result.withEternal
+  if (!best) return ''
+  const seals = Object.entries(best.seals).map(([kind, count]) => (kind === 'offspring' ? 'Offspring Seal (free)' : counted(count, sealName(dataset, kind))))
+  const items = [
+    ...(seals.length ? seals : ['No seals']),
+    ...(best.eternalSeals ? [counted(best.eternalSeals, 'Eternal Seal')] : []),
+    ...books.map((id) => `${dataset.skillsById.get(id)?.name ?? '?'} skill book`),
+  ]
+  return items.join(', ') + (result.plan && result.withEternal ? ` (an Eternal Seal can save ${result.plan.sealCount - result.withEternal.sealCount})` : '')
 }
 
 /** A seal kind's item name: "Heart Seal", or a DLC class's own item ("Dread Scroll"). */

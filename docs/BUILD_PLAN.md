@@ -83,6 +83,12 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   Eternal Seal buttons side by side.
   Round 5: children's recruitment chapter (level table, earliest = later parent), Offspring Seal as a
   join-row promotion, automation plans with it and asks when skipping it is cheaper.
+  Round 6: merged main's seal pill work (SealTally, run-wide Chart pill); owner's priority list
+  (focus weapons incl. a weapon picker, Str/Mag then Spd/Def/Res growth); per-save item limits and
+  real crest names from item research; unobtainable skill books dropped.
+  Round 7: "levels in the selected class" priority; book and Offspring routes planned side by side
+  in a "Choose a route" sheet; Festival of Bonds DLC switch (New Run + run menu, with a DLC switch
+  there too); `--t-note` token; equal-width sheet buttons.
 
 ### Backlog
 

@@ -1,11 +1,12 @@
 import type { ClassDef, Dataset } from '../data/types'
 import type { Reclass, RunPlan } from '../state/model'
 import type { UnitContext } from './army'
-import { classOnRoute, personalSkill, skillsChildrenInherit } from './army'
+import { armyUnits, classOnRoute, personalSkill, skillsChildrenInherit, unitContext } from './army'
 import { sexedClassId } from './classes'
-import { SKILL_BOOKS } from '../data/itemIcons'
+import { bookItemKey, classItemKey, itemLimit, SKILL_BOOKS } from '../data/itemIcons'
 import type { ReclassOption } from './progression'
-import { buildProgression, dlcClassesFor, offspringOptions, reclassOptions, skillCandidates, tierCap } from './progression'
+import { buildProgression, dlcClassesFor, learnedSkillIds, offspringOptions, reclassOptions, sealsUsed, skillCandidates, tierCap } from './progression'
+import { projectUnit } from './stats'
 
 /**
  * Children recruited from Chapter 19 carry an Offspring Seal: a free promotion on the join row.
@@ -16,10 +17,17 @@ export type OffspringMode = 'allow' | 'require' | 'forbid'
 /**
  * "Automate progression" (owner, v3.4): the reclass plan that learns every target skill - the unit's
  * equipped skills, plus (for a parent) the skills its children plan to inherit from it - and ends at
- * the level cap in the unit's selected class. Among those, in order of importance:
- *   1. the fewest seals (every reclass is one item; Eternal Seals are offered separately),
- *   2. the most level-ups in classes wielding the weapon of an equipped -faire skill,
- *   3. the most class growth in Str / Mag / Spd / Def / Res over the level-ups.
+ * the level cap in the unit's selected class. Among those, in order of importance (owner, v3.4):
+ *   1. the fewest seals (every reclass is one item; an Offspring Seal comes with the child and is
+ *      free; Eternal Seals are offered separately),
+ *   2. the most level-ups in the selected class,
+ *   3. the most level-ups in classes wielding the focus weapons: an equipped -faire skill's weapon;
+ *      else the selected class's weapon if it has one; else the weapons the player picks, classes
+ *      wielding all of them ahead of classes wielding one,
+ *   4. the most class growth in Str or Mag, whichever grows faster in the selected class,
+ *   5. the most class growth in Spd, Def or Res, whichever grows fastest in the selected class.
+ * Items one save can only get once (Hero's Brand, Exalt's Brand, Paragon's book) are capped at what
+ * the rest of the run's plans leave over.
  *
  * Search: level by level over states (class, level, may still reclass on this row, skills known),
  * mirroring buildProgression - a level-up teaches the lowest pending threshold of the class held, one
@@ -33,8 +41,21 @@ export interface AutoPlan {
   /** Seals per kind; DLC class items as `dlc:<classId>`. */
   seals: Record<string, number>
   sealCount: number
-  faireLevels: number
-  growthScore: number
+  /** Level-ups in the selected class. */
+  goalLevels: number
+  /** Level-ups in classes wielding every focus weapon / at least one. */
+  weaponLevels: { all: number; any: number }
+  /** Class growth summed over the level-ups: the offensive stat (Str or Mag), then the defensive one. */
+  growth: { offense: number; defense: number }
+}
+
+/** What the player decides before planning. */
+export interface AutoOptions {
+  /** Skills to learn from their skill book rather than a class. */
+  bookSkills?: readonly number[]
+  offspring?: OffspringMode
+  /** Weapon columns to favour when no -faire skill is equipped and the selected class wields several. */
+  weapons?: readonly number[]
 }
 
 export interface AutoResult {
@@ -51,20 +72,34 @@ export interface AutoResult {
   withEternal: AutoPlan | null
 }
 
-// Faire skill -> weapon rank column (sword, lance, axe, dagger, bow, tome, staff, stone).
+// Weapon rank columns: sword, lance, axe, dagger, bow, tome, staff, stone.
+export const WEAPON_NAMES = ['Swords', 'Lances', 'Axes', 'Daggers', 'Bows', 'Tomes', 'Staves', 'Stones'] as const
 const FAIRE_WEAPON: Record<string, number> = { Swordfaire: 0, Lancefaire: 1, Axefaire: 2, Shurikenfaire: 3, Bowfaire: 4, Tomefaire: 5 }
-// Class growth columns (HP, Str, Mag, Skl, Spd, Lck, Def, Res): Str, Mag, Spd, Def, Res.
-const GROWTH_STATS = [1, 2, 4, 6, 7]
+// Growth columns (HP, Str, Mag, Skl, Spd, Lck, Def, Res).
+const STR = 1
+const MAG = 2
+const DEFENSIVE = [4, 6, 7]
 const MAX_SEALS = 10
 const MAX_ETERNAL = 3
 
 interface Cost {
   seals: number
-  faire: number
-  growth: number
+  goal: number
+  weaponAll: number
+  weaponAny: number
+  offense: number
+  defense: number
 }
 
-const better = (a: Cost, b: Cost) => a.seals !== b.seals ? a.seals < b.seals : a.faire !== b.faire ? a.faire > b.faire : a.growth > b.growth
+const ZERO: Cost = { seals: 0, goal: 0, weaponAll: 0, weaponAny: 0, offense: 0, defense: 0 }
+
+/** Lexicographic: fewer seals, then more levels in the selected class, then focus weapons (all, then any), then growth. */
+const better = (a: Cost, b: Cost) => a.seals !== b.seals ? a.seals < b.seals
+  : a.goal !== b.goal ? a.goal > b.goal
+    : a.weaponAll !== b.weaponAll ? a.weaponAll > b.weaponAll
+    : a.weaponAny !== b.weaponAny ? a.weaponAny > b.weaponAny
+      : a.offense !== b.offense ? a.offense > b.offense
+        : a.defense > b.defense
 
 interface Node {
   classId: number
@@ -116,12 +151,90 @@ export function skillBooksUsed(run: RunPlan, ctx: UnitContext, learned: Readonly
   return [...new Set(ctx.plan.skills)].filter((id): id is number => id !== null && id !== personal && !own.includes(id) && !learned.has(id) && SKILL_BOOKS.has(id))
 }
 
-/** `bookSkills`: skills the player chose to learn from their skill book rather than a class. */
-export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext, bookSkills: readonly number[] = [], offspring: OffspringMode = 'allow'): AutoResult {
+/** Weapon columns of the selected class, when the player should pick which to favour (no -faire skill). */
+export function weaponChoices(dataset: Dataset, ctx: UnitContext): number[] {
+  if (faireWeapons(dataset, ctx).length) return []
+  const weapons = wieldedBy(dataset.classesById.get(ctx.currentClassId))
+  return weapons.length > 1 ? weapons : []
+}
+
+function wieldedBy(def: ClassDef | undefined): number[] {
+  return (def?.weaponRanks ?? []).flatMap((rank, column) => (rank > 0 ? [column] : []))
+}
+
+function faireWeapons(dataset: Dataset, ctx: UnitContext): number[] {
+  return [...new Set(ctx.plan.skills.flatMap((id) => {
+    const name = id === null ? undefined : dataset.skillsById.get(id)?.name
+    return name && name in FAIRE_WEAPON ? [FAIRE_WEAPON[name]] : []
+  }))]
+}
+
+/** The weapons the plan favours, and whether a class must wield all of them to count first. */
+function weaponFocus(dataset: Dataset, ctx: UnitContext, chosen: readonly number[] | undefined): { weapons: number[]; all: boolean } {
+  const faire = faireWeapons(dataset, ctx)
+  if (faire.length) return { weapons: faire, all: false }
+  const own = wieldedBy(dataset.classesById.get(ctx.currentClassId))
+  if (own.length === 1) return { weapons: own, all: false }
+  const picked = (chosen ?? []).filter((column) => own.includes(column))
+  return { weapons: picked, all: picked.length > 1 }
+}
+
+/** The stats whose class growth counts: Str or Mag, and Spd, Def or Res, by the selected class's effective growths. */
+function statFocus(dataset: Dataset, ctx: UnitContext): { offense: number; defense: number } {
+  const growths = projectUnit(dataset, ctx.unit, ctx.currentClassId, ctx.projection).growths
+  return {
+    offense: (growths[MAG] ?? 0) > (growths[STR] ?? 0) ? MAG : STR,
+    defense: DEFENSIVE.reduce((best, index) => ((growths[index] ?? 0) > (growths[best] ?? 0) ? index : best)),
+  }
+}
+
+/**
+ * Items one save can only get so many of (Hero's Brand, Exalt's Brand: 1; Paragon's book: 1), less
+ * what the other units' current plans already use. Keys: `dlc:<classId>` for class items, the skill
+ * id for books.
+ */
+function itemCaps(dataset: Dataset, run: RunPlan, ctx: UnitContext, classes: ClassDef[]): { classItems: Record<string, number>; books: Map<number, number> } {
+  const classItems: Record<string, number> = {}
+  for (const def of classes) {
+    const key = def.dlc ? classItemKey(dataset, def.id) : undefined
+    const limit = key ? itemLimit(key, run) : null
+    if (limit !== null) classItems[`dlc:${def.id}`] = limit
+  }
+  const books = new Map<number, number>()
+  for (const skillId of SKILL_BOOKS) {
+    const key = bookItemKey(skillId)
+    const limit = key ? itemLimit(key, run) : null
+    if (limit !== null) books.set(skillId, limit)
+  }
+  if (!Object.keys(classItems).length && !books.size) return { classItems, books }
+  for (const unit of armyUnits(dataset, run)) {
+    if (unit.id === ctx.unit.id || !run.units[unit.id]) continue
+    const other = unitContext(dataset, run, unit.id)
+    if (!other) continue
+    const progression = buildProgression(dataset, run, other)
+    for (const use of sealsUsed(progression)) {
+      const key = `dlc:${use.classId}`
+      if (use.seal === 'dlc' && key in classItems) classItems[key] -= use.count
+      // The same item reaches both genders' class ids; count it against either.
+      if (use.seal === 'dlc' && use.classId !== null) {
+        const item = classItemKey(dataset, use.classId)
+        for (const id of Object.keys(classItems)) if (id !== key && classItemKey(dataset, Number(id.slice(4))) === item) classItems[id] -= use.count
+      }
+    }
+    for (const skillId of skillBooksUsed(run, other, learnedSkillIds(progression))) if (books.has(skillId)) books.set(skillId, books.get(skillId)! - 1)
+  }
+  return { classItems, books }
+}
+
+export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext, options: AutoOptions = {}): AutoResult {
+  const { bookSkills = [], offspring = 'allow' } = options
   const { wanted, inherited } = autoTargets(dataset, run, ctx)
   const classes = reachableClasses(dataset, run, ctx)
+  const caps = itemCaps(dataset, run, ctx, classes)
+  const focus: SolveFocus = { ...weaponFocus(dataset, ctx, options.weapons), stats: statFocus(dataset, ctx), caps: caps.classItems }
   const learnable = new Set(classes.flatMap((def) => skillCandidates(dataset, ctx, def).map((item) => item.skillId)))
-  const byBook = (id: number) => run.dlc && SKILL_BOOKS.has(id) && (!learnable.has(id) || bookSkills.includes(id))
+  const bookLeft = (id: number) => (caps.books.get(id) ?? 1) > 0
+  const byBook = (id: number) => run.dlc && SKILL_BOOKS.has(id) && bookLeft(id) && (!learnable.has(id) || bookSkills.includes(id))
   const targets = wanted.filter((id) => learnable.has(id) && !byBook(id))
   const books = wanted.filter(byBook)
   const unreachable = wanted.filter((id) => !learnable.has(id) && !byBook(id))
@@ -129,13 +242,13 @@ export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext
   // Eternal Seals give the floor; the plan without starts its seal budget there, and fewer Eternal
   // Seals are only tried at that floor (the fewest that reach it are offered).
   const goalTier = dataset.classesById.get(ctx.currentClassId)?.tier
-  const floor = goalTier === 'base' ? null : cheapest(dataset, run, ctx, targets, classes, MAX_ETERNAL, MAX_SEALS, 0, offspring)
-  const plan = cheapest(dataset, run, ctx, targets, classes, 0, MAX_SEALS, floor?.sealCount ?? 0, offspring)
+  const floor = goalTier === 'base' ? null : cheapest(dataset, run, ctx, targets, classes, MAX_ETERNAL, MAX_SEALS, 0, offspring, focus)
+  const plan = cheapest(dataset, run, ctx, targets, classes, 0, MAX_SEALS, floor?.sealCount ?? 0, offspring, focus)
   let withEternal: AutoPlan | null = null
   if (floor && (!plan || floor.sealCount < plan.sealCount)) {
     withEternal = floor
     for (let eternal = 1; eternal < MAX_ETERNAL; eternal += 1) {
-      const fewer = solve(dataset, run, ctx, targets, classes, eternal, floor.sealCount, offspring)
+      const fewer = solve(dataset, run, ctx, targets, classes, eternal, floor.sealCount, offspring, focus)
       if (fewer) {
         withEternal = fewer
         break
@@ -165,15 +278,23 @@ function reachableClasses(dataset: Dataset, run: RunPlan, ctx: UnitContext): Cla
  * Seals come first, so search with a growing seal budget and stop at the first that works: the
  * budget prunes every longer reclass chain, which is most of the state space.
  */
-function cheapest(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, maxSeals: number, from = 0, offspring: OffspringMode = 'allow'): AutoPlan | null {
+interface SolveFocus {
+  weapons: number[]
+  all: boolean
+  stats: { offense: number; defense: number }
+  /** Remaining copies of limited class items, by `dlc:<classId>`. */
+  caps: Record<string, number>
+}
+
+function cheapest(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, maxSeals: number, from: number, offspring: OffspringMode, focus: SolveFocus): AutoPlan | null {
   for (let budget = from; budget <= maxSeals; budget += 1) {
-    const plan = solve(dataset, run, ctx, targets, classes, eternal, budget, offspring)
+    const plan = solve(dataset, run, ctx, targets, classes, eternal, budget, offspring, focus)
     if (plan) return plan
   }
   return null
 }
 
-function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, budget: number, offspring: OffspringMode = 'allow'): AutoPlan | null {
+function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number[], classes: ClassDef[], eternal: number, budget: number, offspring: OffspringMode, focus: SolveFocus): AutoPlan | null {
   const goal = ctx.currentClassId
   const byId = new Map(classes.map((def) => [def.id, def]))
   if (!byId.has(goal)) return null
@@ -235,17 +356,21 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
   // Per class: candidates in learning order with their bits.
   const learnOrder = new Map([...useful].map((id) => [id, (candidates.get(id) ?? []).map((item) => ({ ...item, bit: bit.get(item.skillId)! }))]))
 
-  const faireWeapons = ctx.plan.skills.flatMap((id) => {
-    const name = id === null ? undefined : dataset.skillsById.get(id)?.name
-    return name && name in FAIRE_WEAPON ? [FAIRE_WEAPON[name]] : []
-  })
+  // What one level-up in each class adds to the tie-breaks.
   const levelValue = new Map([...useful].map((id) => {
     const def = byId.get(id)!
+    const wields = focus.weapons.filter((column) => (def.weaponRanks[column] ?? 0) > 0).length
     return [id, {
-      faire: faireWeapons.some((column) => (def.weaponRanks[column] ?? 0) > 0) ? 1 : 0,
-      growth: GROWTH_STATS.reduce((sum, index) => sum + (def.growths[index] ?? 0), 0),
+      weaponAll: focus.all && wields === focus.weapons.length ? 1 : 0,
+      weaponAny: wields > 0 ? 1 : 0,
+      offense: def.growths[focus.stats.offense] ?? 0,
+      defense: def.growths[focus.stats.defense] ?? 0,
     }]
   }))
+  const capKeys = Object.keys(focus.caps)
+  const overCap = (node: Node) => capKeys.some((key) => (node.sealsUsed[key] ?? 0) > focus.caps[key])
+  // With limited items, a state that spent fewer of them can still do more: dominance must say so.
+  const fewerCapped = (a: Node, b: Node) => capKeys.every((key) => (a.sealsUsed[key] ?? 0) <= (b.sealsUsed[key] ?? 0))
   const cap = (def: ClassDef) => tierCap(def.tier, eternal, ctx.unit.levelCap)
   const optionCache = new Map<string, ReclassOption[]>()
   const options = (classId: number, level: number) => {
@@ -272,22 +397,22 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
   const bucketKey = (node: Pick<Node, 'classId' | 'level' | 'canReclass'>) => `${node.classId}|${node.level}|${node.canReclass ? 1 : 0}`
   const notWorse = (a: Cost, b: Cost) => !better(b, a)
   const offer = (map: Map<string, Bucket>, node: Node): boolean => {
-    if (node.cost.seals + lowerBound(node) > budget) return false
+    if (node.cost.seals + lowerBound(node) > budget || overCap(node)) return false
     const key = bucketKey(node)
     const bucket = map.get(key)
     if (!bucket) {
       map.set(key, [node])
       return true
     }
-    for (const other of bucket) if ((other.known & node.known) === node.known && notWorse(other.cost, node.cost)) return false
-    const kept = bucket.filter((other) => !((node.known & other.known) === other.known && notWorse(node.cost, other.cost)))
+    for (const other of bucket) if ((other.known & node.known) === node.known && notWorse(other.cost, node.cost) && fewerCapped(other, node)) return false
+    const kept = bucket.filter((other) => !((node.known & other.known) === other.known && notWorse(node.cost, other.cost) && fewerCapped(node, other)))
     kept.push(node)
     map.set(key, kept)
     return true
   }
 
   let layer = new Map<string, Bucket>()
-  offer(layer, { classId: startDef.id, level: ctx.start.level, canReclass: true, known: startKnown, segment: 0, cost: { seals: 0, faire: 0, growth: 0 }, sealsUsed: {}, parent: null, event: null })
+  offer(layer, { classId: startDef.id, level: ctx.start.level, canReclass: true, known: startKnown, segment: 0, cost: ZERO, sealsUsed: {}, parent: null, event: null })
   let best: Node | null = null
   const alive = (map: Map<string, Bucket>, node: Node) => map.get(bucketKey(node))?.includes(node) ?? false
 
@@ -339,7 +464,14 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
         level,
         canReclass: true,
         known: learned ? node.known | learned.bit : node.known,
-        cost: { seals: node.cost.seals, faire: node.cost.faire + value.faire, growth: node.cost.growth + value.growth },
+        cost: {
+          seals: node.cost.seals,
+          goal: node.cost.goal + (def.id === goal ? 1 : 0),
+          weaponAll: node.cost.weaponAll + value.weaponAll,
+          weaponAny: node.cost.weaponAny + value.weaponAny,
+          offense: node.cost.offense + value.offense,
+          defense: node.cost.defense + value.defense,
+        },
         parent: node,
         event: null,
       })
@@ -351,7 +483,15 @@ function solve(dataset: Dataset, run: RunPlan, ctx: UnitContext, targets: number
   const reclasses: Reclass[] = []
   for (let node: Node | null = best; node; node = node.parent) if (node.event) reclasses.unshift(node.event)
   const sealCount = Object.entries(best.sealsUsed).reduce((sum, [kind, count]) => sum + (kind === 'offspring' ? 0 : count), 0)
-  return { reclasses, eternalSeals: eternal, seals: best.sealsUsed, sealCount, faireLevels: best.cost.faire, growthScore: best.cost.growth }
+  return {
+    reclasses,
+    eternalSeals: eternal,
+    seals: best.sealsUsed,
+    sealCount,
+    goalLevels: best.cost.goal,
+    weaponLevels: { all: best.cost.weaponAll, any: best.cost.weaponAny },
+    growth: { offense: best.cost.offense, defense: best.cost.defense },
+  }
 }
 
 /** Whether a plan, applied to the run, really learns every target and ends in the selected class. */

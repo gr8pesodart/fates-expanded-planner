@@ -7,6 +7,9 @@ import { ItemIcon } from './ItemIcon'
  * Every seal, class item and skill book a plan uses, as a pill of "[icon] x2" with no text (owner,
  * v3.4); the info button opens a dark tooltip listing them by name.
  */
+/** More than one save can get (Hero's Brand and Exalt's Brand are one-time rewards). */
+const over = (item: TallyItem) => item.limit !== null && item.count > item.limit
+
 export function SealTally({ items }: { items: readonly TallyItem[] }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -21,7 +24,7 @@ export function SealTally({ items }: { items: readonly TallyItem[] }) {
     <div ref={ref} className="seal-pill" aria-label="Seals and items used">
       <ul className="seal-tally">
         {items.map((item) => (
-          <li key={item.id} className="seal-tally-item" aria-label={`${item.name} x${item.count}`}>
+          <li key={item.id} className="seal-tally-item" data-over={over(item) || undefined} aria-label={`${item.name} x${item.count}${over(item) ? `, only ${item.limit} per save` : ''}`}>
             {item.key ? <ItemIcon itemKey={item.key} /> : <span className="seal-tally-name">{item.name}</span>}
             <span aria-hidden="true">x{item.count}</span>
           </li>
@@ -36,6 +39,7 @@ export function SealTally({ items }: { items: readonly TallyItem[] }) {
             <span key={item.id} className="seal-tooltip-item">
               {item.key ? <ItemIcon itemKey={item.key} /> : null}
               {item.name} x{item.count}
+              {item.limit !== null ? <span className="seal-tooltip-limit">({item.limit} per save)</span> : null}
             </span>
           ))}
         </div>
