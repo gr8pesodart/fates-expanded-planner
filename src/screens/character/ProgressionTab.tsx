@@ -6,9 +6,9 @@ import { Icon } from '../../components/icons'
 import { SkillCard } from '../../components/SkillCard'
 import { StatTable } from '../../components/StatTable'
 import { useToast } from '../../components/toast'
-import type { Dataset } from '../../data/types'
+import type { Dataset, UnitDef } from '../../data/types'
 import type { UnitContext } from '../../logic/army'
-import { displayName, unitContext } from '../../logic/army'
+import { displayName, skillsChildrenInherit, unitContext } from '../../logic/army'
 import { classFamily } from '../../logic/classes'
 import type { LearnedSkill, LevelRow, ReclassSeal } from '../../logic/progression'
 import { buildProgression, tierCap, withReclass } from '../../logic/progression'
@@ -41,9 +41,16 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   const progression = useMemo(() => buildProgression(dataset, run, ctx), [dataset, run, ctx])
   const unitId = ctx.unit.id
   const access = useMemo(() => skillAccess(dataset, run, ctx), [dataset, run, ctx])
-  const equipped = ctx.plan.skills.filter((id): id is number => id !== null).map((id) => access.byId.get(id) ?? unreachableSkill(id))
-  // Equipped skills the planned path doesn't teach, and (children) ones still to be inherited.
-  const offPath = equipped.filter((item) => item.group === 'available' || item.group === 'locked' || item.group === 'unavailable')
+  const equippedIds = ctx.plan.skills.filter((id): id is number => id !== null)
+  const equipped = equippedIds.map((id) => access.byId.get(id) ?? unreachableSkill(id))
+  // Skills this unit's children plan to inherit from it: they need to be on this unit's path too.
+  const childPicks = useMemo(() => skillsChildrenInherit(dataset, run, unitId), [dataset, run, unitId])
+  const unresolved = (item: SkillAccess) => item.group === 'available' || item.group === 'locked' || item.group === 'unavailable'
+  // Equipped skills the planned path doesn't teach, then children's picks it doesn't teach either.
+  const offPath = [
+    ...equipped.filter(unresolved),
+    ...[...childPicks.keys()].filter((id) => !equippedIds.includes(id)).map((id) => access.byId.get(id) ?? unreachableSkill(id)).filter(unresolved),
+  ]
   const toInherit = equipped.filter((item) => item.group === 'inheritable')
 
   /** Applies a plan change, then removes reclasses the new path can no longer reach. */
@@ -119,7 +126,7 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
       {offPath.length ? (
         <section className="panel-section" aria-labelledby="offpath-title">
           <h2 id="offpath-title" className="section-title">Not in Progression</h2>
-          <EquippedNotes ctx={ctx} items={offPath} label="Equipped skills this path doesn't teach" />
+          <EquippedNotes ctx={ctx} items={offPath} childPicks={childPicks} label="Equipped or inherited skills this path doesn't teach" />
         </section>
       ) : null}
       {progression.segments.map((segment, segmentIndex) => (
@@ -169,8 +176,9 @@ export function ProgressionTab({ ctx }: { ctx: UnitContext }) {
   )
 }
 
-function EquippedNotes({ ctx, items, label }: { ctx: UnitContext; items: SkillAccess[]; label: string }) {
+function EquippedNotes({ ctx, items, label, childPicks }: { ctx: UnitContext; items: SkillAccess[]; label: string; childPicks?: Map<number, UnitDef[]> }) {
   const { dataset, run } = usePlanner()
+  const names = (units: UnitDef[]) => units.map((unit) => displayName(unit, run)).join(' and ')
   return (
     <div className="skill-list" aria-label={label}>
       {items.map((item) => {
@@ -179,6 +187,10 @@ function EquippedNotes({ ctx, items, label }: { ctx: UnitContext; items: SkillAc
           <SkillCard
             key={item.skillId}
             skill={skillView(dataset, item.skillId)}
+            label={[
+              ctx.plan.skills.includes(item.skillId) ? 'Equipped' : null,
+              childPicks?.get(item.skillId) ? `Inherited by ${names(childPicks.get(item.skillId)!)}` : null,
+            ].filter(Boolean).join(' · ') || undefined}
             tag={acquiredVia(dataset, run, ctx, item)}
             caution={rules.caution}
             notice={<><SkillNotice access={item} corrin={ctx.unit.isCorrin} /><ConflictNotice names={rules.conflicts} /></>}

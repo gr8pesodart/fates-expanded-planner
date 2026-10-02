@@ -12,8 +12,9 @@ import { Icon } from './icons'
  * that needs inheriting or another relationship, red for one nothing in the run gives. Where the
  * skill is learned is the card's tag, not part of the notice. The picker's Grouped view shows one
  * grey notice per class (`perClass`) and only when the group heading doesn't already say it all.
+ * `whose`: the plan in question is someone else's (the inherit picker: "Not in Corrin's progression").
  */
-export function SkillNotice({ access, grey = false, corrin = false, perClass = false }: { access: AccessNotice; grey?: boolean; corrin?: boolean; perClass?: boolean }) {
+export function SkillNotice({ access, grey = false, corrin = false, perClass = false, whose }: { access: AccessNotice; grey?: boolean; corrin?: boolean; perClass?: boolean; whose?: string }) {
   const { run } = usePlanner()
   if (access.group === 'progression') return null
   if (perClass && (access.group === 'available' || access.group === 'unavailable')) return null
@@ -41,7 +42,7 @@ export function SkillNotice({ access, grey = false, corrin = false, perClass = f
   const alsoFrom = access.inheritFrom.filter((parent) => !access.viaParent.includes(parent)
     && !access.viaCombo.some((combo) => combo.some((change) => change.role === 'parent' && change.unit === parent)))
   // Grouped › Requires support: the heading says it, so the ways in move up.
-  const lead = perClass ? null : access.group === 'available' ? 'Not in progression' : access.group === 'locked' ? 'Requires support' : 'Not accessible'
+  const lead = perClass ? null : access.group === 'available' ? (whose ? `Not in ${whose}'s progression` : 'Not in progression') : access.group === 'locked' ? 'Requires support' : 'Not accessible'
   if (!lead && !faces.length && !access.viaCombo.length && !alsoFrom.length) return null
   return (
     <span className="skill-notice" data-tone={tone}>

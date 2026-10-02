@@ -223,3 +223,20 @@ export function talentOptions(dataset: Dataset, gender: 'male' | 'female'): numb
   }
   return ids
 }
+
+/** Skills this unit's children on the roster plan to inherit from it, with the children who chose each. */
+export function skillsChildrenInherit(dataset: Dataset, run: RunPlan, parentId: string): Map<number, UnitDef[]> {
+  const picks = new Map<number, UnitDef[]>()
+  const add = (skillId: number | undefined, child: UnitDef) => {
+    if (skillId === undefined) return
+    picks.set(skillId, [...(picks.get(skillId) ?? []), child])
+  }
+  for (const child of armyUnits(dataset, run)) {
+    if (child.fixedParent === null) continue
+    const ctx = unitContext(dataset, run, child.id)
+    if (!ctx) continue
+    if (child.fixedParent === parentId) add(ctx.plan.inheritFixedSkill, child)
+    if (ctx.variableParent?.id === parentId) add(ctx.plan.inheritSkill, child)
+  }
+  return picks
+}

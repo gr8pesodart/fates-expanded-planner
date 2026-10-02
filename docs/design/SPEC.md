@@ -43,14 +43,14 @@ active or selected state uses the route accent.** "Darkened when selected" becom
 | `--accent-strong` | `color-mix(in oklab, var(--accent) 55%, #1b1b1b)` | selected class card, talent, gender (`#414141`, `#3d3d3d`, `#363636`) |
 | `--accent-soft` | `color-mix(in oklab, var(--accent) 12%, #fff)` | hover/pressed wash |
 | `--rel-s` | `#c57373` | S-rank slot border and placeholder |
-| `--rel-a` | `#6981d0` | A+ slot |
+| `--rel-a` | `#6183d0` | A+ slot (v3.4: on the `--info` hue, OKLCH 264.7°; was `#6981d0`) |
 | `--rel-pair` | `#5eb761` | pair-up slot (`#69d06d`) |
 | `--good` / `--good-soft` | `#5eb761` / `#9ed2a0` | boon fill / boon outline |
 | `--bad` / `--bad-soft` | `#be5555` / `#f5adad` | bane fill / bane outline |
 | `--bad-tint` / `--bad-ink` | `--bad-soft` 70% on white / `--bad` 72% on ink | "Not accessible" and incompatible-skill notice fill / text (Figma 3:4348) |
 | `--warn` / `--warn-soft` | `#b39d2d` / `#efe39b` | a yellow matched to `--bad` / `--bad-soft` |
 | `--warn-tint` / `--warn-ink` | `--warn-soft` 70% on white / `--warn` 72% on ink | "Only inheritable" / "Requires support" skill notice fill / text |
-| `--info` / `--info-soft` | `#5b7fd0` / `#bccbf0` | a blue matched to `--bad` / `--bad-soft` (v3.4) |
+| `--info` / `--info-soft` | `#5b7fd0` / `#baccf0` | a blue matched to `--bad` / `--bad-soft` (v3.4) |
 | `--info-tint` / `--info-ink` | `--info-soft` 70% on white / `--info` 72% on ink | "Not in progression" skill notice fill / text |
 | `--stat-low` / `--stat-mid` / `--stat-high` | `#842334` / `#8a6a00` / `#12803f` | dynamic stat colouring (text colour, not fill; each stop ≥ 4.5:1 on `--surface-2`) |
 
@@ -152,8 +152,8 @@ areas may extend past the visible chip.
   originating screen (Roster or Chart; use history). Bottom-left: the name (38/700, white) and the
   favourite star (white variant). Below that are the **tab pills**. The active tab is white fill with
   `--ink` text; inactive tabs are `rgb(0 0 0 / .45)` fill with white text. The tabs are
-  **Avatar** (Corrin only), **Profile**, **Stats** and **Progression**; second-generation units also
-  have a **Parents** tab. The default is Profile.
+  **Avatar** (Corrin only), **Profile**, **Stats**, **Parents** (second-generation units only) and
+  **Progression**, which is always last (owner, v3.4). The default is Profile.
 - **Panel**: white, with a `--r-sheet` top radius, overlapping the splash by about 78px. Opening
   a character slides the page in from the right (460ms, no fade) and starts at the top.
 - **Mobile layering**: the character page is a fixed, scrolling layer over the screen it was opened
@@ -237,7 +237,7 @@ areas may extend past the visible chip.
 - **Skills** (Figma `3:4348`): the personal skill first (locked card; the lock is set inline as the
   name's first character and wraps with its first word), then five equip slots. Under every
   description an accent tag says where the skill is learned ("*Swordmaster* Lv 5", or "Inherited
-  from *Parent*"); stat Takers add a muted "Can't be equipped with another Taker". A skill the plan
+  from *Parent*"); stat Takers add a muted "Can't be used with another Taker". A skill the plan
   doesn't reach carries an inset notice under the card, its tone rising with the distance (owner,
   v3.4): **blue** "Not in progression" (`--info-tint` / `--info-ink`) when a class the unit already
   has teaches it; **yellow** (`--warn-tint` / `--warn-ink`) "Only inheritable from *A* or *B*", or
@@ -308,7 +308,9 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   equip-slot picker. Directly under the heading, equipped skills that only a parent can pass on and
   that aren't inherited yet are listed with their notice.
 - **Not in Progression** (just above the first segment): equipped skills the planned path doesn't
-  teach, each with its yellow or red notice.
+  teach, then skills this unit's children have chosen to inherit from it that the path doesn't teach
+  either (v3.4), each with its notice and a label above the description ("Equipped", "Inherited by
+  *Kana*").
 - The page is split into **segments**, one per class tier the route passes through: Base (1–20),
   Advanced (1–20), Special (1–40), plus Eternal Seal extensions (+5 each). A segment only
   exists while the route needs it. Each segment has a 21/700 heading, then **one row per level**:
@@ -334,15 +336,16 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
 
 - The "Chart" title and sort button in a sticky white header (as the Roster's, no shadow; a 1px
   `--line` bottom border fades in over 150ms only once the page has scrolled), with an underline
-  tab rail like the Roster's: **Full**, **Skills** (default), **Progression**, **Skills + Pair Up**.
-  Then a list of cards (`--line` border, `--r-lg`, gap 20, padding 10; rows have 4px left padding).
+  tab rail like the Roster's: **Full**, **Skills Only** (default), **Skills + Progression**,
+  **Skills + Pair Up** (v3.4 names; swipe between them). Then a list of cards (`--line` border,
+  `--r-lg`, gap 20, padding 10). Each row starts with the 32px portrait chip, aligned with the stat
+  table's left edge, then the sprite at the Roster's spacing (`--s2`); skill icons sit 1px apart.
   Map sprites render at whole-number scales only (32px = 1×), so Chart and Roster sprites are 32px.
-- Tabs: *Skills* shows each row's skill icons; *Progression* adds a grey inset with the compact
-  class path ("Lv 1: Nohr Princess → Lv 10: Samurai → Lv 12: Swordmaster → Lv 15: Master of Arms":
-  the join class, then each class change at the level it's taken); *Skills + Pair Up* shows skills
-  for leads and solo units, and the back unit's **Effective Pair Up Bonuses** table instead (at the
-  pair's actual support rank — A but not S means no S bonus); *Full* shows skills, path and pair-up
-  bonuses for everyone. The swap button sits on the divider between the two rows.
+- Tabs: every tab keeps each row's skill icons. *Skills + Progression* adds a grey inset with the
+  compact class path ("Lv 1: Nohr Princess → Lv 10: Samurai → Lv 12: Swordmaster → Lv 15: Master of
+  Arms": the join class, then each class change at the level it's taken); *Skills + Pair Up* adds
+  every unit's **Effective Pair Up Bonuses** table, front and back alike (at the pair's actual
+  support rank - A but not S means no S bonus); *Full* shows skills, path and pair-up bonuses. The swap button sits on the divider between the two rows.
 - A sort button opens its own Recruit / Name / Stat sheet with direction, a **Show** filter (All /
   First gen / Children), Favourites-first and Link pair-up partners; these settings do not share state with the Roster. Class sprites have no chip
   background and sit between the portrait and name.
@@ -408,21 +411,27 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
     child's own (Corrin's Nohr Princess = Kana's Nohr Prince) unless that version doesn't teach the
     skill (Troubadour's Demoiselle / Gentilhomme). Grey per-class notices only where the heading
     doesn't say it all: Inheritable only - "Skills can only be inherited from *A* (or *B*)", the
-    head showing the parents' sprites (two at most, overlapped like the Avatar talent cards, then
-    "+N"); Requires support - the ways in with no lead line, then "Skills can also be inherited from
+    head showing every parent's sprite, overlapped like the Avatar talent cards (Kana's can run to
+    nine; owner kept them all); Requires support - the ways in with no lead line, then "Skills can also be inherited from
     *Name*". Requires support and Not accessible heads show the sprite at 50% and the name in
     `--ink-2`. Cards carry only "Lv N".
   - *Ungrouped*: one list, each card with the Profile's tag and coloured notice. *Starred*: the
     unit's starred skills, same.
-  - Not accessible skills are grey cards (`--surface-2`) with the icon at 50%.
+  - Not accessible skills are grey cards (`--surface-2`) with the icon at 30% and every
+    full-strength text (name, tag, label) in `--ink-2`. Descriptions break after slashes
+    ("bow/tome/…", Aegis, Pavise) so nothing runs under the star.
   - Every card has a star centred beside the description (the card is a div whose main button covers
-    it). The equipped skill is labelled "EQUIPPED" above its description; one equipped in another
-    slot is muted ("EQUIPPED IN SLOT N · TAP TO SWAP"); picking it swaps the slots.
+    it). The equipped skill is labelled "Equipped" above its description (11/700 accent, standard
+    case); one equipped in another slot is muted ("Equipped in slot N · tap to swap"); picking it
+    swaps the slots.
   - Filter menu, saved per character: "S rank flexible", "A+ rank flexible" ("A rank flexible" for
     Corrin) and, for a child whose second parent is chosen, "Parent flexible"; switching one off
     treats new relationships of that kind (other second parents) as unavailable.
-  The inherit-slot pickers list that parent's inheritable skills, the ones the parent has equipped
-  first ("EQUIPPED BY *Parent*").
+  The inherit-slot pickers ("Inherited from *Parent*") have no tab rail and no stars (owner): one
+  list of that parent's inheritable skills under the same sticky pill rail, with the groups **In
+  *Parent*'s progression** / **Not in *Parent*'s progression** (the parent's own plan) and no class
+  grouping; each card's tag names the class ("Nohr Noble Lv 5"). Skills the child has equipped are
+  labelled "Equipped".
 
 ## Desktop (≥ 1024px; the mock is mobile-only)
 

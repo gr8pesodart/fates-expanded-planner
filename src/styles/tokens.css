@@ -18,7 +18,7 @@
   --accent: var(--valla);
 
   --rel-s: #c57373;
-  --rel-a: #6981d0;
+  --rel-a: #6183d0;
   --rel-pair: #5eb761;
   --good: #5eb761;
   --good-soft: #9ed2a0;
@@ -31,9 +31,10 @@
   --warn-soft: #efe39b;
   --warn-tint: color-mix(in oklab, var(--warn-soft) 70%, #ffffff);
   --warn-ink: color-mix(in oklab, var(--warn) 72%, #1b1b1b);
-  /* Blue at the same weight for the mildest notice ("Not in progression", owner v3.4). */
+  /* Blue at the same weight for the mildest notice ("Not in progression", owner v3.4). One hue
+     (OKLCH 264.7) with --rel-a, anchored on --info. */
   --info: #5b7fd0;
-  --info-soft: #bccbf0;
+  --info-soft: #baccf0;
   --info-tint: color-mix(in oklab, var(--info-soft) 70%, #ffffff);
   --info-ink: color-mix(in oklab, var(--info) 72%, #1b1b1b);
   --stat-low: #842334;

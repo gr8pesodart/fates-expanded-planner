@@ -44,7 +44,7 @@ export function acquiredVia(dataset: Dataset, run: RunPlan, ctx: UnitContext, ac
 export function skillRules(dataset: Dataset, skillId: number, equipped: readonly (number | null | undefined)[]): { caution: string | null; conflicts: string[] } {
   if (!isExclusiveSkill(dataset, skillId)) return { caution: null, conflicts: [] }
   return {
-    caution: "Can't be equipped with another Taker",
+    caution: "Can't be used with another Taker",
     conflicts: conflictingSkills(dataset, skillId, equipped).map((id) => dataset.skillsById.get(id)?.name ?? '?'),
   }
 }

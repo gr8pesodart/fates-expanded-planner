@@ -919,6 +919,11 @@
   padding-top: 0;
 }
 
+/* The inherit picker has no pager: its one page scrolls straight inside the picker body. */
+.skill-pick-body > .skill-pick-page {
+  min-height: 0;
+}
+
 .filter-menu .switch-row {
   padding: var(--s2) 0;
   border: 0;
@@ -973,13 +978,6 @@
 
 .skill-class-sprites .sprite + .sprite {
   margin-left: -12px;
-}
-
-.skill-class-more {
-  align-self: center;
-  margin-left: 2px;
-  font: var(--t-cell);
-  color: var(--ink-2);
 }
 
 /* Requires support and Not accessible: classes the plan can't reach yet. */
@@ -1546,9 +1544,7 @@
 }
 
 .skill-card-label {
-  font: 700 10px/1.2 var(--f-ui);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 700 11px/1.2 var(--f-ui);
   color: var(--accent-strong);
 }
 
@@ -1564,8 +1560,13 @@
 }
 
 .skill-card.faded .skill-icon {
-  opacity: 0.5;
+  opacity: 0.3;
 }
+
+.skill-card.faded :is(.skill-card-name, .skill-card-tag, .skill-card-label) {
+  color: var(--ink-2);
+}
+
 
 .skill-card.empty .skill-card-name {
   color: var(--ink-2);
@@ -1574,6 +1575,8 @@
 .skill-card-desc {
   display: grid;
   gap: 4px;
+  /* A last resort for unbreakable runs; slashes already get break points (SkillCard › wrappable). */
+  overflow-wrap: anywhere;
   font: 400 12px/1.35 var(--f-ui);
   color: var(--ink-2);
 }
@@ -2049,11 +2052,6 @@
   padding: var(--s4) var(--s3);
 }
 
-/* Only the sprite sits further left (its frame has transparent margins); everything else keeps the inset. */
-.chart-row .roster-id > .sprite:first-child {
-  margin-left: calc(-1 * var(--s2));
-}
-
 /* Compact class path ("Lv 10: Samurai → Lv 20: Swordmaster"), in a grey inset like the skill notices. */
 .chart-route {
   display: flex;
@@ -2083,12 +2081,12 @@
 .chart-skills {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 1px;
   flex: none;
 }
 
 .chart-skills .edit-btn {
-  margin-left: 11px;
+  margin-left: var(--s2);
 }
 
 .swap-btn {

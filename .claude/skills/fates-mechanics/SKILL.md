@@ -98,6 +98,8 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 - **Exclusive skills (v3.4, `skills.ts › conflictingSkills`)**: the seven stat Takers carry "Can't use
   with other Takers." in their game description; the planner keys off that text (Lifetaker lacks it).
+  Researched 2026-10-02: no other equip clash exists; **Heavy Blade + Dancing Blade combine** (don't
+  "fix" them into a clash). Sources and the debuff-overlap note are in DATA.md › Exclusive skills.
 - Groups, in picker order (UI: In progression / Not in progression / Inheritable only / Requires
   support / Not accessible): progression (learned on the planned path / chosen inherited) → available
   (current pool + DLC classes) → inheritable (a current parent's inheritable pool, and - v3.4 owner

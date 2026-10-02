@@ -63,8 +63,10 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
   }, [])
   const tabs: CharacterTab[] = ctx ? [
     ...(ctx.unit.isCorrin ? ['avatar' as const] : []),
-    'profile', 'stats', 'progression',
+    'profile', 'stats',
     ...(ctx.isChild ? ['parents' as const] : []),
+    // Progression is always the last tab (owner, v3.4).
+    'progression',
   ] : []
   const active = tabs.includes(tab) ? tab : 'profile'
   const activeIndex = tabs.indexOf(active)

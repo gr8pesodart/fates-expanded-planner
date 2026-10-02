@@ -5,7 +5,7 @@ import { useUi } from '../app/ui'
 import type { ChartTab } from '../app/ui'
 import type { RosterEntry } from '../app/selectors'
 import { useSortedRoster } from '../app/selectors'
-import { ClassSprite, SkillIcon } from '../components/art'
+import { ClassSprite, Portrait, SkillIcon } from '../components/art'
 import { EditButton, Rail, StarButton } from '../components/controls'
 import { StatTable } from '../components/StatTable'
 import { SwapButton } from '../components/SwapButton'
@@ -24,8 +24,8 @@ import { useScrolled } from '../lib/useScrolled'
 
 const TABS: { id: ChartTab; label: string }[] = [
   { id: 'full', label: 'Full' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'progression', label: 'Progression' },
+  { id: 'skills', label: 'Skills Only' },
+  { id: 'progression', label: 'Skills + Progression' },
   { id: 'pairUp', label: 'Skills + Pair Up' },
 ]
 const TAB_IDS = TABS.map((tab) => tab.id)
@@ -37,15 +37,15 @@ interface RowParts {
   pairUp: boolean
 }
 
-function partsFor(tab: ChartTab, role: 'front' | 'back' | 'solo'): RowParts {
+// Every tab keeps the skills; front and back units both show their pair-up bonus (owner, v3.4).
+function partsFor(tab: ChartTab): RowParts {
   switch (tab) {
     case 'full':
       return { skills: true, route: true, pairUp: true }
     case 'progression':
       return { skills: true, route: true, pairUp: false }
-    // The back unit's contribution is its pair-up bonus; leads and solo units fight with their skills.
     case 'pairUp':
-      return { skills: role !== 'back', route: false, pairUp: role === 'back' }
+      return { skills: true, route: false, pairUp: true }
     default:
       return { skills: true, route: false, pairUp: false }
   }
@@ -69,18 +69,18 @@ export function ChartScreen() {
       {cards.map((card) => {
         if (card.kind === 'solo') {
           const entry = byId.get(card.unitId)
-          return entry ? <li key={card.unitId} className="chart-card"><ChartRow entry={entry} parts={partsFor(tab, 'solo')} /></li> : null
+          return entry ? <li key={card.unitId} className="chart-card"><ChartRow entry={entry} parts={partsFor(tab)} /></li> : null
         }
         const front = byId.get(card.front)
         const back = byId.get(card.back)
         if (!front || !back) return null
         return (
           <li key={`${card.front}+${card.back}`} className="chart-card pair">
-            <ChartRow entry={front} parts={partsFor(tab, 'front')} />
+            <ChartRow entry={front} parts={partsFor(tab)} />
             <div className="chart-swap">
               <SwapButton unitId={card.front} frontName={front.name} backName={back.name} />
             </div>
-            <ChartRow entry={back} parts={partsFor(tab, 'back')} />
+            <ChartRow entry={back} parts={partsFor(tab)} />
           </li>
         )
       })}
@@ -127,6 +127,7 @@ function ChartRow({ entry, parts }: { entry: RosterEntry; parts: RowParts }) {
     <div className="chart-row" onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
       <div className="chart-row-top">
         <div className="roster-id">
+          <Portrait unitId={unitId} name={name} className="chip-32" />
           <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
           <span className="unit-name">{name}</span>
           <StarButton heart on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((next) => toggleFavourite(next, unitId))} />

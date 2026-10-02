@@ -43,7 +43,7 @@ export function SkillCard({ skill, locked = false, onClick, label, tag, caution,
       </span>
       <span className="skill-card-desc">
         {label ? <span className="skill-card-label">{label}</span> : null}
-        {skill ? skill.description ?? 'No description.' : <span>{emptyText}</span>}
+        {skill ? wrappable(skill.description ?? 'No description.') : <span>{emptyText}</span>}
         {tag ? <span className="skill-card-tag">{tag}</span> : null}
         {caution ? <span className="skill-card-caution">{caution}</span> : null}
       </span>
@@ -64,6 +64,11 @@ export function SkillCard({ skill, locked = false, onClick, label, tag, caution,
   const body = <>{main}{notice}</>
   if (!onClick || locked) return <div className={className}>{body}</div>
   return <button type="button" className={className} onClick={onClick} disabled={disabled} aria-pressed={selected || undefined}>{body}</button>
+}
+
+/** Lets "Bow/Yumi/Tome/Scroll" (Aegis, Pavise) break after each slash instead of overflowing. */
+function wrappable(text: string): string {
+  return text.replace(/\//g, '/\u200B')
 }
 
 /** The lock reads as the name's first character: it wraps with the first word, never alone. */

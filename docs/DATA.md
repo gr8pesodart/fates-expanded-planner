@@ -252,7 +252,18 @@ The current planner therefore does not include inherited support rows in child p
   (Strengthtaker … Resistancetaker) each say "Can't use with other Takers." in the game's own
   description (Fire Emblem Wiki › Speedtaker: "Does not overlap with another -taker skill"); the
   planner reads that text from the pack, so Lifetaker (no such line) is unaffected. Two equipped
-  Takers get a red notice; pinned in `skills.test.ts`.
+  Takers get a red notice; pinned in `skills.test.ts`. Serenes Forest › Fates › Skills: "does not
+  overlap with other Taker skills" (whether the menu refuses the second one is unconfirmed, so the
+  UI says "Can't be used", not "can't be equipped").
+  Checked and **not** clashing (research 2026-10-02, owner asked about the Blade pair): Heavy Blade +
+  Dancing Blade combine (Serenes › DLC class skills lists "Strength +3, Speed -1" and "Speed +3,
+  Defence -1"; GameFAQs board 114533 thread 73519475: "Yes they do"); different Rally skills all fire
+  (Fire Emblem Wiki › Rally: "A unit may have multiple Rally skills equipped and all will activate");
+  Poison Strike + Grisly Wound + Savage Blow stack (Fire Emblem Wiki › Grisly Wound). Not equip
+  clashes but worth knowing: same-stat debuffs on one target don't add, the larger wins (Serenes ›
+  Hoshidan class skills: "Debuffs do not stack, but can be combined with other debuffs (when the same
+  stat is targeted, the larger effect takes priority)"), so e.g. Strength Seal and Draconic Hex
+  overlap on Str; one Rally doesn't stack with itself from two units.
 - **Progression** — join class/level from `recruitment.json` (falls back to the primary base class
   at Lv 1). A character's own level cap (GameData +134, `units.json › levelCap`) raises promoted
   segments: Jakob and Felicia join promoted (Butler / Maid) with cap 40 — four built-in Eternal

@@ -4,10 +4,11 @@ import type { Dataset } from '../data/types'
 import { edgePartner, supportPartners } from '../data/types'
 import { emptyRun, emptyUnitPlan, withCorrinBuild } from '../state/model'
 import type { RunPlan } from '../state/model'
-import { armyUnits, unitContext } from './army'
+import { armyUnits, skillsChildrenInherit, unitContext } from './army'
 import { classFamily } from './classes'
 import { setBond } from './relationships'
 import { skillAccess } from './skillAccess'
+import { inheritableSkillPool } from './skills'
 
 let dataset: Dataset
 
@@ -137,5 +138,31 @@ describe('skillAccess', () => {
     const single = corrinRun()
     const open = skillAccess(dataset, single, unitContext(dataset, single, KANA_M)!, { s: true, a: true, p: false })
     expect(open.list.some((item) => item.viaParent.length > 0)).toBe(true)
+  })
+
+  it('puts every skill a current parent can pass on in Inheritable only, unless the child is already closer', () => {
+    const run = setBond(corrinRun(), CORRIN_F, 'sPartner', JAKOB)
+    for (const unit of armyUnits(dataset, run).filter((item) => item.fixedParent !== null)) {
+      const ctx = unitContext(dataset, run, unit.id)!
+      const access = skillAccess(dataset, run, ctx)
+      for (const parent of [dataset.unitsById.get(unit.fixedParent!), ctx.variableParent ?? undefined]) {
+        if (!parent) continue
+        const parentCtx = unitContext(dataset, run, parent.id)!
+        for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) {
+          const group = access.byId.get(item.skillId)?.group
+          if (group === undefined) continue // the child's own personal skill
+          expect(['progression', 'available', 'inheritable']).toContain(group)
+          if (group === 'inheritable') expect(access.byId.get(item.skillId)!.inheritFrom).toContain(parent)
+        }
+      }
+    }
+  })
+
+  it("lists what a unit's children plan to inherit from it", () => {
+    let run = setBond(corrinRun(), CORRIN_F, 'sPartner', JAKOB)
+    const ward = skillId('Dragon Ward')
+    run = { ...run, units: { ...run.units, [KANA_M]: { ...emptyUnitPlan(), inheritSkill: skillId('Live to Serve'), inheritFixedSkill: ward } } }
+    expect(skillsChildrenInherit(dataset, run, CORRIN_F).get(ward)?.map((unit) => unit.id)).toEqual([KANA_M])
+    expect(skillsChildrenInherit(dataset, run, JAKOB).get(skillId('Live to Serve'))?.map((unit) => unit.id)).toEqual([KANA_M])
   })
 })

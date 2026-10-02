@@ -109,15 +109,21 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   own); page contents are one `useMemo` keyed on the plan, not the tab, so a tab change only moves the
   pager. Grouped: `GroupToc` sticky pill rail (scroll-spy on the page; tapping smooth-scrolls and
   suppresses the spy until `scrollend`/1.2s) - owner replaced sticky headings with it. Inheritable
-  only heads show the parents' sprites (≤2 + "+N"); Requires support / Not accessible heads are faded.
+  only heads show every parent's sprite (owner: keep all nine of Kana's); Requires support / Not
+  accessible heads are faded. Shared pieces: `SkillTabsSheet` (tabs + pager), `GroupedSkills` +
+  `GroupToc` (groups of `ClassBlock`s; the TOC scrolls its nearest `.skill-pick-page`) - the inherit
+  picker is a plain Sheet with `GroupToc` and flat "In / Not in *Parent*'s progression" sections
+  (owner: no tabs, no stars, no class grouping). Character tabs: Progression is always last.
+  `SkillCard` descriptions get a zero-width space after every "/" (`wrappable`) so weapon lists wrap. `SkillCard label` is standard case (owner).
   `SkillFilterMenu` (per unit, `ui.skillFilters[unitId]` via `useSkillFilters`; "Parent flexible" only
   for a child with a second parent). Class bodies collapse by animating `grid-template-rows` 0fr↔1fr
   (always rendered, `inert` when closed). Sheets are fixed at 88dvh when they hold the picker. Inherit
   picker: the parent's equipped skills first. Chart, New Run, Runs and pickers are lazy chunks.
-- Chart tabs (`ui.chartTab`): Full / Skills / Progression / Skills + Pair Up; `partsFor(tab, role)`
+- Chart tabs (`ui.chartTab`, ids unchanged): Full / Skills Only / Skills + Progression / Skills + Pair
+  Up (v3.4 labels; skills on every tab, pair-up on front and back units alike); `partsFor(tab)`
   decides skills / class path (`progression.ts › routeSteps`) / effective pair-up table per row.
   v3.4: each tab is a full chart in a `TabPager` (swipe to change tab). Rows use the normal `--s3`
-  inset; only the class sprite is pulled left by `--s2` (a zero-width portrait chip used to fake it). The
+  inset, starting with a real `chip-32` portrait (owner, v3.4) then the sprite at the Roster's `--s2`. The
   swap button lives in a zero-height `.chart-swap` between the rows so uneven rows don't misplace it.
 - Class sprites: sizes in multiples of 32 only (see `fates-sprites`).
 

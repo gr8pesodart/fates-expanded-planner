@@ -68,6 +68,11 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   lock. Chart: tab swipes (same pager), sprite-only left shift. Inherit picker lists the parent's
   equipped skills first. Rails: pill colours tween, one sliding underline for tab rails; character
   tab pills tween and scroll into view. Roster stat tables slide off the page edge, not the row.
+  Follow-ups: standard-case card labels, chart sprites back on the inset, every parent sprite on
+  Inheritable only heads, `--rel-a` / `--info-soft` moved onto the `--info` hue (OKLCH 264.7),
+  inherit picker as one list under the sticky pill rail (In / Not in the parent's progression, no tabs
+  or stars),
+  children's inherited picks listed on the parent's Progression when its path doesn't teach them.
 
 ### Backlog
 
