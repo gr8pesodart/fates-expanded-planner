@@ -2170,7 +2170,7 @@
   box-shadow: var(--shadow-float);
   /* Pops out of the tail tip: 26px in from the right edge, 6px below the box. */
   transform-origin: calc(100% - 26px) calc(100% + var(--s2));
-  animation: seal-pop 160ms var(--ease);
+  animation: seal-pop 300ms var(--ease);
 }
 
 /* The tail is part of the tooltip's fill (same background, no seam) and points at the info button,
@@ -2195,7 +2195,7 @@
 }
 
 @keyframes seal-pop {
-  from { opacity: 0; transform: scale(0.9); }
+  from { opacity: 0; transform: scale(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2214,7 +2214,8 @@
 }
 
 .chart-seal-float .seal-pill {
-  max-width: 50vw;
+  /* Fixed width on every mobile breakpoint: three icons plus a fading fourth, as on 390px. */
+  width: 195px;
   box-shadow: var(--shadow-float);
 }
 
