@@ -91,8 +91,8 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   `flex: none` keeps the button from being squeezed. The shared tooltip (same component on the
   Progression foot) hugs its contents and right-aligns to the pill in both instances, is
   semi-transparent (`color-mix(--scrim 92%, transparent)`), carries `--shadow-float`, builds its
-  tail into its own fill (no seam) and pops in over 160ms (`seal-pop`, disabled under reduced
-  motion).
+  tail into its own fill (no seam) and pops out of the tail tip over 160ms (`seal-pop`, disabled
+  under reduced motion).
 - **Sprites pause while sliding (v3.4, `lib/motion.ts`)**: `useSwipePager` holds the motion flag while
   dragging and `settleMotion()` after; TabPager settles on every index change; `useAnimationIndex`
   stops ticking while held and rejoins the shared clock after (owner: swipes lagged).
