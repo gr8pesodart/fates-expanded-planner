@@ -2080,12 +2080,31 @@
   gap: var(--s2);
 }
 
-/* End of the Progression page: the seals pill, then the Eternal Seal buttons side by side. */
+/* End of the Progression page: the seals pill hangs on the chart's bottom border at the right,
+   the Eternal Seal buttons sit below. The border lives on the foot so the pill can centre on it,
+   and the padding clears the pill's lower half plus its cut-out ring. */
 .progression-foot {
+  position: relative;
   display: grid;
-  justify-items: start;
   gap: var(--s3);
-  padding: var(--s4);
+  border-top: 1px solid var(--line);
+  padding: calc(21px + var(--s2) * 2) var(--s4) var(--s4);
+}
+
+/* The pill is 42px tall (28px button + 2 x --s2 + 2px border), so half of it rises above the
+   border. The surface ring cuts a constant gap out of the border around the pill. */
+.progression-foot .seal-pill {
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 var(--s2) var(--surface);
+}
+
+/* The last chart section hands its border to the foot and leaves room for the pill's top half. */
+.panel-section:has(+ .progression-foot) {
+  padding-bottom: calc(21px + var(--s2) * 2);
+  border-bottom: 0;
 }
 
 .progression-foot .eternal-row {
@@ -2111,12 +2130,14 @@
 
 /* Icons and counts only (owner, v3.4); the info button lists them by name in a dark tooltip. */
 .seal-pill {
+  --seal-tooltip-bg: color-mix(in srgb, var(--scrim) 92%, transparent);
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
   min-height: 32px;
-  padding: 0 4px 0 var(--s4);
+  padding: var(--s2) var(--s4);
+  background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--r-pill);
 }
@@ -2157,17 +2178,119 @@
 .seal-tooltip {
   position: absolute;
   bottom: calc(100% + var(--s2));
-  left: 0;
+  right: 0;
   z-index: 6;
   display: grid;
-  gap: 2px;
-  min-width: 180px;
-  padding: var(--s3) var(--s4);
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100vw - var(--s5));
+  padding: var(--s4) 16px;
   border-radius: var(--r-md);
-  background: var(--scrim);
+  background: var(--seal-tooltip-bg);
   color: var(--on-dark);
-  font: var(--t-cell);
+  font: var(--t-sub);
   box-shadow: var(--shadow-float);
+  /* Pops out of the tail tip: 26px in from the right edge, 6px below the box. */
+  transform-origin: calc(100% - 26px) calc(100% + var(--s2));
+  animation: seal-pop 300ms var(--ease);
+}
+
+/* The tail is part of the tooltip's fill (same background, no seam) and points at the info button,
+   which sits 26px from the tooltip's right edge in both the Progression and Chart pills. */
+.seal-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 20px;
+  width: 12px;
+  height: var(--s2);
+  background: var(--seal-tooltip-bg);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  pointer-events: none;
+}
+
+/* The item's sprite sits on the name's line, not stacked above it. */
+.seal-tooltip-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+@keyframes seal-pop {
+  from { opacity: 0; transform: scale(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-tooltip { animation: none; }
+}
+
+/* The Chart's run-wide tally: one line at most half the screen wide (6/12 - three icons sit clear
+   of the fade), the icons scrolling under the fixed info button, whose surface plate fades into
+   the list (owner, v3.5). The right edge sits midway in the page margin (--s3). */
+.chart-seal-float {
+  --seal-fade: 64px;
+  position: fixed;
+  right: calc(var(--s3) / 2);
+  bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom));
+  z-index: 10;
+}
+
+.chart-seal-float .seal-pill {
+  /* Fixed width on every mobile breakpoint: three icons plus a fading fourth, as on 390px. */
+  width: 195px;
+  box-shadow: var(--shadow-float);
+}
+
+.chart-seal-float .seal-tally {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  border-radius: var(--r-pill);
+  /* Span border to border so scrolling content clips at the pill edge, not the start inset; the
+     padding moves onto the scroller, and the right side also reaches under the button and fade. */
+  margin-left: calc(-1 * var(--s4));
+  margin-right: calc(-1 * (var(--s4) + 28px + var(--s2)));
+  padding-left: var(--s4);
+  padding-right: var(--seal-fade);
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.chart-seal-float .seal-tally::-webkit-scrollbar {
+  display: none;
+}
+
+.chart-seal-float .seal-tally-item {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The info button stays put above the scrolling list; this plate hides the icons passing under it
+   and softens into the list on the left. */
+.chart-seal-float .seal-pill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: var(--seal-fade);
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: linear-gradient(90deg, transparent, var(--surface) 37%);
+  pointer-events: none;
+}
+
+.chart-seal-float .seal-pill-info {
+  position: relative;
+  z-index: 2;
+  flex: none;
+}
+
+@media (min-width: 1024px) {
+  .chart-seal-float { display: none; }
 }
 
 .book-choices {

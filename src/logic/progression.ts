@@ -377,6 +377,14 @@ export interface SealUse {
   count: number
 }
 
+/** Every skill the path teaches or starts with, for counting skill books. */
+export function learnedSkillIds(progression: Progression): Set<number> {
+  return new Set([
+    ...progression.startsWith,
+    ...progression.segments.flatMap((segment) => segment.rows.flatMap((row) => row.learned)),
+  ].map((item) => item.skillId))
+}
+
 /** Seals the planned path uses, in seal order, DLC class items per class, Eternal Seals last. */
 export function sealsUsed(progression: Progression): SealUse[] {
   const uses: SealUse[] = []

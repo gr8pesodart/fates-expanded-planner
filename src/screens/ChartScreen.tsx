@@ -7,6 +7,7 @@ import type { RosterEntry } from '../app/selectors'
 import { useSortedRoster } from '../app/selectors'
 import { ClassSprite, Portrait, SkillIcon } from '../components/art'
 import { EditButton, Rail, StarButton } from '../components/controls'
+import { SealTally } from '../components/SealTally'
 import { StatTable } from '../components/StatTable'
 import { SwapButton } from '../components/SwapButton'
 import { PagerPage, TabPager } from '../components/TabPager'
@@ -17,6 +18,7 @@ import { classFamily } from '../logic/classes'
 import { lensRow } from '../logic/lenses'
 import { buildProgression, routeSteps } from '../logic/progression'
 import { toggleFavourite } from '../logic/relationships'
+import { runTallyItems } from '../logic/tally'
 import { navigate } from '../lib/router'
 import { useSwipePager } from '../lib/swipe'
 import { useMountedTabs } from '../lib/useMountedTabs'
@@ -53,12 +55,14 @@ function partsFor(tab: ChartTab): RowParts {
 
 export function ChartScreen() {
   const { rosterLens, chartSort, chartFavouritesFirst, chartLinkPairs, chartGeneration, chartTab, setChartTab } = useUi()
-  const { run, readOnly } = usePlanner()
+  const { dataset, run, readOnly } = usePlanner()
   const openPicker = usePickers((state) => state.open)
   const { entries, sort } = useSortedRoster(rosterLens, chartSort, { favouritesFirst: chartFavouritesFirst, linkPairs: chartLinkPairs, generation: chartGeneration })
   const { sentinelRef, scrolled } = useScrolled()
   const byId = new Map(entries.map((entry) => [entry.unitId, entry]))
   const cards = chartCards(entries.map((entry) => entry.unitId), run, chartLinkPairs)
+  // Cumulative over the whole run: every roster unit's planned path, memoised away from tab changes.
+  const tally = useMemo(() => runTallyItems(dataset, run, entries.map((entry) => entry.ctx)), [dataset, run, entries])
   const pagesRef = useRef<HTMLDivElement>(null)
   const tabIndex = TABS.findIndex((tab) => tab.id === chartTab)
   // Tabs swipe like the character page: each tab is a full chart, mounted once seen.
@@ -109,6 +113,9 @@ export function ChartScreen() {
             </PagerPage>
           ))}
         </TabPager>
+      </div>
+      <div className="chart-seal-float">
+        <SealTally items={tally} />
       </div>
     </section>
   )
