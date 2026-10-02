@@ -84,10 +84,11 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   module worker).
   The Chart floats the same `SealTally` bottom-right on mobile only (`.chart-seal-float`, hidden
   ≥1024px, tooltip right-aligned) with run-wide totals from `logic/tally.ts › runTallyItems`: one
-  line at a fixed 195px on every mobile width (three-and-a-bit icons), the right edge midway in the
-  page margin, the icons scrolling border-to-border (scrollbar hidden; the float sits outside the
-  chart pager's swipe surface, so native touch scroll works) under the fixed info button, whose
-  `::after` surface gradient (`--seal-fade: 64px` covers the button) fades the list out;
+  line at a fixed 240px on every mobile width (three icons plus a bite of the fourth even with
+  two-digit counts), the right edge midway in the page margin, the icons scrolling border-to-border
+  (scrollbar hidden; the float sits outside the chart pager's swipe surface, so native touch scroll
+  works) under the fixed info button, whose `::after` surface gradient (`--seal-fade: 64px` covers
+  the button) fades the list out;
   `flex: none` keeps the button from being squeezed. The shared tooltip (same component on the
   Progression foot) hugs its contents and right-aligns to the pill in both instances, is
   semi-transparent (`color-mix(--scrim 92%, transparent)`), carries `--shadow-float`, builds its

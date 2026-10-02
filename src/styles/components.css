@@ -2214,8 +2214,9 @@
 }
 
 .chart-seal-float .seal-pill {
-  /* Fixed width on every mobile breakpoint: three icons plus a fading fourth, as on 390px. */
-  width: 195px;
+  /* Fixed width on every mobile breakpoint: three icons plus a bite of the fourth even when the
+     counts are two digits (x12/x33), which measures 240px. */
+  width: 240px;
   box-shadow: var(--shadow-float);
 }
 
