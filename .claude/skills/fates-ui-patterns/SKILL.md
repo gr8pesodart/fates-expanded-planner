@@ -77,7 +77,10 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   Remove = outline, muted at 0). Automate progression: `bookOrClassChoices` sheet first, then
   `app/autoPlanner.ts` runs the search in `logic/autoProgression.worker.ts` (Vite module worker).
   The Chart floats the same `SealTally` bottom-right on mobile only (`.chart-seal-float`, hidden
-  ≥1024px, tooltip right-aligned) with run-wide totals from `logic/tally.ts › runTallyItems`.
+  ≥1024px, tooltip right-aligned) with run-wide totals from `logic/tally.ts › runTallyItems`: one
+  line capped at `33vw`, the icons scrolling horizontally (scrollbar hidden; the float sits outside
+  the chart pager's swipe surface, so native touch scroll works) under the fixed info button, whose
+  `::after` surface gradient fades the list out; `flex: none` keeps the button from being squeezed.
 - **Sprites pause while sliding (v3.4, `lib/motion.ts`)**: `useSwipePager` holds the motion flag while
   dragging and `settleMotion()` after; TabPager settles on every index change; `useAnimationIndex`
   stops ticking while held and rejoins the shared clock after (owner: swipes lagged).

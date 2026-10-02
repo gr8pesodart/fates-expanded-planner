@@ -2148,8 +2148,10 @@
   box-shadow: var(--shadow-float);
 }
 
-/* The Chart's run-wide tally, floating over the bottom-right corner on mobile only (owner, v3.5). */
+/* The Chart's run-wide tally: one line at most a third of the screen wide, the icons scrolling
+   under the fixed info button, whose surface plate fades into the list (owner, v3.5). */
 .chart-seal-float {
+  --seal-fade: 48px;
   position: fixed;
   right: var(--s3);
   bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom));
@@ -2157,8 +2159,51 @@
 }
 
 .chart-seal-float .seal-pill {
+  max-width: 33vw;
   background: var(--surface);
   box-shadow: var(--shadow-float);
+}
+
+.chart-seal-float .seal-tally {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  /* Reach under the button, then keep the last item clear of the fade when scrolled to the end. */
+  margin-right: calc(-1 * (28px + var(--s2)));
+  padding-right: var(--seal-fade);
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.chart-seal-float .seal-tally::-webkit-scrollbar {
+  display: none;
+}
+
+.chart-seal-float .seal-tally-item {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The info button stays put above the scrolling list; this plate hides the icons passing under it
+   and softens into the list on the left. */
+.chart-seal-float .seal-pill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  width: var(--seal-fade);
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: linear-gradient(90deg, transparent, var(--surface) 45%);
+  pointer-events: none;
+}
+
+.chart-seal-float .seal-pill-info {
+  position: relative;
+  z-index: 2;
+  flex: none;
 }
 
 /* Right-aligned pill: the tooltip opens inwards, not off the screen edge. */
