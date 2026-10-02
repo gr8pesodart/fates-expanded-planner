@@ -55,6 +55,13 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 - **Gendered class names (v3.4, `sexedClassId`)**: Monk ↔ Shrine Maiden, Great Master ↔ Priestess,
   Butler ↔ Maid, Nohr Prince ↔ Nohr Princess swap by gender like the (M)/(F) pairs (Fire Emblem Wiki ›
   Reclass). Before v3.4 women with S Azama got Monk. Pinned in `classes.test.ts`.
+- **Special classes from base/advanced (v3.4)**: Heart Seal into an own special class (Azura's
+  Songstress) keeps the level from base, +20 from advanced (`reclassOptions`). Pinned in
+  `progression.test.ts`.
+- **Automate progression (v3.4, `autoProgression.ts`, tests + `tools/audit/autoProgression.audit.ts`)**:
+  see DATA.md; it must stay in step with buildProgression's learning rules (verifyAutoPlan replays).
+- **Items / skill books (v3.4)**: item table layout and the 17 books in DATA.md › Items; books make
+  their skill `available` with DLC on.
 - Duplicate branches fall back to the contributor's next (secondary) branch. Seals can't grant Nohr
   Prince(ss)/Wolfskin/Kitsune/Villager → secondary instead — **this applies to Corrin's A ranks too**:
   Kaden/Selkie → Diviner, Keaton/Velouria → Fighter (Serenes › Class Changing: "the character will

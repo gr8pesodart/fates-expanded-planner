@@ -15,6 +15,7 @@ full textures are used.
 |---|---|---|---|
 | Skill icons | `icon/Icon.bch.lz` textures `skill` (512×256) + `skill2` (512×32), 24×24 cells indexed by the Skill table's `icon` field | `public/assets/skills/<skillId>.webp` | **229/229 (100%)** |
 | Class sprites | `unit/Body/<jid>/青0.bch.lz` (player-coloured map sprite sheet), rotated 90°, first frame | `public/assets/classes/<classId>.webp` | **125/129 (96.9%)** |
+| Item icons (v3.4) | **Fates Icon Project (regular)** - the owner's installed icon mod (`work/mods/icon-project/regular/…/icon/Icon.bch.lz`, texture `item`, 16×16 cells); cell per item from the installed build's GameData item table (`work/merge/GameData.bin.lz`, u16 at record +16). Owner asked for the mod's icons (v3.4). | `public/assets/items/<key>.webp` + `src/data/itemIcons.json` | 6 seals, 8 class-change items, 17 skill books (all found) |
 | Unit faces | `face/face/<portrait>_bu.arc` neutral (“通常”) part, hair merged from `face/hair/<hair>/髪0.bch.lz` tinted with the FaceData hair colour, cropped to the BU rectangle from `face/FaceData.bin.lz` | `public/assets/units/<unitSlot>.webp` | **71/71 (100%)** |
 
 Total weight: ≈1.3 MB of WebP (target < 3 MB). Faces are 128×128; class sprites are one frame at
@@ -57,6 +58,10 @@ Format references used (documentation and cross-checks, not copied code):
 python tools/assets/extract_assets.py            # writes public/assets/ + src/data/assets.json
 python tools/assets/extract_assets.py --help     # --romfs, --fe-tools, --pack, --out, --manifest
 ```
+
+Item icons have their own script and manifest (like the sprites):
+`python tools/assets/extract_item_icons.py` → `public/assets/items/` + `src/data/itemIcons.json`
+(item table layout in its docstring and docs/DATA.md › Items).
 
 The data packs must exist first (`tools/extract/extract_game_data.py`); the script reads
 `units.json` / `classes.json` / `skills.json` and writes the manifest next to the app sources.

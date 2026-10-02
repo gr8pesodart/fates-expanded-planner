@@ -307,6 +307,23 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   the other slot is disabled ("From other parent"). Inherited skills also appear in the child's
   equip-slot picker. Directly under the heading, equipped skills that only a parent can pass on and
   that aren't inherited yet are listed with their notice.
+- **Automate progression** (v3.4): an outline button beside the first segment's heading (Base, or
+  Special for Azura). It plans the reclasses that learn every equipped skill (and what children
+  inherit) and end in the selected class, with the fewest seals, then the most levels in -faire
+  weapon classes, then the best Str/Mag/Spd/Def/Res growth; a toast reports the seals and any skill
+  left to a skill book or out of reach. Before planning, a "Class or skill book?" sheet asks about
+  each equipped skill a book could teach instead (Class / Skill book segmented control) - except
+  when another equipped skill without a book comes from a class that teaches it too (that class is
+  planned anyway). If Eternal Seals save seals (or are the only way), a sheet asks first ("Use an
+  Eternal Seal?" / "Plan without"). The search runs in a Web Worker; the button reads "Planning…".
+- **Page foot** (v3.4): a pill of every seal, DLC class item and skill book the plan uses - 16px
+  Icon Project icons and "x2", no text - with an info button that opens a dark tooltip (`--scrim`)
+  listing them by name ("Heart Seal x2", "Warp skill book x1"). Below it, side by side in two
+  equal columns: **Use Eternal Seal** (`btn primary`, accent; disabled until the last segment
+  reaches its cap) and **Remove an Eternal Seal** (outline, muted while none are used).
+- **Skill books** (DLC on): an equipped skill the path never teaches but a book does is assumed to
+  come from the book - its "Not in Progression" card shows a grey "From its skill book" notice and
+  the book joins the pill.
 - **Not in Progression** (just above the first segment): equipped skills the planned path doesn't
   teach, then skills this unit's children have chosen to inherit from it that the path doesn't teach
   either (v3.4), each with its notice and a label above the description ("Equipped", "Inherited by
@@ -427,11 +444,12 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
   - Filter menu, saved per character: "S rank flexible", "A+ rank flexible" ("A rank flexible" for
     Corrin) and, for a child whose second parent is chosen, "Parent flexible"; switching one off
     treats new relationships of that kind (other second parents) as unavailable.
+  Skill books (DLC on) are their own Grouped class, "Skill books", with the book icon.
   The inherit-slot pickers ("Inherited from *Parent*") have no tab rail and no stars (owner): one
   list of that parent's inheritable skills under the same sticky pill rail, with the groups **In
   *Parent*'s progression** / **Not in *Parent*'s progression** (the parent's own plan) and no class
-  grouping; each card's tag names the class ("Nohr Noble Lv 5"). Skills the child has equipped are
-  labelled "Equipped".
+  grouping; each card's tag names the class ("Nohr Noble Lv 5"). Skills the child has equipped lead
+  each group, labelled "Equipped" on a light green card (`--good-tint`).
 
 ## Desktop (≥ 1024px; the mock is mobile-only)
 

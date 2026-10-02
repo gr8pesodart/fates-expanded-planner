@@ -5,6 +5,7 @@ import { ASSETS_ENABLED, defaultHairColour, portraitArt, spriteLayers } from '..
 import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
 import { hairColourOf } from '../logic/hair'
+import { motionPaused, onMotionChange } from '../lib/motion'
 
 function monogram(label: string): string {
   const words = label.replace(/\([^)]*\)/g, ' ').trim().split(/\s+/).filter(Boolean)
@@ -106,6 +107,8 @@ function useAnimationIndex(sequence: SpriteAnimationFrame[] | undefined, enabled
     if (reducedMotion.matches) return
     let timer = 0
     const tick = () => {
+      // Frozen while something slides; onMotionChange restarts the clock (it rejoins mid-cycle).
+      if (motionPaused()) return
       const { index: current, wait } = frameAt(sequence, performance.now())
       setIndex(current)
       timer = window.setTimeout(tick, Math.max(1, wait))
@@ -122,7 +125,9 @@ function useAnimationIndex(sequence: SpriteAnimationFrame[] | undefined, enabled
     tick()
     document.addEventListener('visibilitychange', visibility)
     reducedMotion.addEventListener('change', motion)
+    const stopListening = onMotionChange(visibility)
     return () => {
+      stopListening()
       window.clearTimeout(timer)
       document.removeEventListener('visibilitychange', visibility)
       reducedMotion.removeEventListener('change', motion)

@@ -140,6 +140,11 @@ export function reclassOptions(
     if (current.tier === 'special' && target.tier === 'promoted' && level > BASE_LEVEL_CAP) {
       offer({ classId: target.id, seal, level: level - BASE_LEVEL_CAP, newSegment: true })
     }
+    // Into a special class from the 20-level tracks (Azura back to Songstress): the level carries over
+    // on the 40-level scale, as the DLC classes do (advanced Lv N → special Lv 20 + N).
+    if (target.tier === 'special' && current.tier === 'base') offer({ classId: target.id, seal, level, newSegment: true })
+    if (target.tier === 'special' && current.tier === 'promoted') offer({ classId: target.id, seal, level: level + BASE_LEVEL_CAP, newSegment: true })
+    if (target.tier === 'special' && current.tier === 'special') offer({ classId: target.id, seal, level, newSegment: false })
   }
 
   if (run.dlc) {
@@ -341,4 +346,28 @@ export function finalClass(progression: Progression): number | null {
 export function withReclass(reclasses: Reclass[], segment: number, level: number, classId: number | null): Reclass[] {
   const others = reclasses.filter((item) => !(item.segment === segment && item.level === level))
   return classId === null ? others : [...others, { segment, level, classId }]
+}
+
+export interface SealUse {
+  seal: ReclassSeal | 'eternal'
+  /** DLC class changes are counted per class (each class has its own item). */
+  classId: number | null
+  count: number
+}
+
+/** Seals the planned path uses, in seal order, DLC class items per class, Eternal Seals last. */
+export function sealsUsed(progression: Progression): SealUse[] {
+  const uses: SealUse[] = []
+  for (const row of progression.segments.flatMap((segment) => segment.rows)) {
+    if (row.reclass === null) continue
+    const seal = row.options.find((option) => option.classId === row.reclass)?.seal
+    if (!seal) continue
+    const classId = seal === 'dlc' ? row.reclass : null
+    const existing = uses.find((use) => use.seal === seal && use.classId === classId)
+    if (existing) existing.count += 1
+    else uses.push({ seal, classId, count: 1 })
+  }
+  const order: SealUse['seal'][] = ['master', 'heart', 'partner', 'friendship', 'dlc', 'eternal']
+  if (progression.eternalSeals > 0) uses.push({ seal: 'eternal', classId: null, count: progression.eternalSeals })
+  return uses.sort((a, b) => order.indexOf(a.seal) - order.indexOf(b.seal))
 }

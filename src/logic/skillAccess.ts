@@ -10,11 +10,13 @@ import { playableClassIds } from './lenses'
 import { buildProgression, dlcClassesFor } from './progression'
 import { inheritableSkillPool } from './skills'
 import { fixedParentIsCorrin } from './stats'
+import { SKILL_BOOKS } from '../data/itemIcons'
 
 /**
  * Where a skill stands for one unit, in the order the skill picker lists them:
  *  - progression: learned on the planned class path (or already chosen as an inherited skill)
- *  - available:   a class the unit can take now teaches it, but the plan doesn't reach it
+ *  - available:   a class the unit can take now teaches it, but the plan doesn't reach it - or, with DLC
+ *                 on, a skill book teaches it (v3.4; `book`)
  *  - inheritable: only inheritance can give it: from a current parent, or from another possible second
  *                 parent when no relationship would teach it (second generation)
  *  - locked:      needs a relationship the plan doesn't have (S, A+ / A, another parent)
@@ -52,6 +54,8 @@ export interface AccessNotice {
   viaCombo: RelationChange[][]
   /** Parents who can pass it on: current parents or other possible second parents. */
   inheritFrom: UnitDef[]
+  /** Only a skill book (a DLC item) gives it; classId is null. */
+  book: boolean
 }
 
 /** A skill's best status for the unit (the Profile, Progression, and the picker's flat lists). */
@@ -87,7 +91,7 @@ function learnset(dataset: Dataset, classId: number): { id: number; level: numbe
 
 /** An equipped skill no relationship in this run can give (e.g. after a route change). */
 export function unreachableSkill(skillId: number): SkillAccess {
-  return { skillId, group: 'unavailable', classId: null, level: null, viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [] }
+  return { skillId, group: 'unavailable', classId: null, level: null, viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [], book: false }
 }
 
 // Plans are immutable, so a run object identifies one state: the Profile, Progression and picker
@@ -116,7 +120,7 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
     if (skillId === personal) return null
     const existing = byId.get(skillId)
     if (existing) return existing.group === group ? existing : null
-    const access: SkillAccess = { skillId, group, classId, level, viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [] }
+    const access: SkillAccess = { skillId, group, classId, level, viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [], book: false }
     byId.set(skillId, access)
     order.push(access)
     return access
@@ -124,11 +128,11 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
   // Classes keep their own (first, i.e. best) status, whatever their skills' best status is.
   const classes = new Map<string, ClassAccess>()
   const cls = (classId: number | null, group: SkillGroup, skills?: { skillId: number; level: number | null }[]): ClassAccess | null => {
-    const key = String(classId ?? 'inherited')
+    const key = String(classId ?? (group === 'progression' ? 'inherited' : 'books'))
     const existing = classes.get(key)
     if (existing) return existing.group === group ? existing : null
     const own = skills ?? (classId === null ? [] : learnset(dataset, classId).map((item) => ({ skillId: item.id, level: item.level })))
-    const record: ClassAccess = { group, classId, level: null, skills: own.filter((item) => item.skillId !== personal), viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [] }
+    const record: ClassAccess = { group, classId, level: null, skills: own.filter((item) => item.skillId !== personal), viaS: [], viaA: [], viaParent: [], viaCombo: [], inheritFrom: [], book: false }
     classes.set(key, record)
     return record
   }
@@ -170,6 +174,22 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
   for (const classId of current) {
     cls(classId, 'available')
     for (const item of learnset(dataset, classId)) entry(item.id, 'available', classId, item.level)
+  }
+
+  // 2b. Skill books (DLC items; the installed build's item table, data/itemIcons.json) teach their
+  // skill to anyone, no relationship needed.
+  if (run.dlc) {
+    const books = cls(null, 'available', [])
+    for (const skillId of SKILL_BOOKS) {
+      if (byId.has(skillId)) continue
+      const access = entry(skillId, 'available', null, null)
+      if (!access) continue
+      access.book = true
+      if (books) {
+        books.book = true
+        books.skills.push({ skillId, level: null })
+      }
+    }
   }
 
   // 3. Only a current parent can pass it on.

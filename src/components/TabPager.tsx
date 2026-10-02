@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import { settleMotion } from '../lib/motion'
 
 /**
  * Horizontal strip of every page. The strip follows the drag (`--swipe-dx`, set by useSwipePager on
@@ -9,6 +10,14 @@ import type { CSSProperties, ReactNode } from 'react'
  */
 export function TabPager({ index, children, fill = false }: { index: number; children: ReactNode; fill?: boolean }) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) {
+      first.current = false
+      return
+    }
+    settleMotion()
+  }, [index])
   useLayoutEffect(() => {
     const viewport = viewportRef.current
     const page = viewport?.querySelectorAll<HTMLElement>(':scope > .pager-track > .pager-page')[index]

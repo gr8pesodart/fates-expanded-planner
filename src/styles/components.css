@@ -976,6 +976,17 @@
   flex: none;
 }
 
+.skill-class-book {
+  width: 32px;
+  justify-content: center;
+}
+
+.skill-notice-book {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .skill-class-sprites .sprite + .sprite {
   margin-left: -12px;
 }
@@ -1559,6 +1570,11 @@
   border-color: var(--surface-2);
 }
 
+.skill-card.highlight {
+  background: var(--good-tint);
+  border-color: color-mix(in oklab, var(--good-soft) 60%, #ffffff);
+}
+
 .skill-card.faded .skill-icon {
   opacity: 0.3;
 }
@@ -2015,6 +2031,153 @@
   border: 6px solid transparent;
   border-top: 0;
   border-bottom-color: var(--scrim);
+}
+
+.progression-head {
+  padding: 0 var(--s4) 8px 0;
+}
+
+.progression-head .section-title {
+  padding-bottom: 0;
+}
+
+.auto-btn {
+  min-height: 32px;
+  padding: 0 var(--s4);
+  font-size: 13px;
+}
+
+.eternal-offer {
+  margin: 0 0 var(--s4);
+  font: var(--t-body);
+}
+
+.eternal-offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+/* End of the Progression page: the seals pill, then the Eternal Seal buttons side by side. */
+.progression-foot {
+  display: grid;
+  justify-items: start;
+  gap: var(--s3);
+  padding: var(--s4);
+}
+
+.progression-foot .eternal-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  justify-self: stretch;
+  padding: 0;
+}
+
+.progression-foot .eternal-row .btn {
+  padding: 0 var(--s3);
+  font-size: 13px;
+}
+
+.progression-foot .eternal-row .btn:disabled {
+  opacity: 0.45;
+}
+
+.skill-notice.skill-notice-book {
+  display: flex;
+  align-items: center;
+}
+
+/* Icons and counts only (owner, v3.4); the info button lists them by name in a dark tooltip. */
+.seal-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: 32px;
+  padding: 0 4px 0 var(--s4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+}
+
+.seal-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.seal-tally-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: var(--t-cell);
+}
+
+.seal-tally-name {
+  color: var(--ink-2);
+}
+
+.seal-pill-info {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  color: var(--ink-2);
+}
+
+.seal-pill-info[aria-expanded="true"] {
+  color: var(--accent-strong);
+}
+
+.seal-tooltip {
+  position: absolute;
+  bottom: calc(100% + var(--s2));
+  left: 0;
+  z-index: 6;
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  padding: var(--s3) var(--s4);
+  border-radius: var(--r-md);
+  background: var(--scrim);
+  color: var(--on-dark);
+  font: var(--t-cell);
+  box-shadow: var(--shadow-float);
+}
+
+.book-choices {
+  display: grid;
+  gap: var(--s3);
+  margin-bottom: var(--s4);
+}
+
+.book-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.book-choice-name {
+  flex: 1;
+  font: var(--t-sub);
+}
+
+.item-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  font: var(--t-cell);
+  font-size: 10px;
+  color: var(--ink-2);
+}
+
+.item-icon img {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
 .eternal-row {
@@ -2534,10 +2697,11 @@
   .inherit-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* ---------- swipe / slide swap ---------- */
+/* ---------- swipes and the Roster's lens strip ---------- */
 
-.slide-swap {
-  position: relative;
+/* Swipe surfaces: vertical scrolling stays native; horizontal drags come to useHorizontalSwipe. */
+[data-swipe] {
+  touch-action: pan-y;
 }
 
 /* Sliding stat tables run off the page edge, not their row's padding (owner, v3.4): the screen clips. */
@@ -2546,42 +2710,32 @@
   overflow-x: clip;
 }
 
-.slide-layer.in {
-  transform: translateX(var(--swipe-dx, 0px));
-}
-
-/* Swipe surfaces: vertical scrolling stays native; horizontal drags come to useHorizontalSwipe. */
-[data-swipe] {
-  touch-action: pan-y;
-}
-
-.slide-layer.in {
+/* Previous / current / next lens tables in a row, one gap apart; the middle one shows. */
+.stat-strip-track {
+  display: flex;
+  gap: var(--s4);
+  transform: translateX(calc(-1 * (100% + var(--s4)) + var(--swipe-dx, 0px)));
   transition: transform 200ms var(--ease);
 }
 
-[data-dragging] .slide-layer.in {
+[data-dragging] .stat-strip-track {
   transition: none;
 }
 
-.slide-layer.in[data-dir="1"] { animation: slide-in-next 240ms var(--ease); }
-.slide-layer.in[data-dir="-1"] { animation: slide-in-prev 240ms var(--ease); }
-
-.slide-layer.out {
-  position: absolute;
-  inset: 0 0 auto;
-  pointer-events: none;
+.stat-strip-page {
+  flex: 0 0 100%;
+  min-width: 0;
 }
 
-.slide-layer.out[data-dir="1"] { animation: slide-out-next 240ms var(--ease) forwards; }
-.slide-layer.out[data-dir="-1"] { animation: slide-out-prev 240ms var(--ease) forwards; }
+/* A new lens eases in from where its table was when the drag let go (0 for a rail tap). */
+.stat-strip-track[data-dir="1"] { animation: strip-from-next 240ms var(--ease); }
+.stat-strip-track[data-dir="-1"] { animation: strip-from-prev 240ms var(--ease); }
 
-@keyframes slide-in-next { from { transform: translateX(100%); } }
-@keyframes slide-in-prev { from { transform: translateX(-100%); } }
-@keyframes slide-out-next { from { transform: translateX(var(--swipe-from, 0px)); } to { transform: translateX(-100%); } }
-@keyframes slide-out-prev { from { transform: translateX(var(--swipe-from, 0px)); } to { transform: translateX(100%); } }
+@keyframes strip-from-next { from { transform: translateX(var(--swipe-from, 0px)); } }
+@keyframes strip-from-prev { from { transform: translateX(calc(-2 * (100% + var(--s4)) + var(--swipe-from, 0px))); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .slide-layer.in, .slide-layer.out { animation: none; transition: none; }
+  .stat-strip-track, .stat-strip-track[data-dir] { animation: none; transition: none; }
 }
 
 /* ---------- character tab pager ---------- */

@@ -10,6 +10,8 @@ import { SortIcon } from '../components/SortIcon'
 import { SkillCard } from '../components/SkillCard'
 import { ConflictNotice, SkillNotice } from '../components/SkillNotice'
 import { PagerPage, TabPager } from '../components/TabPager'
+import { ItemIcon } from '../components/ItemIcon'
+import { bookItemKey } from '../data/itemIcons'
 import { useMountedTabs } from '../lib/useMountedTabs'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import { displayName, unitContext } from '../logic/army'
@@ -420,6 +422,14 @@ function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: num
       // Inheritable only: every parent who could pass it on (current parents first), in their own
       // version of the class. Kana's can run to nine (owner: keep them all).
       const parents = group === 'inheritable' ? record.inheritFrom : []
+      if (record.book) {
+        return (
+          <>
+            <span className="skill-class-sprites skill-class-book"><ItemIcon itemKey={bookItemKey(record.skills[0]?.skillId ?? -1) ?? ''} /></span>
+            <span className="skill-class-name">Skill books</span>
+          </>
+        )
+      }
       const sprites = !def ? null : parents.length
         ? parents.map((parent) => <ClassSprite key={parent.id} unitId={parent.id} classId={sexedClassId(dataset, def.id, parent.gender)} name={`${displayName(parent, run)}: ${def.name}`} size={32} />)
         : <ClassSprite unitId={unitId} classId={def.id} name={def.name} size={32} />
@@ -438,7 +448,7 @@ function EquipSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: num
           id: group,
           label: GROUP_TITLE[group],
           classes: access.classes.filter((record) => record.group === group).map((record) => ({
-            key: `${group}:${record.classId ?? 'inherited'}`,
+            key: `${group}:${record.classId ?? (record.book ? 'books' : 'inherited')}`,
             head: classHead(record, group),
             faded: group === 'locked' || group === 'unavailable',
             notice: <SkillNotice access={record} grey perClass corrin={corrin} />,
@@ -526,6 +536,7 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
           skill={{ id: skill.id, name: skill.name, description: skill.description }}
           selected={entry.skillId === current}
           disabled={fromOther}
+          highlight={plan.skills.includes(entry.skillId)}
           label={[plan.skills.includes(entry.skillId) ? 'Equipped' : null, fromOther ? 'From the other parent' : null].filter(Boolean).join(' · ') || undefined}
           tag={entry.label}
           caution={skillRules(dataset, entry.skillId, []).caution}
@@ -536,9 +547,11 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
 
     // One flat list per group (owner: no class grouping here); each card's tag names the class.
     const learned = (entry: SkillPoolEntry) => donorAccess?.byId.get(entry.skillId)?.group === 'progression'
+    // The child's own equipped skills lead each group (owner, v3.4).
+    const equippedFirst = (items: SkillPoolEntry[]) => [...items.filter((entry) => plan.skills.includes(entry.skillId)), ...items.filter((entry) => !plan.skills.includes(entry.skillId))]
     const groups = [
-      { id: 'in', label: `In ${donorName}'s progression`, items: entries.filter(learned) },
-      { id: 'out', label: `Not in ${donorName}'s progression`, items: entries.filter((entry) => !learned(entry)) },
+      { id: 'in', label: `In ${donorName}'s progression`, items: equippedFirst(entries.filter(learned)) },
+      { id: 'out', label: `Not in ${donorName}'s progression`, items: equippedFirst(entries.filter((entry) => !learned(entry))) },
     ].filter((group) => group.items.length)
     return {
       list: !donor ? <p className="empty-note">Choose a second parent on the Parents tab first.</p> : (

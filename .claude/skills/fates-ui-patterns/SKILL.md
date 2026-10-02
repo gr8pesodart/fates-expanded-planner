@@ -69,8 +69,16 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - **Rails (v3.4)**: `Rail` pills tween colours; `variant="tabs"` draws one `.rail-indicator` (a 1px
   bar moved with `translateX` + `scaleX`, so it slides on the compositor). `lib/useActiveInView`
   smooth-scrolls a rail (and the character tab pills) to keep the selection centred.
-- Roster: the list is the swipe surface; every row's `StatTable` gets `slideIndex` (lens index) so all
-  tables slide together. Lens-rail taps animate the same way.
+- Roster: the list is the swipe surface; every row's `StatTable` gets `slide` = { index, prev, next }
+  (v3.4 strip: the neighbouring lenses' tables are rendered either side, so a drag shows them; on
+  commit the track remounts centred and eases in from `--swipe-from`). SlideSwap is gone.
+- **Progression foot (v3.4)**: `SealTally` is a pill (icons + "x2" only) with an info button opening a
+  dark `--scrim` tooltip list; Eternal Seal buttons sit in two equal columns (Use = `btn primary`,
+  Remove = outline, muted at 0). Automate progression: `bookOrClassChoices` sheet first, then
+  `app/autoPlanner.ts` runs the search in `logic/autoProgression.worker.ts` (Vite module worker).
+- **Sprites pause while sliding (v3.4, `lib/motion.ts`)**: `useSwipePager` holds the motion flag while
+  dragging and `settleMotion()` after; TabPager settles on every index change; `useAnimationIndex`
+  stops ticking while held and rejoins the shared clock after (owner: swipes lagged).
 
 ## Components
 

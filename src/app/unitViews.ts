@@ -34,6 +34,7 @@ export function acquiredVia(dataset: Dataset, run: RunPlan, ctx: UnitContext, ac
     const level = access.level !== null ? `Lv ${access.level}` : null
     return [withClass && def ? classFamily(def.name) : null, level].filter(Boolean).join(' ') || null
   }
+  if (access.book) return 'Skill book'
   if (access.group !== 'progression') return null
   const fixedParent = ctx.unit.fixedParent ? dataset.unitsById.get(ctx.unit.fixedParent) : undefined
   const parent = ctx.plan.inheritFixedSkill === access.skillId ? fixedParent : ctx.variableParent

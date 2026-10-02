@@ -1,10 +1,10 @@
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import type { StatRow } from '../logic/lenses'
 import { formatCell } from '../logic/lenses'
-import { SlideSwap } from './SlideSwap'
 
-export function StatTable({ row, signed = false, inverse = false, muted = false, label, referenceRows, mov = true, slideIndex }: {
+export interface StatTableProps {
   row: StatRow
   /** Greyed values without colouring (e.g. an expected final row that never leaves a base class). */
   muted?: boolean
@@ -14,12 +14,23 @@ export function StatTable({ row, signed = false, inverse = false, muted = false,
   referenceRows?: StatRow[]
   /** Parent-inheritance tables have no Mov (the Parents design drops the column). */
   mov?: boolean
-  /** When set, a change slides the old table out and the new one in (Roster lens swipes). */
-  slideIndex?: number
-}) {
+}
+
+/** The Roster's lens strip: the neighbouring lenses' tables sit either side, ready for a swipe. */
+export interface StatSlide {
+  index: number
+  prev?: StatTableProps
+  next?: StatTableProps
+}
+
+export function StatTable({ slide, ...props }: StatTableProps & { slide?: StatSlide }) {
+  return slide ? <StatStrip slide={slide} current={props} /> : <Table {...props} />
+}
+
+function Table({ row, signed = false, inverse = false, muted = false, label, referenceRows, mov = true }: StatTableProps) {
   const keys = mov ? STAT_TABLE_KEYS : STAT_TABLE_KEYS.filter((key) => key !== 'mov')
   const columns: CSSProperties | undefined = mov ? undefined : { gridTemplateColumns: `repeat(${keys.length}, minmax(0, 1fr))` }
-  const table = (
+  return (
     <div className={['stat-table', inverse ? 'inverse' : '', muted ? 'muted' : ''].filter(Boolean).join(' ')} role="table" aria-label={label}>
       <div className="stat-row" role="row" style={columns}>
         {keys.map((key) => (
@@ -37,7 +48,25 @@ export function StatTable({ row, signed = false, inverse = false, muted = false,
       </div>
     </div>
   )
-  return slideIndex === undefined ? table : <SlideSwap index={slideIndex}>{table}</SlideSwap>
+}
+
+/**
+ * Previous / current / next lens side by side. The track follows the list's live `--swipe-dx`; when
+ * the lens changes it remounts centred on the new lens and eases in from where the drag let go
+ * (`--swipe-from`), so the table that was being dragged in keeps moving instead of popping.
+ */
+function StatStrip({ slide, current }: { slide: StatSlide; current: StatTableProps }) {
+  const [shown, setShown] = useState({ index: slide.index, dir: 0 })
+  if (slide.index !== shown.index) setShown({ index: slide.index, dir: slide.index > shown.index ? 1 : -1 })
+  return (
+    <div className="stat-strip">
+      <div key={shown.index} className="stat-strip-track" data-dir={shown.dir || undefined}>
+        <div className="stat-strip-page" aria-hidden="true" inert>{slide.prev ? <Table {...slide.prev} /> : null}</div>
+        <div className="stat-strip-page"><Table {...current} /></div>
+        <div className="stat-strip-page" aria-hidden="true" inert>{slide.next ? <Table {...slide.next} /> : null}</div>
+      </div>
+    </div>
+  )
 }
 
 function statTone(value: number, values: number[]): CSSProperties {

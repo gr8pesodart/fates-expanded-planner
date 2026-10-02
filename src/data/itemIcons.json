@@ -1,0 +1,198 @@
+{
+  "generatedAt": "2026-10-02T05:34:10Z",
+  "source": "Installed GameData item table + Fates Icon Project (regular) item sheet (tools/assets/extract_item_icons.py)",
+  "seals": {
+    "master": "master",
+    "heart": "heart",
+    "partner": "partner",
+    "friendship": "friendship",
+    "eternal": "eternal",
+    "offspring": "offspring"
+  },
+  "classItems": {
+    "118": "class-118",
+    "120": "class-120",
+    "122": "class-122",
+    "123": "class-123",
+    "124": "class-124",
+    "126": "class-126",
+    "127": "class-127",
+    "125": "class-125"
+  },
+  "books": {
+    "138": "book-138",
+    "139": "book-139",
+    "140": "book-140",
+    "122": "book-122",
+    "121": "book-121",
+    "120": "book-120",
+    "142": "book-142",
+    "143": "book-143",
+    "144": "book-144",
+    "145": "book-145",
+    "146": "book-146",
+    "147": "book-147",
+    "148": "book-148",
+    "158": "book-158",
+    "159": "book-159",
+    "26": "book-26",
+    "154": "book-154"
+  },
+  "items": {
+    "master": {
+      "file": "assets/items/master.webp",
+      "name": "Master Seal",
+      "source": "Icon Project icon/Icon.bch.lz#item[10,1] (icon 26; item 311 IID_マスタープルフ, work/merge GameData)"
+    },
+    "heart": {
+      "file": "assets/items/heart.webp",
+      "name": "Heart Seal",
+      "source": "Icon Project icon/Icon.bch.lz#item[4,20] (icon 324; item 312 IID_パラレルプルフ, work/merge GameData)"
+    },
+    "partner": {
+      "file": "assets/items/partner.webp",
+      "name": "Partner Seal",
+      "source": "Icon Project icon/Icon.bch.lz#item[5,20] (icon 325; item 313 IID_マリッジプルフ, work/merge GameData)"
+    },
+    "friendship": {
+      "file": "assets/items/friendship.webp",
+      "name": "Friendship Seal",
+      "source": "Icon Project icon/Icon.bch.lz#item[6,20] (icon 326; item 314 IID_バディプルフ, work/merge GameData)"
+    },
+    "eternal": {
+      "file": "assets/items/eternal.webp",
+      "name": "Eternal Seal",
+      "source": "Icon Project icon/Icon.bch.lz#item[7,20] (icon 327; item 315 IID_エターナルプルフ, work/merge GameData)"
+    },
+    "class-118": {
+      "file": "assets/items/class-118.webp",
+      "name": "Dread Scroll",
+      "source": "Icon Project icon/Icon.bch.lz#item[8,20] (icon 328; item 316 IID_魔戦士の巻物, work/merge GameData)"
+    },
+    "class-120": {
+      "file": "assets/items/class-120.webp",
+      "name": "Ebon Wing",
+      "source": "Icon Project icon/Icon.bch.lz#item[9,20] (icon 329; item 317 IID_黒天馬の翼, work/merge GameData)"
+    },
+    "offspring": {
+      "file": "assets/items/offspring.webp",
+      "name": "Offspring Seal",
+      "source": "Icon Project icon/Icon.bch.lz#item[12,20] (icon 332; item 322 IID_チャイルドプルフ, work/merge GameData)"
+    },
+    "class-122": {
+      "file": "assets/items/class-122.webp",
+      "name": "Sighting Lens",
+      "source": "Icon Project icon/Icon.bch.lz#item[13,20] (icon 333; item 323 IID_シューター砲台, work/merge GameData)"
+    },
+    "class-123": {
+      "file": "assets/items/class-123.webp",
+      "name": "Witch's Mark",
+      "source": "Icon Project icon/Icon.bch.lz#item[14,20] (icon 334; item 324 IID_魔女の魔法陣, work/merge GameData)"
+    },
+    "book-138": {
+      "file": "assets/items/book-138.webp",
+      "name": "Paragon",
+      "source": "Icon Project icon/Icon.bch.lz#item[15,20] (icon 335; item 325 IID_エリートの書, work/merge GameData)"
+    },
+    "book-139": {
+      "file": "assets/items/book-139.webp",
+      "name": "Armor Shield",
+      "source": "Icon Project icon/Icon.bch.lz#item[0,21] (icon 336; item 326 IID_鎧盾の書, work/merge GameData)"
+    },
+    "book-140": {
+      "file": "assets/items/book-140.webp",
+      "name": "Beast Shield",
+      "source": "Icon Project icon/Icon.bch.lz#item[1,21] (icon 337; item 327 IID_獣盾の書, work/merge GameData)"
+    },
+    "book-122": {
+      "file": "assets/items/book-122.webp",
+      "name": "Winged Shield",
+      "source": "Icon Project icon/Icon.bch.lz#item[2,21] (icon 338; item 328 IID_翼盾の書, work/merge GameData)"
+    },
+    "book-121": {
+      "file": "assets/items/book-121.webp",
+      "name": "Point Blank",
+      "source": "Icon Project icon/Icon.bch.lz#item[3,21] (icon 339; item 329 IID_近接射撃の書, work/merge GameData)"
+    },
+    "book-120": {
+      "file": "assets/items/book-120.webp",
+      "name": "Bold Stance",
+      "source": "Icon Project icon/Icon.bch.lz#item[4,21] (icon 340; item 330 IID_攻防一体の陣の書, work/merge GameData)"
+    },
+    "book-142": {
+      "file": "assets/items/book-142.webp",
+      "name": "Strengthtaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[15,1] (icon 31; item 331 IID_力の吸収の書, work/merge GameData)"
+    },
+    "book-143": {
+      "file": "assets/items/book-143.webp",
+      "name": "Magictaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[6,21] (icon 342; item 332 IID_魔力の吸収の書, work/merge GameData)"
+    },
+    "book-144": {
+      "file": "assets/items/book-144.webp",
+      "name": "Skilltaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[7,21] (icon 343; item 333 IID_技の吸収の書, work/merge GameData)"
+    },
+    "book-145": {
+      "file": "assets/items/book-145.webp",
+      "name": "Speedtaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[8,21] (icon 344; item 334 IID_速さの吸収の書, work/merge GameData)"
+    },
+    "book-146": {
+      "file": "assets/items/book-146.webp",
+      "name": "Lucktaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[9,21] (icon 345; item 335 IID_幸運の吸収の書, work/merge GameData)"
+    },
+    "book-147": {
+      "file": "assets/items/book-147.webp",
+      "name": "Defensetaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[10,21] (icon 346; item 336 IID_守備の吸収の書, work/merge GameData)"
+    },
+    "book-148": {
+      "file": "assets/items/book-148.webp",
+      "name": "Resistancetaker",
+      "source": "Icon Project icon/Icon.bch.lz#item[11,21] (icon 347; item 337 IID_魔防の吸収の書, work/merge GameData)"
+    },
+    "class-124": {
+      "file": "assets/items/class-124.webp",
+      "name": "Lodestar item",
+      "source": "Icon Project icon/Icon.bch.lz#item[1,22] (icon 353; item 356 IID_英雄王の紋章, work/merge GameData)"
+    },
+    "class-126": {
+      "file": "assets/items/class-126.webp",
+      "name": "Great Lord item",
+      "source": "Icon Project icon/Icon.bch.lz#item[2,22] (icon 354; item 357 IID_聖痕の紋章, work/merge GameData)"
+    },
+    "class-127": {
+      "file": "assets/items/class-127.webp",
+      "name": "Grandmaster item",
+      "source": "Icon Project icon/Icon.bch.lz#item[3,22] (icon 355; item 359 IID_邪痕の紋章, work/merge GameData)"
+    },
+    "class-125": {
+      "file": "assets/items/class-125.webp",
+      "name": "Vanguard item",
+      "source": "Icon Project icon/Icon.bch.lz#item[6,22] (icon 358; item 362 IID_神将の紋章, work/merge GameData)"
+    },
+    "book-158": {
+      "file": "assets/items/book-158.webp",
+      "name": "Heavy Blade book",
+      "source": "Icon Project icon/Icon.bch.lz#item[7,22] (icon 359; item 363 IID_剛剣の書, work/merge GameData)"
+    },
+    "book-159": {
+      "file": "assets/items/book-159.webp",
+      "name": "Veteran Intuition book",
+      "source": "Icon Project icon/Icon.bch.lz#item[8,22] (icon 360; item 364 IID_歴戦の勘の書, work/merge GameData)"
+    },
+    "book-26": {
+      "file": "assets/items/book-26.webp",
+      "name": "Aether book",
+      "source": "Icon Project icon/Icon.bch.lz#item[9,22] (icon 361; item 365 IID_天空の書, work/merge GameData)"
+    },
+    "book-154": {
+      "file": "assets/items/book-154.webp",
+      "name": "Warp book",
+      "source": "Icon Project icon/Icon.bch.lz#item[10,22] (icon 362; item 393 IID_ワープの書, work/merge GameData)"
+    }
+  }
+}

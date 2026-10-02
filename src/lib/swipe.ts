@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { holdMotion, settleMotion } from './motion'
 
 export interface SwipeHandlers {
   /** Horizontal offset while a horizontal drag is in progress. */
@@ -98,7 +99,8 @@ export function useHorizontalSwipe(ref: { current: HTMLElement | null }, handler
 
 /**
  * Swipe between pages: drags the element's content live (`--swipe-dx`, damped at the ends),
- * commits to the neighbouring page on release, or springs back. Pairs with SlideSwap, whose exit
+ * commits to the neighbouring page on release, or springs back. Pairs with TabPager or the Roster's
+ * stat strips, which ease in from the release offset (`--swipe-from`).
  * animation starts from the release offset (`--swipe-from`).
  */
 export function useSwipePager(ref: { current: HTMLElement | null }, index: number, count: number, onChange: (next: number) => void, enabled = true): void {
@@ -111,6 +113,7 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
       const node = ref.current
       if (!node) return
       const blocked = (dx > 0 && index === 0) || (dx < 0 && index === count - 1)
+      holdMotion()
       node.dataset.dragging = ''
       node.style.setProperty('--swipe-dx', `${blocked ? dx / 4 : dx}px`)
     },
@@ -124,9 +127,11 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
         onChange(next)
       }
       settle(node)
+      settleMotion()
     },
     onCancel() {
       if (ref.current) settle(ref.current)
+      settleMotion()
     },
   }, enabled)
 }

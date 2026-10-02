@@ -73,6 +73,14 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   inherit picker as one list under the sticky pill rail (In / Not in the parent's progression, no tabs
   or stars),
   children's inherited picks listed on the parent's Progression when its path doesn't teach them.
+  Round 3: automate progression (seal-budgeted search, Eternal Seal prompt), Seals Used tally with
+  Icon Project item icons (new `extract_item_icons.py`), skill books as a DLC way in, Azura back to
+  Songstress, Roster lens strip (neighbour lenses pre-rendered), sprites paused while sliding,
+  inherit picker's equipped skills first on green.
+  Round 4: solver pruning (Pareto dominance on known-skill bitmasks, set-cover and level bounds,
+  Eternal floor first; hard DLC cases 127 s → ~1.3 s) and a Web Worker; class-or-book question;
+  equipped skills off the path assumed from their skill book and counted; seals pill with tooltip;
+  Eternal Seal buttons side by side.
 
 ### Backlog
 

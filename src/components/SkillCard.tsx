@@ -13,7 +13,7 @@ export interface SkillView {
  * description: `label` above it (e.g. "Equipped"), the accent `tag` under it (where the skill is
  * learned), then a muted `caution` (e.g. the Taker rule).
  */
-export function SkillCard({ skill, locked = false, onClick, label, tag, caution, emptyText = 'Tap to choose a skill.', selected = false, muted = false, faded = false, disabled, notice, aside }: {
+export function SkillCard({ skill, locked = false, onClick, label, tag, caution, emptyText = 'Tap to choose a skill.', selected = false, muted = false, faded = false, highlight = false, disabled, notice, aside }: {
   skill: SkillView | null
   locked?: boolean
   onClick?: () => void
@@ -25,8 +25,10 @@ export function SkillCard({ skill, locked = false, onClick, label, tag, caution,
   selected?: boolean
   /** Still tappable, but dimmed (e.g. equipped in another slot: picking it swaps the slots). */
   muted?: boolean
-  /** Not accessible in this run: a grey card with a half-transparent icon. */
+  /** Not accessible in this run: a grey card with a faint icon. */
   faded?: boolean
+  /** A light green card (the inherit picker: skills the child already has equipped). */
+  highlight?: boolean
   disabled?: boolean
   /** Full-width inset(s) under the card (SkillNotice). */
   notice?: ReactNode
@@ -49,7 +51,7 @@ export function SkillCard({ skill, locked = false, onClick, label, tag, caution,
       </span>
     </>
   )
-  const className = ['skill-card', locked ? 'locked' : '', skill ? '' : 'empty', selected ? 'selected' : '', muted ? 'muted' : '', faded ? 'faded' : '', aside ? 'has-aside' : ''].filter(Boolean).join(' ')
+  const className = ['skill-card', locked ? 'locked' : '', skill ? '' : 'empty', selected ? 'selected' : '', muted ? 'muted' : '', faded ? 'faded' : '', highlight ? 'highlight' : '', aside ? 'has-aside' : ''].filter(Boolean).join(' ')
   if (aside) {
     // A button can't hold the aside's own button, so the card is a div and its main button stretches
     // over the whole card (::after) beneath the aside.

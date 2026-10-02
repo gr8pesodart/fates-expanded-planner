@@ -22,6 +22,8 @@
   --rel-pair: #5eb761;
   --good: #5eb761;
   --good-soft: #9ed2a0;
+  /* A light green wash at the notice tints' weight (equipped skills in the inherit picker, v3.4). */
+  --good-tint: color-mix(in oklab, var(--good-soft) 35%, #ffffff);
   --bad: #be5555;
   --bad-soft: #f5adad;
   /* Skill notices: red from --bad; a yellow at the same weight for "not in progression". */

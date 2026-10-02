@@ -164,6 +164,20 @@ describe('buildProgression', () => {
     expect(progression.segments).toHaveLength(1)
   })
 
+  it('lets Azura go back to Songstress from her other classes with a Heart Seal', () => {
+    const azura = dataset.units.find((unit) => unit.name === 'Azura')!
+    const base: RunPlan = { ...emptyRun('test'), dlc: false }
+    const run: RunPlan = { ...base, units: { [azura.id]: { ...emptyUnitPlan(), reclasses: [
+      { segment: 0, level: 5, classId: classId('Sky Knight (F)') },
+      { segment: 1, level: 12, classId: classId('Songstress') },
+    ] } } }
+    const progression = buildProgression(dataset, run, unitContext(dataset, run, azura.id)!)
+    expect(progression.dropped).toEqual([])
+    expect(progression.segments.map((segment) => segment.label)).toEqual(['Special', 'Base', 'Special'])
+    expect(progression.segments[2].rows[0].level).toBe(12)
+    expect(findRow(progression, 1, 12)!.options.find((option) => option.classId === classId('Songstress'))?.seal).toBe('heart')
+  })
+
   it('moves a promoted unit onto the special track at +20 levels for DLC classes', () => {
     const progression = progressionFor(corrinRun([
       { segment: 0, level: 10, classId: classId('Nohr Noble (F)') },

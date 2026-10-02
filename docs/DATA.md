@@ -241,6 +241,46 @@ The current planner therefore does not include inherited support rows in child p
   ways in), which the picker's Grouped view lists whole. Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
   else; skills nothing in the run gives are not listed. Picker filters (`SkillFilters`, per unit):
   `s` / `a` drop new S / A+ candidates, `p` drops other second parents once one is chosen.
+- **Items (v3.4, `tools/assets/extract_item_icons.py` → `src/data/itemIcons.json`)** - GameData header
+  word 11 (at 0x20) points at the item table; records start 0x10 later, 104 bytes each: +0 IID
+  pointer, +16 u16 icon cell, +19 kind (11 seal / class-change item, 12 skill book), +56 seal type
+  (0 Master, 1 Heart, 2 Partner, 3 Friendship, 4 Eternal, 5 class change → class id at +57, 6
+  Offspring) or the skill a book teaches. Read from the installed build (the Icon Project repoints
+  icons). Class items: Dread Scroll (Dread Fighter), Ebon Wing (Dark Falcon), Sighting Lens
+  (Ballistician), Witch's Mark (Witch), and unnamed crests for Lodestar / Vanguard / Great Lord /
+  Grandmaster (no English MIID_; named after the class). 17 skill books: Paragon, Armor Shield, Beast
+  Shield, Winged Shield, Point Blank, Bold Stance, the seven Takers, Heavy Blade, Veteran Intuition,
+  Aether, Warp (+57 is 10 / 25 / 35 for the last three, meaning unknown).
+- **Skill books in skill access (v3.4)** - with DLC on, a skill only a book teaches is `available`
+  (`book: true`, picker group "Skill books", notice "From its skill book (DLC)"). Book counts per
+  run are not modelled.
+- **Into a special class from the 20-level tracks (v3.4, `progression.ts › reclassOptions`)** - an own
+  special class (Azura's Songstress) is offered by Heart Seal from base (same level) and advanced
+  (level + 20), like the DLC classes; before v3.4 Azura could never return to Songstress.
+- **Automate progression (v3.4, `autoProgression.ts`)** - targets: equipped skills plus what the unit's
+  children plan to inherit from it (minus its own inherited picks and the personal skill). Level-by-
+  level search over (class, level, row reclass unused, skills known) mirroring buildProgression,
+  entering only classes that teach a target or promote into one; ends at the cap in the selected
+  class. Cost, lexicographic: seals, then level-ups in classes wielding an equipped -faire weapon,
+  then Str/Mag/Spd/Def/Res class growth. Seal budget grows from a floor (first feasible budget is
+  optimal). Pruning, all exact: (1) Pareto dominance per (class, level, row event) - a state that
+  knows a superset of skills (bitmask) at a no-worse lexicographic cost dominates, because a
+  level-up then learns the same skill or one the other still lacks, and lexicographic order
+  survives adding equal future costs; (2) a set-cover lower bound - the targets still missing need
+  at least `cover[missing]` more classes, one seal each; (3) a level bound - on the scale base Lv /
+  advanced 20 + Lv / special Lv, reclassing never moves back (promotion jumps forward), each
+  level-up adds one and the path ends at the goal's cap, so a state learns at most `goalEnd − scale`
+  more skills. Eternal Seals: more never need more seals, so 3 Eternal Seals give the floor; the
+  plan without searches from that floor, and 1–2 are tried only at the floor (the fewest reaching
+  it are offered). Hard Corrin cases (three Lv 15 advanced skills + two Lv 35 DLC skills) solve in
+  about 1.3 s on desktop (8 seals, or 5 with two Eternal Seals); before the pruning they took up to
+  127 s. Skills no class in reach teaches use their skill book (DLC) or are reported; a skill both
+  can teach is asked about (`bookOrClassChoices`), unless another equipped skill without a book
+  pins the same class. `npm run audit:skills` replays every roster unit's plan and the hard cases
+  through buildProgression.
+- **Skill books on the Progression page (v3.4, `skillBooksUsed`)** - with DLC on, an equipped skill
+  the path doesn't teach but a book does is assumed learned from the book and counted with the
+  seals.
 - **Gender-locked class counterparts (v3.4, `classes.ts › sexedClassId`)** - besides the (M)/(F)
   pairs, four pairs have their own names: Monk ↔ Shrine Maiden, Great Master ↔ Priestess, Butler ↔
   Maid, Nohr Prince ↔ Nohr Princess. Fire Emblem Wiki › Reclass: "Male characters that would reclass
