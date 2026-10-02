@@ -2148,10 +2148,10 @@
   box-shadow: var(--shadow-float);
 }
 
-/* The Chart's run-wide tally: one line at most a third of the screen wide, the icons scrolling
+/* The Chart's run-wide tally: one line at most 5/12 of the screen wide, the icons scrolling
    under the fixed info button, whose surface plate fades into the list (owner, v3.5). */
 .chart-seal-float {
-  --seal-fade: 48px;
+  --seal-fade: 54px;
   position: fixed;
   right: var(--s3);
   bottom: calc(var(--nav-h) + var(--s3) + env(safe-area-inset-bottom));
@@ -2159,7 +2159,7 @@
 }
 
 .chart-seal-float .seal-pill {
-  max-width: 33vw;
+  max-width: calc(100vw * 5 / 12);
   background: var(--surface);
   box-shadow: var(--shadow-float);
 }
