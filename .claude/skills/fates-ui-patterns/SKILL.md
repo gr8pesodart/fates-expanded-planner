@@ -78,10 +78,13 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   `app/autoPlanner.ts` runs the search in `logic/autoProgression.worker.ts` (Vite module worker).
   The Chart floats the same `SealTally` bottom-right on mobile only (`.chart-seal-float`, hidden
   ≥1024px, tooltip right-aligned) with run-wide totals from `logic/tally.ts › runTallyItems`: one
-  line capped at 5/12 of the viewport (`calc(100vw * 5 / 12)`), the icons scrolling horizontally
-  (scrollbar hidden; the float sits outside the chart pager's swipe surface, so native touch scroll
-  works) under the fixed info button, whose `::after` surface gradient fades the list out; `flex:
-  none` keeps the button from being squeezed.
+  line capped at half the viewport (`50vw`; 6/12, three icons clear of the fade), the right edge
+  midway in the page margin, the icons scrolling border-to-border (scrollbar hidden; the float sits
+  outside the chart pager's swipe surface, so native touch scroll works) under the fixed info
+  button, whose `::after` surface gradient fades the list out; `flex: none` keeps the button from
+  being squeezed. The shared tooltip (same component on the Progression foot) is semi-transparent
+  (`color-mix(--scrim 92%, transparent)`), at least as wide as the pill, with a tail over the info
+  button and a 160ms `seal-pop` (disabled under reduced motion).
 - **Sprites pause while sliding (v3.4, `lib/motion.ts`)**: `useSwipePager` holds the motion flag while
   dragging and `settleMotion()` after; TabPager settles on every index change; `useAnimationIndex`
   stops ticking while held and rejoins the shared clock after (owner: swipes lagged).
