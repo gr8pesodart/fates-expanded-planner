@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { usePlanner } from '../app/plannerContext'
-import { Portrait } from '../components/art'
+import { Portrait, CutinArt } from '../components/art'
 import { StarButton } from '../components/controls'
 import { Icon } from '../components/icons'
 import { PagerPage, TabPager } from '../components/TabPager'
 import { useMountedTabs } from '../lib/useMountedTabs'
 import { useActiveInView } from '../lib/useActiveInView'
-import { portraitArt, splashArt } from '../data/art'
+import { cutinArt, portraitArt } from '../data/art'
 import { displayName, unitContext } from '../logic/army'
 import { toggleFavourite } from '../logic/relationships'
 import type { CharacterTab } from '../lib/router'
@@ -192,14 +192,14 @@ function SplashSwap({ unitId, name }: { unitId: string; name: string }) {
   )
 }
 
-/** Official promo art cropped on the face; falls back to the talk portrait over a route-hue wash. */
+/** The unit's cut-in, phase 2 (artwork with built-in hair colouring); falls back to the talk portrait. */
 export function Splash({ unitId, name, fading = false, onFaded }: { unitId: string; name: string; fading?: boolean; onFaded?: () => void }) {
-  const art = splashArt(unitId)
+  const art = cutinArt(unitId)
   const fade = fading ? { 'data-fading': '', onAnimationEnd: onFaded } : {}
   if (art) {
     return (
-      <div className="splash" {...fade}>
-        <img src={art.src} alt="" width={art.w} height={art.h} loading="eager" decoding="async" fetchPriority="high" style={{ objectPosition: `${art.focal.x * 100}% ${art.focal.y * 100}%` }} />
+      <div className="splash cutin" {...fade}>
+        <CutinArt unitId={unitId} />
       </div>
     )
   }

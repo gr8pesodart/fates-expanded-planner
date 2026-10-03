@@ -157,6 +157,34 @@ The script also renders `docs/screenshots/v3/portraits.png`: every unit's face c
 bust crop at 115px with names, so the crops can be eyeballed in one image. `src/data/portraits.test.ts`
 pins coverage ≥ 90%, file existence under `public/`, and square in-bounds boxes.
 
+### Portrait artwork (v3.4): hair layers, tighter crops, cut-in hero
+
+Owner request (2026-10-03): hair colour on all portrait art, tighter chips, neutral expressions,
+and the character page hero from the game's critical / skill cut-ins (phase 2, facing left).
+Started by the DeepSeek lane, finished on `opus`.
+
+- **Neutral expression:** every talk portrait is the `通常` (neutral) part of `_st.arc` (some
+  characters' neutral faces have closed eyes - Orochi, Hana - that is the game's own neutral).
+- **Crops:** face chips use FaceData's exact 128px face rect (no margin); relationship / picker
+  cards use a 248px square whose top sits 28px above the face rect (`BUST_BOX`,
+  `BUST_TOP_OFFSET`). The owner's card reference (Anna) turned out to be a crop of her *cut-in*
+  art, so talk-portrait cards can't match it exactly - pending owner review.
+- **Hair:** units with a recolourable layer (Corrin M/F + 21 children) ship the base without
+  hair plus a same-canvas `<slot>-hair.webp` (and `<slot>-ct-hair.webp` for the cut-in); the app
+  tints them at run time (`art.tsx › useTintedImage`) with `logic/hair.ts › hairColourOf`.
+- **Tint model:** `out = grey * colour / 0xBB` per channel, the map sprites' formula
+  (`extract_sprites.py › tint_ramp`, `art.tsx › tintTables`). Calibrating against the owner's Nina /
+  Soleil colour sheets numerically failed (the sheet art couldn't be registered to the game
+  textures - body pixels differed by ~63 even when aligned), so the choice rests on the sprite
+  formula's earlier validation and visual comparison (closer than overlay, which washed hair out).
+  Paragon has no tint code to copy (its portrait service pastes the raw hair texture).
+- **Cut-ins:** `face/face/<name>_ct.arc` is 512x512 with two phases stacked; phase 2 = the bottom
+  512x256 (`<slot>-ct.webp`). The game draws them facing right; the hero mirrors them in CSS
+  (`.splash.cutin img { transform: scaleX(-1) }`) so characters look left. 4-bit alpha (16 levels)
+  and 512px source width: the hero shows them ~1.4x, so edges are soft-stepped - that is the source.
+- **Splash art (below) is no longer used by the app** (only `splash.test.ts` reads its manifest);
+  the files and `fetch_splash.py` remain until the owner decides to drop them.
+
 ## Splash art (v3, online)
 
 The character-page header uses **official Fire Emblem Fates artwork**, the one set not taken from

@@ -6,12 +6,29 @@ import { assetUrl } from './assets'
  */
 type Box = [number, number, number, number]
 
+export interface PortraitHair {
+  file: string
+  w: number
+  h: number
+}
+
 export interface PortraitEntry {
   file: string
   w: number
   h: number
   face: Box
   bust: Box
+  /** Same-canvas recolourable hair layer (children, Corrin); tinted per run in Portrait. */
+  hair?: PortraitHair
+  /** Critical / skill cut-in, phase 2 (bottom half of the source texture). */
+  ct?: CutinEntry
+}
+
+export interface CutinEntry {
+  file: string
+  w: number
+  h: number
+  hair?: PortraitHair
 }
 
 export interface SpriteImage {
@@ -44,13 +61,6 @@ interface SpriteHead extends SpriteImage {
   small?: SpriteImage
 }
 
-export interface SplashEntry {
-  file: string
-  w: number
-  h: number
-  focal: { x: number; y: number }
-}
-
 interface PortraitManifest { generatedAt?: string; units: Record<string, PortraitEntry> }
 interface SpriteManifest {
   generatedAt?: string
@@ -61,9 +71,8 @@ interface SpriteManifest {
   /** FaceData default hair colour per unit (`#rrggbb`). */
   hairColours?: Record<string, string>
 }
-interface SplashManifest { generatedAt?: string; units: Record<string, SplashEntry> }
 
-const manifests = import.meta.glob<{ default: unknown }>(['./portraits.json', './sprites.json', './splash.json'], { eager: true })
+const manifests = import.meta.glob<{ default: unknown }>(['./portraits.json', './sprites.json'], { eager: true })
 
 function manifest<T>(name: string): T | null {
   return (manifests[`./${name}.json`]?.default as T | undefined) ?? null
@@ -71,7 +80,6 @@ function manifest<T>(name: string): T | null {
 
 const PORTRAITS = manifest<PortraitManifest>('portraits')
 const SPRITES = manifest<SpriteManifest>('sprites')
-const SPLASH = manifest<SplashManifest>('splash')
 
 export const ASSETS_ENABLED = import.meta.env.VITE_ASSETS !== 'off'
 
@@ -86,14 +94,47 @@ export interface PortraitArt {
   box: Box | null
   w: number
   h: number
+  /** Tinted at run time over the base (same canvas). */
+  hair: PortraitHair | null
 }
+
+const hairArt = (hair: PortraitHair | undefined, version?: string): PortraitHair | null =>
+  hair ? { ...hair, file: url(hair.file, version) } : null
 
 export function portraitArt(unitId: string, crop: 'face' | 'bust'): PortraitArt | null {
   if (!ASSETS_ENABLED) return null
   const entry = PORTRAITS?.units[unitId]
-  if (entry) return { src: url(entry.file, PORTRAITS?.generatedAt), box: entry[crop], w: entry.w, h: entry.h }
+  if (entry) {
+    return {
+      src: url(entry.file, PORTRAITS?.generatedAt),
+      box: entry[crop],
+      w: entry.w,
+      h: entry.h,
+      hair: hairArt(entry.hair, PORTRAITS?.generatedAt),
+    }
+  }
   const legacy = assetUrl('unit', unitId)
-  return legacy ? { src: legacy, box: null, w: 128, h: 128 } : null
+  return legacy ? { src: legacy, box: null, w: 128, h: 128, hair: null } : null
+}
+
+export interface CutinArt {
+  src: string
+  w: number
+  h: number
+  hair: PortraitHair | null
+}
+
+/** The unit's critical / skill cut-in (phase 2), the character page hero. */
+export function cutinArt(unitId: string): CutinArt | null {
+  if (!ASSETS_ENABLED) return null
+  const entry = PORTRAITS?.units[unitId]?.ct
+  if (!entry) return null
+  return {
+    src: url(entry.file, PORTRAITS?.generatedAt),
+    w: entry.w,
+    h: entry.h,
+    hair: hairArt(entry.hair, PORTRAITS?.generatedAt),
+  }
 }
 
 export type SpriteLayers =
@@ -132,21 +173,15 @@ export function defaultHairColour(unitId: string): string | null {
   return SPRITES?.hairColours?.[unitId] ?? null
 }
 
-export function splashArt(unitId: string): (SplashEntry & { src: string }) | null {
-  if (!ASSETS_ENABLED) return null
-  const entry = SPLASH?.units[unitId]
-  return entry ? { ...entry, src: url(entry.file, SPLASH?.generatedAt) } : null
-}
+let warmedCutin: { src: string; image: HTMLImageElement } | null = null
 
-let warmedSplash: { src: string; image: HTMLImageElement } | null = null
-
-export function preloadSplashArt(unitId: string): void {
-  const art = splashArt(unitId)
-  if (!art || warmedSplash?.src === art.src) return
+export function preloadCutinArt(unitId: string): void {
+  const art = cutinArt(unitId)
+  if (!art || warmedCutin?.src === art.src) return
   const image = new Image()
   image.fetchPriority = 'high'
   image.decoding = 'async'
   image.src = art.src
-  warmedSplash = { src: art.src, image }
+  warmedCutin = { src: art.src, image }
   void image.decode().catch(() => {})
 }

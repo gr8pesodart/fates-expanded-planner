@@ -5,7 +5,6 @@ import { Icon } from '../../components/icons'
 import { Sheet } from '../../components/Sheet'
 import { CORRIN_HAIR_COLOURS } from '../../data/hairColours'
 import { BANES, BOONS } from '../../data/boons'
-import { splashArt } from '../../data/art'
 import { STAT_KEYS, STAT_LABELS } from '../../data/types'
 import type { StatKey } from '../../data/types'
 import { classStart, talentOptions } from '../../logic/army'
@@ -46,7 +45,6 @@ export function AvatarTab({ run: override, onChange }: { run?: RunPlan; onChange
         <div className="gender-grid" role="radiogroup" aria-labelledby="gender-title">
           {(['female', 'male'] as const).map((gender) => {
             const unit = corrinPair(dataset, gender).corrin
-            const art = unit ? splashArt(unit.id) : null
             return (
               <button
                 key={gender}
@@ -57,11 +55,8 @@ export function AvatarTab({ run: override, onChange }: { run?: RunPlan; onChange
                 disabled={readOnly}
                 onClick={() => switchTo(gender)}
               >
-                {art ? (
-                  <img className="gender-art" src={art.src} alt="" style={{ objectPosition: `${art.focal.x * 100}% ${art.focal.y * 100}%` }} />
-                ) : unit ? (
-                  <Portrait unitId={unit.id} name="Corrin" crop="bust" className="gender-art" />
-                ) : null}
+                {/* The bust portrait, not the splash: it carries Corrin's tinted hair. */}
+                {unit ? <Portrait unitId={unit.id} name="Corrin" crop="bust" className="gender-art" /> : null}
                 <span className="gender-label">{gender === 'female' ? 'Female' : 'Male'}</span>
               </button>
             )

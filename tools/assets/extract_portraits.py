@@ -1,30 +1,28 @@
 #!/usr/bin/env python3
-"""Extract standing talk portraits for every unit from the owner's dump.
+"""Extract portrait artwork for every unit from the owner's dump.
 
-For each unit in the data pack the script reads the neutral (``通常``)
-standing talk sprite from ``face/face/<name>_st.arc``, merges the character's
-hair (``face/hair/<hair>/髪0.bch.lz`` tinted with the FaceData hair colour,
-mirroring the ``_bu`` face pipeline; regular units have the hair baked into
-the body texture), trims the canvas to the alpha content plus the crop boxes,
-and writes an optimised WebP to ``public/assets/portraits/<slot>.webp``.
+Two artworks per unit (docs/ASSETS.md "Portrait artwork (v3.4)"):
 
-Crop boxes come from FaceData (see docs/ASSETS.md "Talk portraits (v3)"):
+- **Talk portrait**: the neutral (``通常``) standing sprite from
+  ``face/face/<name>_st.arc``, with the character's recolourable hair layer
+  (``face/hair/<name>_st/髪0.bch.lz``, tinted with the FaceData colour) composited
+  when the unit has one. Crop boxes come from FaceData: the exact 128x128 face
+  rect ("face chips") and a square around the whole portrait whose head sits about
+  a tenth from the top ("relationship / picker cards", matching the owner's
+  reference cards).
+- **Cut-in (critical / skill activation)**: phase 2 (the bottom half of the
+  512x512 ``_ct`` texture) with its matching ``_ct`` hair layer tinted the same
+  way. Used as the character page hero.
 
-  - face: the 128x128 face rect at record +40 (top of hair to chin), grown by
-    a 10% margin per side.
-  - bust: the game's 110x218 bust rect at record +48, widened to a square of
-    its height, centred on the rect; the eye rect at +56 confirms the eye
-    line sits near the top third of the card, as the design asks.
+Tinting uses the same reference-grey multiply as the map sprites
+(``extract_sprites.py › tint_ramp``): ``out = grey * colour / 0xBB`` per channel.
+Units with a hair layer also get a same-canvas hair-only WebP; the app tints it at
+run time for Corrin / children whose colour follows the run.
 
-The script writes ``src/data/portraits.json`` (unit id -> file, size, crop
-boxes, provenance), prints a coverage report, and renders
-``docs/screenshots/v3/portraits.png`` (every face crop at 64px and bust crop
-at 115px with names) for review. Run it from the repo root:
+Writes ``public/assets/portraits/<slot>.webp`` (+ ``-hair`` and ``-ct`` variants),
+``src/data/portraits.json`` and a review contact sheet. Run from the repo root:
 
     python tools/assets/extract_portraits.py
-
-The BCH/LZ13/pixel decoders live in tools/assets/fe_assets.py; Pillow is the
-only third-party dependency.
 """
 
 from __future__ import annotations
@@ -32,7 +30,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import statistics
 import struct
 import sys
 from datetime import datetime, timezone
@@ -53,8 +50,16 @@ DEFAULT_OUT = os.path.join(REPO_ROOT, "public", "assets", "portraits")
 DEFAULT_MANIFEST = os.path.join(REPO_ROOT, "src", "data", "portraits.json")
 DEFAULT_CONTACT_SHEET = os.path.join(REPO_ROOT, "docs", "screenshots", "v3", "portraits.png")
 
-FACE_MARGIN = 0.10
-MAX_HEIGHT = 512
+# The game's face rect is "top of hair to chin" (128 square); the face chip is exactly that.
+FACE_BOX = 128
+# Relationship / picker cards: a square around the standing portrait, head near the top
+# (owner references, 2026-10-03). 248 is the largest square the 256 texture fits.
+BUST_BOX = 248
+BUST_TOP_OFFSET = 28
+CUTIN_HEIGHT = 256
+
+# The hair grey whose tint shows the FaceData colour exactly (extract_sprites.py › HAIR_REFERENCE_GREY).
+HAIR_REFERENCE_GREY = 0xBB
 WEBP_QUALITY = 85
 
 # The avatar's fid is player-configured; FaceData ships default ST records per gender.
@@ -65,6 +70,7 @@ AVATAR_FALLBACK_FSID = {
 
 FACE_CHIP = 64
 BUST_CARD = 115
+CUTIN_CARD = 160
 SHEET_COLUMNS = 10
 SHEET_GAP = 12
 SHEET_PAD = 24
@@ -130,8 +136,9 @@ def parse_face_data(romfs: str, lz13) -> dict:
 # ------------------------------- pixels -------------------------------------
 
 
-def portrait_normal_texture(romfs: str, portrait: str, lz13):
-    path = os.path.join(romfs, "face", "face", f"{portrait}.arc")
+def arc_bch_texture(romfs: str, arc_name: str, entry_prefix: str | None, lz13, entry_index: int = 0):
+    """First texture of the first arc entry whose name starts with ``entry_prefix``."""
+    path = os.path.join(romfs, "face", "face", f"{arc_name}.arc")
     if not os.path.isfile(path):
         return None
     raw = open(path, "rb").read()
@@ -147,7 +154,7 @@ def portrait_normal_texture(romfs: str, portrait: str, lz13):
         entry = archive.data_offset + info_label + index * 16
         name = archive.read_string(entry)
         offset = struct.unpack_from("<I", raw, entry + 12)[0]
-        if name and name.startswith("通常"):
+        if entry_prefix is None or (name and name.startswith(entry_prefix)):
             chosen = archive.data_offset + data_label + offset
             break
     if chosen is None:
@@ -157,97 +164,118 @@ def portrait_normal_texture(romfs: str, portrait: str, lz13):
         return None
     blob = lz13.decompress(raw[chosen : chosen + length])
     textures = fe_assets.bch_textures(blob)
+    return textures[entry_index] if len(textures) > entry_index else None
+
+
+def hair_texture(romfs: str, hair_dir: str, lz13):
+    path = os.path.join(romfs, "face", "hair", hair_dir, "髪0.bch.lz")
+    if not os.path.isfile(path):
+        return None
+    textures = fe_assets.bch_textures(lz13.decompress(open(path, "rb").read()))
     return textures[0] if textures else None
 
 
-def tint_overlay(image: Image.Image, color: bytes) -> Image.Image:
-    """Paragon-style overlay blend, tinting a white hair texture."""
-    if color[:3] == b"\x00\x00\x00":
-        return image
+def to_image(texture) -> Image.Image:
+    return Image.frombytes("RGBA", (texture.width, texture.height), texture.rgba)
+
+
+def tint_ramp(image: Image.Image, color: bytes) -> Image.Image:
+    """Recolourable-hair tint: out = min(255, grey * colour / 0xBB) per channel.
+
+    Mirrors tools/assets/extract_sprites.py › tint_ramp and src/components/art.tsx › tintTables.
+    """
     lut = []
     for channel in range(3):
         base = color[channel]
-        for value in range(256):
-            a = value / 256.0
-            b = base / 256.0
-            blended = 2 * a * b if a < 0.5 else 1 - 2 * (1 - a) * (1 - b)
-            lut.append(int(blended * 256))
+        lut.extend(min(255, (value * base) // HAIR_REFERENCE_GREY) for value in range(256))
     rgb = image.convert("RGB").point(lut)
-    result = Image.new("RGBA", image.size)
-    result.paste(rgb, mask=image.getchannel("A"))
+    result = rgb.convert("RGBA")
     result.putalpha(image.getchannel("A"))
+    return result
+
+
+def composite_hair(base: Image.Image, hair: Image.Image | None, colour: bytes | None) -> Image.Image:
+    """Base with the recolourable hair layer tinted ``colour`` drawn over it."""
+    if hair is None or colour is None:
+        return base
+    result = base.copy()
+    result.alpha_composite(tint_ramp(hair, colour))
     return result
 
 
 # ----------------------------- crop boxes -----------------------------------
 
 
-def crop_boxes(info: dict) -> tuple[list[int], list[int]] | None:
-    """Face and bust squares in texture pixels, derived from FaceData."""
-    face = info["face"]
-    bust = info["bust"]
-    if not face[2] or not face[3] or not bust[2] or not bust[3]:
+def portrait_boxes(info: dict) -> tuple[list[int], list[int]] | None:
+    """Face and relationship-card boxes (squares) in texture pixels."""
+    fx, fy, fw, fh = info["face"]
+    if not fw or not fh:
         return None
-    face_side = round(face[2] * (1 + 2 * FACE_MARGIN))
-    face_cx = face[0] + face[2] / 2
-    face_cy = face[1] + face[3] / 2
-    face_box = [round(face_cx - face_side / 2), round(face_cy - face_side / 2), face_side, face_side]
-    bust_side = bust[3]
-    bust_cx = bust[0] + bust[2] / 2
-    bust_box = [round(bust_cx - bust_side / 2), bust[1], bust_side, bust_side]
-    return face_box, bust_box
+    face_side = min(fw, fh)
+    face_box = [fx, fy, face_side, face_side]
+    # relationship box: square around the head, top a little above the face rect
+    top = max(0, fy - BUST_TOP_OFFSET)
+    side = min(BUST_BOX, 256 - top)
+    cx = fx + fw / 2
+    left = int(round(min(max(cx - side / 2, 0), 256 - side)))
+    return face_box, [left, top, side, side]
 
 
-def extract_unit_portrait(romfs: str, info: dict, lz13):
-    texture = portrait_normal_texture(romfs, info["portrait"], lz13)
+def build_unit_art(romfs: str, info: dict, lz13):
+    """Talk portrait canvas (trimmed to content + boxes) and its boxes."""
+    texture = arc_bch_texture(romfs, info["portrait"], "通常", lz13)
     if texture is None:
         return None, "no portrait arc"
-    image = Image.frombytes("RGBA", (texture.width, texture.height), texture.rgba)
+    base = to_image(texture)
 
-    if info["hair"]:
-        hair_path = os.path.join(romfs, "face", "hair", info["hair"], "髪0.bch.lz")
-        if os.path.isfile(hair_path):
-            hair_texture = fe_assets.bch_textures(lz13.decompress(open(hair_path, "rb").read()))[0]
-            if hair_texture.width == texture.width and hair_texture.height == texture.height:
-                hair = Image.frombytes(
-                    "RGBA", (hair_texture.width, hair_texture.height), hair_texture.rgba
-                )
-                image.alpha_composite(tint_overlay(hair, info["hair_color"]))
+    hair_tex = hair_texture(romfs, info["hair"], lz13) if info["hair"] else None
+    hair = to_image(hair_tex) if hair_tex is not None else None
+    if hair is not None and (hair.width != texture.width or hair.height != texture.height):
+        hair = None
 
-    boxes = crop_boxes(info)
+    boxes = portrait_boxes(info)
     if boxes is None:
-        return None, "invalid FaceData rects"
+        return None, "invalid FaceData face rect"
     face, bust = boxes
 
-    content = image.getchannel("A").getbbox()
+    content = base.getchannel("A").getbbox()
     if content is None:
         return None, "empty portrait texture"
     x0 = min(content[0], face[0], bust[0])
     y0 = min(content[1], face[1], bust[1])
     x1 = max(content[2], face[0] + face[2], bust[0] + bust[2])
     y1 = max(content[3], face[1] + face[3], bust[1] + bust[3])
+    box = (x0, y0, x1, y1)
 
-    cropped = Image.new("RGBA", (x1 - x0, y1 - y0))
-    cropped.paste(image, (-x0, -y0), image)
+    def shift(box_rect: list[int]) -> list[int]:
+        return [box_rect[0] - x0, box_rect[1] - y0, box_rect[2], box_rect[3]]
 
-    scale = min(1.0, MAX_HEIGHT / cropped.height)
-    if scale < 1.0:
-        size = (round(cropped.width * scale), round(cropped.height * scale))
-        cropped = cropped.resize(size, Image.LANCZOS)
+    return {
+        "base": base,
+        "hair": hair,
+        "box": box,
+        "face": shift(face),
+        "bust": shift(bust),
+    }, None
 
-    def to_image(box: list[int]) -> list[int]:
-        return [
-            round((box[0] - x0) * scale),
-            round((box[1] - y0) * scale),
-            round(box[2] * scale),
-            round(box[3] * scale),
-        ]
 
-    eyes = info["eyes"]
-    eye_line = None
-    if 0 < eyes[2] < 1000 and 0 < eyes[3] < 1000:
-        eye_line = (eyes[1] + eyes[3] / 2 - bust[1]) / bust[3]
-    return {"image": cropped, "face": to_image(face), "bust": to_image(bust), "eye_line": eye_line}, None
+def build_cutin(romfs: str, portrait_name: str, lz13):
+    """Phase 2 (bottom half) of the unit's cut-in texture and its hair layer."""
+    ct_name = portrait_name[:-2] + "ct" if portrait_name.endswith("_st") else f"{portrait_name}_ct"
+    texture = arc_bch_texture(romfs, ct_name, None, lz13)
+    if texture is None or texture.height < CUTIN_HEIGHT * 2:
+        return None, None
+    base = to_image(texture).crop((0, CUTIN_HEIGHT, texture.width, CUTIN_HEIGHT * 2))
+
+    hair_tex = hair_texture(romfs, ct_name, lz13)
+    if hair_tex is None:
+        # The avatar's hair folder drops the a/b/c face-variant prefix (aマイユニ女1_ct -> マイユニ女1_ct).
+        stripped = ct_name[1:] if len(ct_name) > 1 else ct_name
+        hair_tex = hair_texture(romfs, stripped, lz13)
+    hair = to_image(hair_tex) if hair_tex is not None else None
+    if hair is not None and (hair.width != base.width or hair.height != base.height):
+        hair = None
+    return base, hair
 
 
 # ------------------------------ contact sheet --------------------------------
@@ -267,42 +295,57 @@ def load_font(size: int):
 def write_contact_sheet(rows: list[dict], out_dir: str, path: str) -> None:
     body_font = load_font(13)
     title_font = load_font(20)
-    face_rows = (len(rows) + SHEET_COLUMNS - 1) // SHEET_COLUMNS
-    bust_rows = face_rows
-    face_block = face_rows * (FACE_CHIP + SHEET_LABEL)
-    bust_block = bust_rows * (BUST_CARD + SHEET_LABEL)
+    row_count = (len(rows) + SHEET_COLUMNS - 1) // SHEET_COLUMNS
+    face_block = row_count * (FACE_CHIP + SHEET_LABEL)
+    bust_block = row_count * (BUST_CARD + SHEET_LABEL)
+    cutin_block = row_count * (CUTIN_CARD + SHEET_LABEL)
     width = SHEET_PAD * 2 + SHEET_COLUMNS * SHEET_CELL - SHEET_GAP
-    height = SHEET_PAD * 2 + 2 * 56 + face_block + bust_block + 24
+    height = SHEET_PAD * 2 + 3 * 56 + face_block + bust_block + cutin_block + 48
     sheet = Image.new("RGB", (width, height), "#f6f6f6")
     draw = ImageDraw.Draw(sheet)
 
     def draw_text_centered(x: float, y: float, text: str, font) -> None:
         draw.text((x - draw.textlength(text, font=font) / 2, y), text, font=font, fill="#1b1b1b")
 
+    def cell_x(index: int) -> int:
+        return SHEET_PAD + (index % SHEET_COLUMNS) * SHEET_CELL
+
+    def place(art: Image.Image, index: int, y: int, card: int) -> None:
+        cy = y + (index // SHEET_COLUMNS) * (card + SHEET_LABEL)
+        sheet.paste(art, (cell_x(index) + (SHEET_CELL - SHEET_GAP - art.width) // 2, cy), art)
+        # Label under the art itself: cut-ins are half as tall as their row, and a label at the row
+        # pitch read as the caption of the next row's art.
+        draw_text_centered(cell_x(index) + (SHEET_CELL - SHEET_GAP) / 2, cy + art.height + 3, rows[index]["name"], body_font)
+
+    def load(file_name: str) -> Image.Image:
+        with Image.open(os.path.join(out_dir, os.path.basename(file_name))) as opened:
+            return opened.convert("RGBA")
+
     y = SHEET_PAD
-    draw.text((SHEET_PAD, y), f"Talk portraits — face crop ({FACE_CHIP}px)", font=title_font, fill="#1b1b1b")
+    draw.text((SHEET_PAD, y), f"Talk portrait - face crop ({FACE_CHIP}px)", font=title_font, fill="#1b1b1b")
     y += 56
     for index, row in enumerate(rows):
-        with Image.open(os.path.join(out_dir, os.path.basename(row["entry"]["file"]))) as opened:
-            portrait = opened.convert("RGBA")
         x, yy, w, h = row["entry"]["face"]
-        face = portrait.crop((x, yy, x + w, yy + h)).resize((FACE_CHIP, FACE_CHIP), Image.LANCZOS)
-        cell_x = SHEET_PAD + (index % SHEET_COLUMNS) * SHEET_CELL
-        cell_y = y + (index // SHEET_COLUMNS) * (FACE_CHIP + SHEET_LABEL)
-        sheet.paste(face, (cell_x + (SHEET_CELL - SHEET_GAP - FACE_CHIP) // 2, cell_y), face)
-        draw_text_centered(cell_x + (SHEET_CELL - SHEET_GAP) / 2, cell_y + FACE_CHIP + 3, row["name"], body_font)
+        full = load(row["entry"]["file"])
+        place(full.crop((x, yy, x + w, yy + h)).resize((FACE_CHIP, FACE_CHIP), Image.LANCZOS), index, y, FACE_CHIP)
     y += face_block + 24
-    draw.text((SHEET_PAD, y), f"Talk portraits — bust crop ({BUST_CARD}px)", font=title_font, fill="#1b1b1b")
+
+    draw.text((SHEET_PAD, y), f"Talk portrait - card crop ({BUST_CARD}px)", font=title_font, fill="#1b1b1b")
     y += 56
     for index, row in enumerate(rows):
-        with Image.open(os.path.join(out_dir, os.path.basename(row["entry"]["file"]))) as opened:
-            portrait = opened.convert("RGBA")
         x, yy, w, h = row["entry"]["bust"]
-        bust = portrait.crop((x, yy, x + w, yy + h)).resize((BUST_CARD, BUST_CARD), Image.LANCZOS)
-        cell_x = SHEET_PAD + (index % SHEET_COLUMNS) * SHEET_CELL
-        cell_y = y + (index // SHEET_COLUMNS) * (BUST_CARD + SHEET_LABEL)
-        sheet.paste(bust, (cell_x + (SHEET_CELL - SHEET_GAP - BUST_CARD) // 2, cell_y), bust)
-        draw_text_centered(cell_x + (SHEET_CELL - SHEET_GAP) / 2, cell_y + BUST_CARD + 3, row["name"], body_font)
+        full = load(row["entry"]["file"])
+        place(full.crop((x, yy, x + w, yy + h)).resize((BUST_CARD, BUST_CARD), Image.LANCZOS), index, y, BUST_CARD)
+    y += bust_block + 24
+
+    draw.text((SHEET_PAD, y), f"Cut-in phase 2 ({CUTIN_CARD}px wide)", font=title_font, fill="#1b1b1b")
+    y += 56
+    for index, row in enumerate(rows):
+        if "ct" not in row["entry"]:
+            continue
+        cutin = load(row["entry"]["ct"]["file"])
+        scale = CUTIN_CARD / cutin.width
+        place(cutin.resize((CUTIN_CARD, int(cutin.height * scale)), Image.LANCZOS), index, y, CUTIN_CARD)
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
     sheet.save(path)
@@ -324,11 +367,16 @@ def main() -> None:
     lz13 = load_lz13(args.fe_tools)
     units = read_json(os.path.join(args.pack, "units.json"))["units"]
     faces = parse_face_data(args.romfs, lz13)
+    sprites_manifest = read_json(os.path.join(REPO_ROOT, "src", "data", "sprites.json"))
+    corrin_default = sprites_manifest.get("corrinHairColours", ["#f6f4ef"])[0]
+    corrin_rgb = bytes(int(corrin_default.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4))
+    os.makedirs(args.out, exist_ok=True)
 
     entries = {}
     rows = []
     missing = []
-    eye_lines = []
+    hair_units = 0
+    ct_hair_units = 0
     for unit in units:
         fid = unit.get("fid") or ""
         part = fid[4:] if fid.startswith("FID_") else ""
@@ -338,27 +386,47 @@ def main() -> None:
         if not info or not info["portrait"]:
             missing.append((unit["id"], unit["name"], "no ST FaceData entry"))
             continue
-        result, error = extract_unit_portrait(args.romfs, info, lz13)
+        colour = corrin_rgb if unit.get("isCorrin") else info["hair_color"]
+        art, error = build_unit_art(args.romfs, info, lz13)
         if error:
             missing.append((unit["id"], unit["name"], error))
             continue
-        image = result["image"]
-        file_name = f"assets/portraits/{unit['slot']}.webp"
-        out_path = os.path.join(args.out, f"{unit['slot']}.webp")
-        os.makedirs(args.out, exist_ok=True)
-        image.save(out_path, "WEBP", quality=WEBP_QUALITY, method=6)
+
+        base = composite_hair(art["base"], art["hair"], colour)
+        canvas = base.crop(art["box"])
+        key = f"{unit['slot']}"
+        file_name = f"assets/portraits/{key}.webp"
+        canvas.save(os.path.join(args.out, f"{key}.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
         entry = {
             "file": file_name,
-            "w": image.width,
-            "h": image.height,
-            "face": result["face"],
-            "bust": result["bust"],
-            "source": f"face/face/{info['portrait']}.arc#通常 + hair",
+            "w": canvas.width,
+            "h": canvas.height,
+            "face": art["face"],
+            "bust": art["bust"],
+            "source": f"face/face/{info['portrait']}.arc#通常" + (" + hair" if art["hair"] else ""),
         }
+        if art["hair"] is not None:
+            hair_canvas = art["hair"].crop(art["box"])
+            hair_name = f"assets/portraits/{key}-hair.webp"
+            hair_canvas.save(os.path.join(args.out, f"{key}-hair.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
+            entry["hair"] = {"file": hair_name, "w": hair_canvas.width, "h": hair_canvas.height}
+            hair_units += 1
+
+        ct_base, ct_hair = build_cutin(args.romfs, info["portrait"], lz13)
+        if ct_base is not None:
+            ct_tinted = composite_hair(ct_base, ct_hair, colour)
+            ct_name_file = f"assets/portraits/{key}-ct.webp"
+            ct_tinted.save(os.path.join(args.out, f"{key}-ct.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
+            ct_entry = {"file": ct_name_file, "w": ct_tinted.width, "h": ct_tinted.height}
+            if ct_hair is not None:
+                ct_hair_file = f"assets/portraits/{key}-ct-hair.webp"
+                ct_hair.save(os.path.join(args.out, f"{key}-ct-hair.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
+                ct_entry["hair"] = {"file": ct_hair_file, "w": ct_base.width, "h": ct_base.height}
+                ct_hair_units += 1
+            entry["ct"] = ct_entry
+
         entries[unit["id"]] = entry
         rows.append({"name": unit["name"], "entry": entry})
-        if result["eye_line"] is not None:
-            eye_lines.append(result["eye_line"])
 
     manifest = {
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -371,19 +439,17 @@ def main() -> None:
         json.dump(manifest, f, ensure_ascii=False, separators=(",", ":"))
         f.write("\n")
 
-    total_bytes = sum(os.path.getsize(os.path.join(args.out, f"{u['slot']}.webp")) for u in units if u["id"] in entries)
+    total_bytes = 0
+    for name in os.listdir(args.out):
+        total_bytes += os.path.getsize(os.path.join(args.out, name))
     print(f"portraits: {len(entries)}/{len(units)} ({100 * len(entries) / max(len(units), 1):.1f}%)")
-    for entry in missing:
-        print(f"  missing portrait: {entry}")
-    print(f"total size: {total_bytes / 1024:.0f} KiB ({total_bytes / max(len(entries), 1) / 1024:.1f} KiB avg)")
-    if eye_lines:
-        print(
-            f"eye line in bust box: {statistics.mean(eye_lines) * 100:.0f}% "
-            f"({min(eye_lines) * 100:.0f}-{max(eye_lines) * 100:.0f}%)"
-        )
+    print(f"hair layers: {hair_units} talk, {ct_hair_units} cut-in")
+    for m in missing:
+        print(f"  missing portrait: {m}")
+    print(f"total size: {total_bytes / 1024:.0f} KiB ({total_bytes / max(len(rows), 1) / 1024:.1f} KiB avg)")
     write_contact_sheet(rows, args.out, args.contact_sheet)
-    print(f"manifest: {os.path.relpath(args.manifest, REPO_ROOT)}")
-    print(f"contact sheet: {os.path.relpath(args.contact_sheet, REPO_ROOT)}")
+    print(f"manifest: {args.manifest}")
+    print(f"contact sheet: {args.contact_sheet}")
 
 
 if __name__ == "__main__":

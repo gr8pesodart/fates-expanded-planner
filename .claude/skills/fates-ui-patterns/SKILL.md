@@ -43,20 +43,25 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - `--char-head-h` (measured sticky head height on the article) lets rails inside tabs stick under the
   head: Profile › Classes' lens rail is `.class-lens-rail` (sticky, `top: var(--char-head-h)`).
 - **Hero = inset art container (Figma 19:642, owner v3.4)**: `.char-hero` is `--hero-h` (233px) tall,
-  `--page-margin` (`--s4`, 12px - the character sections' margin) in from the sides and top (page
-  content starts right under it), with `--hero-pad` = the page margin as padding on every side (back
+  `--page-margin` (`--s4`, 12px - the character sections' margin) in from the sides and **flush with
+  the top** (owner: the card touches the top of the page; page content starts right under it), with `--hero-pad` = the page margin as padding on every side (back
   button, name, pills). Radius is concentric (owner): `min(pill height, back size) / 2 + padding` =
   16 + 12 = 28px (the pills win over the back button's 20 + 12); the pills' min-height reads
-  `--hero-tabs-h` so the maths holds. `.char-art` renders the splash at the full screen width (390x316,
-  the files are crops at that ratio) so the container shows its top; gradient (Figma 19:644) `to top,
-  rgb(0 0 0 / 0.94) 24.148%, transparent 61.055%` over the 316px art. History: the owner first asked for fixed art behind per-tab rounded cards
+  `--hero-tabs-h` so the maths holds. The art is the unit's **cut-in phase 2** (owner, v3.4 - the
+  splash can't take hair colour): `CutinArt` = base + runtime-tinted hair layer, `object-fit: contain`
+  top-centred at the full screen width, **mirrored** with `scaleX(-1)` so characters look left (the
+  game draws them facing right); gradient (Figma 19:644) `to top, rgb(0 0 0 / 0.94) 24.148%,
+  transparent 61.055%` over the 316px art box. Avatar gender cards use the bust `Portrait` (carries
+  Corrin's tinted hair). See docs/ASSETS.md › Portrait artwork (v3.4). History: the owner first asked for fixed art behind per-tab rounded cards
   (2px apart); that couldn't reach under the iOS status bar (default status bar style = solid strip;
   `black-translucent` would turn the clock white on the white screens), so they chose this container
   and reverted the cards. Tab pages are plain again, `--pager-gap: var(--s2)` (6px, transparent).
 - Roster stat strips: `--strip-gap: var(--s6)` (30px, owner: "a fair bit larger" than 12px).
+- Class sprites: tapping one on the Roster **or the Chart** opens the class picker (`sprite-btn`);
+  picker rows show bare sprites (the `tile` chip background was removed, owner v3.4).
 - Back button (mobile): `.back-rail` (absolute, from the top to the hero's tab pills:
   `--hero-h - --hero-pad - --hero-tabs-h`) holds a sticky `.back-btn` pinned at its starting
-  24px (page margin + padding), so it stays put over the art and the tab pills push it out (owner, v3.4);
+  12px (the hero's padding; the hero is flush with the top), so it stays put over the art and the tab pills push it out (owner, v3.4);
   the sticky head's own back button takes over.
 - General swipe/slider knowledge (physics, hand-over, profiling) is also in the global
   `frontend-dev` skill (`~/.claude/skills/frontend-dev/slider-physics/GUIDE.md`).

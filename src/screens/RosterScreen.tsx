@@ -5,7 +5,7 @@ import { useUi } from '../app/ui'
 import type { RosterEntry } from '../app/selectors'
 import { useSortedRoster } from '../app/selectors'
 import { ClassSprite, Portrait } from '../components/art'
-import { preloadSplashArt } from '../data/art'
+import { preloadCutinArt } from '../data/art'
 import { EditButton, Rail, StarButton } from '../components/controls'
 import { SortIcon } from '../components/SortIcon'
 import type { SlotKind } from '../components/slots'
@@ -110,7 +110,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, slide, active, refere
   if (ctx.isChild) slots.splice(2, 0, ['parent', partner(ctx.variableParent)])
   const open = () => navigate({ name: 'unit', unitId, tab: 'profile' })
   return (
-    <li className="roster-row" aria-current={active || undefined} data-muted={entry.muted || undefined} onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
+    <li className="roster-row" aria-current={active || undefined} data-muted={entry.muted || undefined} onPointerEnter={() => preloadCutinArt(unitId)} onFocusCapture={() => preloadCutinArt(unitId)}>
       <div className="roster-row-top">
         <div className="roster-id">
           <Portrait unitId={unitId} name={name} className="chip-32" />

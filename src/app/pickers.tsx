@@ -140,7 +140,7 @@ function ClassPicker({ unitId, onClose }: { unitId: string; onClose(): void }) {
             const active = classId === ctx.currentClassId
             return (
               <button key={classId} type="button" className="class-row" aria-pressed={active} onClick={() => choose(classId)}>
-                <ClassSprite unitId={unitId} classId={classId} name={def.name} size={32} tile />
+                <ClassSprite unitId={unitId} classId={classId} name={def.name} size={32} />
                 <span className="class-row-name">{classFamily(def.name)}</span>
                 <span className="class-row-tier muted">{def.tier === 'promoted' ? 'Advanced' : def.tier === 'special' ? 'Special' : 'Base'}</span>
                 {active ? <Icon name="check" size={20} className="accent" /> : null}

@@ -1,7 +1,7 @@
 import { Fragment, useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { PlannerContext } from '../app/plannerContext'
-import { ASSETS_ENABLED, defaultHairColour, portraitArt, spriteLayers } from '../data/art'
+import { ASSETS_ENABLED, cutinArt, defaultHairColour, portraitArt, spriteLayers } from '../data/art'
 import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
 import { hairColourOf } from '../logic/hair'
@@ -15,11 +15,14 @@ function monogram(label: string): string {
 
 /**
  * Talk-portrait crop. The crop box is square, so percentage background sizing frames it in any
- * square container without knowing its pixel size.
+ * square container without knowing its pixel size. Units with a recolourable hair layer get the
+ * layer tinted to their run colour drawn on top of the same crop.
  */
 export function Portrait({ unitId, name, crop = 'face', className = '' }: { unitId: string; name: string; crop?: 'face' | 'bust'; className?: string }) {
   const art = portraitArt(unitId, crop)
   const [failed, setFailed] = useState(false)
+  const hairColour = useHairColour(unitId)
+  const tintedHairUrl = useTintedImage(art?.hair?.file ?? null, hairColour)
   if (!art || failed) {
     return <span className={`portrait mono ${className}`} role="img" aria-label={name}>{monogram(name)}</span>
   }
@@ -31,12 +34,34 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
     )
   }
   const [x, y, w] = art.box
-  const style: CSSProperties = {
+  const frame: CSSProperties = {
     backgroundImage: `url("${art.src}")`,
     backgroundSize: `${(art.w / w) * 100}% ${(art.h / w) * 100}%`,
     backgroundPosition: `${art.w === w ? 0 : (x / (art.w - w)) * 100}% ${art.h === w ? 0 : (y / (art.h - w)) * 100}%`,
   }
-  return <span className={`portrait cropped ${className}`} role="img" aria-label={name} style={style} />
+  const hairFrame: CSSProperties = {
+    ...frame,
+    backgroundImage: tintedHairUrl ? `url("${tintedHairUrl}")` : 'none',
+  }
+  return (
+    <span className={`portrait cropped ${className}`} role="img" aria-label={name} style={frame}>
+      {tintedHairUrl ? <span className="portrait-hair" style={hairFrame} /> : null}
+    </span>
+  )
+}
+
+/** Character page hero: the unit's critical / skill cut-in (phase 2), hair tinted per run. */
+export function CutinArt({ unitId }: { unitId: string }) {
+  const art = cutinArt(unitId)
+  const hairColour = useHairColour(unitId)
+  const tintedHairUrl = useTintedImage(art?.hair?.file ?? null, hairColour)
+  if (!art) return null
+  return (
+    <>
+      <img className="cutin-base" src={art.src} width={art.w} height={art.h} alt="" loading="eager" decoding="async" fetchPriority="high" />
+      {tintedHairUrl ? <img className="cutin-hair" src={tintedHairUrl} width={art.w} height={art.h} alt="" /> : null}
+    </>
+  )
 }
 
 /** One band of a layered sprite strip, picked with background-position. */
@@ -281,6 +306,22 @@ function useTintedHair(image: SpriteImage | null, colour: string | null): { over
   return { overlay: image && file ? { ...image, file } : null, pending: key !== null && !done }
 }
 
+/** A whole-image version of the hair tint (talk portraits, cut-ins): the tinted URL, or null. */
+function useTintedImage(src: string | null, colour: string | null): string | null {
+  const key = src && colour ? `${src}|${colour}` : null
+  const done = key !== null && tintedHair.has(key)
+  const [, rerender] = useState(0)
+  useEffect(() => {
+    if (!key || done || !src || !colour) return
+    let cancelled = false
+    void tintHair(src, colour).then(() => {
+      if (!cancelled) rerender((count) => count + 1)
+    })
+    return () => { cancelled = true }
+  }, [key, done, src, colour])
+  return key ? tintedHair.get(key) ?? null : null
+}
+
 /**
  * The colour to tint a unit's recolourable hair in this run (logic/hair.ts), or null when the
  * extracted default already shows it. `override` serves draft runs (the new-run flow).
@@ -292,12 +333,11 @@ function useHairColour(unitId: string | null, override?: string | null): string 
   return colour && colour.toLowerCase() !== defaultHairColour(unitId)?.toLowerCase() ? colour : null
 }
 
-export function ClassSprite({ unitId, classId, name, size = 32, tile = false, hair }: {
+export function ClassSprite({ unitId, classId, name, size = 32, hair }: {
   unitId: string | null
   classId: number
   name: string
   size?: number
-  tile?: boolean
   /** Hair colour to show instead of the run's (draft runs); null = extracted default. */
   hair?: string | null
 }) {
@@ -320,7 +360,7 @@ export function ClassSprite({ unitId, classId, name, size = 32, tile = false, ha
   // Wait for the tint too, so the default colour never flashes before the chosen one.
   const ready = decoded && !headHair.pending && !singleHair.pending
   const wrap = (content: ReactNode) => (
-    <span ref={spriteRef} className={tile ? 'sprite tile' : 'sprite'} style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
+    <span ref={spriteRef} className="sprite" style={{ width: size, height: size }} role="img" aria-label={name}>{content}</span>
   )
   if (!layers) return wrap(<span className="sprite-mono">{monogram(name)}</span>)
   if (!ready) return wrap(null)

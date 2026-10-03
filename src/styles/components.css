@@ -358,6 +358,7 @@
 /* ---------- art ---------- */
 
 .portrait {
+  position: relative;
   display: inline-grid;
   place-items: center;
   overflow: hidden;
@@ -365,6 +366,13 @@
   background-repeat: no-repeat;
   border-radius: var(--r-xs);
   aspect-ratio: 1;
+}
+
+/* Recolourable hair, tinted per run, over the same crop box as the base. */
+.portrait-hair {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
 }
 
 .portrait img {
@@ -390,11 +398,6 @@
   place-items: center;
   flex: none;
   image-rendering: pixelated;
-}
-
-.sprite.tile {
-  background: var(--surface-3);
-  border-radius: var(--r-sm);
 }
 
 .sprite-stage {
@@ -1142,8 +1145,8 @@
 .char-hero {
   position: relative;
   height: var(--hero-h);
-  /* The page margin on the sides and top; the page content starts right under it. */
-  margin: var(--page-margin) var(--page-margin) 0;
+  /* Flush to the top of the page; the page margin stays on the sides (owner, v3.4). */
+  margin: 0 var(--page-margin) 0;
   overflow: clip;
   border-radius: var(--hero-radius);
   background: var(--scrim);
@@ -1167,6 +1170,19 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Cut-in phase 2 fits the hero width (2:1), head up; the hair overlay shares the exact frame.
+   Mirrored: the game draws cut-ins facing right, the owner wants characters looking left. */
+.splash.cutin img {
+  object-fit: contain;
+  object-position: top center;
+  transform: scaleX(-1);
+}
+
+.splash.cutin img.cutin-hair {
+  position: absolute;
+  inset: 0;
 }
 
 .splash::after {
@@ -1210,8 +1226,8 @@
 
 .back-btn {
   position: sticky;
-  /* Pinned where it starts (the hero's margin + its padding), so it doesn't nudge on scroll. */
-  top: calc(var(--page-margin) + var(--hero-pad) + env(safe-area-inset-top));
+  /* Pinned where it starts (the hero sits flush with the top, so just its padding). */
+  top: calc(var(--hero-pad) + env(safe-area-inset-top));
   margin: var(--hero-pad) 0 0 var(--hero-pad);
   pointer-events: auto;
   display: grid;

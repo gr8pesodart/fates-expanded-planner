@@ -11,7 +11,7 @@ import { SealTally } from '../components/SealTally'
 import { StatTable } from '../components/StatTable'
 import { SwapButton } from '../components/SwapButton'
 import { PagerPage, TabPager } from '../components/TabPager'
-import { preloadSplashArt } from '../data/art'
+import { preloadCutinArt } from '../data/art'
 import { SortIcon } from '../components/SortIcon'
 import { chartCards } from '../logic/chart'
 import { classFamily } from '../logic/classes'
@@ -126,6 +126,7 @@ const ChartList = memo(function ChartList({ tab, cards, byId }: { tab: ChartTab;
 
 function ChartRow({ entry, parts }: { entry: RosterEntry; parts: RowParts }) {
   const { dataset, run, readOnly, mutate } = usePlanner()
+  const openPicker = usePickers((state) => state.open)
   const { ctx, name, unitId } = entry
   const classDef = dataset.classesById.get(ctx.currentClassId)
   const skills = ctx.plan.skills.filter((id): id is number => id !== null)
@@ -134,11 +135,14 @@ function ChartRow({ entry, parts }: { entry: RosterEntry; parts: RowParts }) {
     [parts.route, dataset, run, ctx],
   )
   return (
-    <div className="chart-row" onPointerEnter={() => preloadSplashArt(unitId)} onFocusCapture={() => preloadSplashArt(unitId)}>
+    <div className="chart-row" onPointerEnter={() => preloadCutinArt(unitId)} onFocusCapture={() => preloadCutinArt(unitId)}>
       <div className="chart-row-top">
         <div className="roster-id">
           <Portrait unitId={unitId} name={name} className="chip-32" />
-          <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
+          {/* Same as the Roster: the sprite opens the class picker. */}
+          <button type="button" className="sprite-btn" aria-label={`${classDef?.name ?? 'Class'} - choose ${name}'s class`} disabled={readOnly} onClick={() => openPicker({ classes: unitId })}>
+            <ClassSprite unitId={unitId} classId={ctx.currentClassId} name={classDef?.name ?? 'Class'} size={32} />
+          </button>
           <span className="unit-name">{name}</span>
           <StarButton heart on={entry.favourite} name={name} disabled={readOnly} onToggle={() => mutate((next) => toggleFavourite(next, unitId))} />
         </div>
