@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import type { StatRow } from '../logic/lenses'
 import { formatCell } from '../logic/lenses'
-import { releaseOffset } from '../lib/swipe'
+import { releaseOffset, SETTLE_EASE, SETTLE_MS } from '../lib/swipe'
 
 export interface StatTableProps {
   row: StatRow
@@ -69,7 +69,7 @@ function StatStrip({ slide, current }: { slide: StatSlide; current: StatTablePro
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     // The new lens's table sat one page (track width + the --s4 gap) to that side, plus wherever the
     // drag left it. In % so no row has to measure itself mid-commit.
-    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--s4)) + ${shown.from}px)`, '0px'] }, { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' })
+    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--s4)) + ${shown.from}px)`, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
   }, [shown])
   const pages = [
     { lens: slide.index - 1, props: slide.prev },

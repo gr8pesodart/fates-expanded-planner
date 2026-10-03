@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { settleMotion } from '../lib/motion'
+import { SETTLE_MS } from '../lib/swipe'
 
 /**
  * Horizontal strip of every page. The strip follows the drag (an inline `translate` from
@@ -19,7 +20,7 @@ export function TabPager({ index, children, fill = false }: { index: number; chi
       first.current = false
       return
     }
-    settleMotion()
+    settleMotion(SETTLE_MS)
   }, [index])
   useLayoutEffect(() => {
     const viewport = viewportRef.current

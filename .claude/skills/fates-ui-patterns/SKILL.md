@@ -61,6 +61,11 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   to 0 (never a CSS transition, so StatStrip can take over); on a commit it waits for the new `index`
   (layout effect; `navigate` lands a task later) so the page change and the release start together.
   `releaseOffset()` = where a committed swipe let go (300 ms window, else 0).
+- **Settle timing (owner, v3.4: the release "snapped")**: every release motion uses `swipe.ts ›
+  SETTLE_MS` (480) + `SETTLE_EASE` (cubic ease-out `0.33, 1, 0.68, 1`) - the drag offset's Web
+  Animation, StatStrip's ease-in and `.pager-track`'s CSS transition (literal copy in
+  components.css; keep them equal or the composed motion wobbles). The old 200-380 ms with
+  `--ease` (`0.2, 0.8, 0.2, 1`, starting slope 4) left at ~2x finger speed.
 - **Swipe performance rules (v3.4, owner: "major slow down while swiping"; sprite pausing didn't fix
   it):** never set a custom property on a swipe surface or pager ancestor - custom properties
   inherit, so `--swipe-dx` on the list restyled 16-27k nodes per pointermove (100-200 ms frames on a

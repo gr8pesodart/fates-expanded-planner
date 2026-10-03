@@ -117,18 +117,27 @@ const offsetTo = (targets: HTMLElement[], offset: string) => {
 }
 
 /**
+ * How a released swipe settles, shared by every piece that moves (the drag offset, TabPager's page
+ * transition in components.css `.pager-track`, the Roster strips' ease-in) - they run together, so
+ * they must match. A cubic ease-out over 480 ms (owner, v3.4: the old 200-380 ms with a steeper curve
+ * "snapped"): it leaves at a speed close to a finger's and glides in.
+ */
+export const SETTLE_MS = 480
+export const SETTLE_EASE = 'cubic-bezier(0.33, 1, 0.68, 1)'
+
+/**
  * Lets go of the drag: each target eases from its offset back to 0. A Web Animation rather than a CSS
  * transition, so content that remounts or re-centres on the new page (StatStrip) can clear the inline
  * offset itself and run its own animation without a transition fighting it.
  */
-const release = (targets: HTMLElement[], ms: number) => {
+const release = (targets: HTMLElement[]) => {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   for (const target of targets) {
     const offset = target.style.translate
     target.style.removeProperty('translate')
     target.removeAttribute('data-dragging')
     if (offset && offset !== '0px' && !reduced && target.isConnected) {
-      target.animate({ translate: [offset, '0px'] }, { duration: ms, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' })
+      target.animate({ translate: [offset, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
     }
   }
 }
@@ -144,19 +153,19 @@ export const PAGER_TRACK = ':scope > .pager > .pager-track'
  * inherited by every node below it, so each pointermove restyled the whole page (thousands of nodes;
  * 100-200 ms a frame on a phone). `translate` isn't inherited and composes with the targets' own
  * `transform`, so their CSS keeps placing the page (TabPager transitions it) while the offset eases
- * out over `releaseMs`.
+ * out alongside it (`SETTLE_MS`).
  */
-export function useSwipePager(ref: { current: HTMLElement | null }, index: number, count: number, onChange: (next: number) => void, { enabled = true, targets = PAGER_TRACK, releaseMs = 380 }: { enabled?: boolean; targets?: string; releaseMs?: number } = {}): void {
+export function useSwipePager(ref: { current: HTMLElement | null }, index: number, count: number, onChange: (next: number) => void, { enabled = true, targets = PAGER_TRACK }: { enabled?: boolean; targets?: string } = {}): void {
   const dragged = useRef<HTMLElement[]>([])
   const fallback = useRef(0)
   const settle = () => {
     window.clearTimeout(fallback.current)
-    release(dragged.current, releaseMs)
+    release(dragged.current)
     dragged.current = []
   }
   // A committed swipe lets go once the new page is in the DOM (some owners navigate, which lands a
   // task later), so the page change and the release start on the same frame instead of springing back.
-  useLayoutEffect(settle, [index, releaseMs])
+  useLayoutEffect(settle, [index])
   useHorizontalSwipe(ref, {
     onDrag(dx) {
       const node = ref.current
@@ -178,11 +187,11 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
       } else {
         settle()
       }
-      settleMotion()
+      settleMotion(SETTLE_MS)
     },
     onCancel() {
       settle()
-      settleMotion()
+      settleMotion(SETTLE_MS)
     },
   }, enabled)
 }

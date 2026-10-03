@@ -30,7 +30,7 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
   const lens = lensDef(rosterLens)
   const lensIndex = LENSES.findIndex((item) => item.id === rosterLens)
   const listRef = useRef<HTMLUListElement | null>(null)
-  useSwipePager(listRef, lensIndex, LENSES.length, (next) => setRosterLens(LENSES[next].id), { targets: '.stat-strip-track', releaseMs: 200 })
+  useSwipePager(listRef, lensIndex, LENSES.length, (next) => setRosterLens(LENSES[next].id), { targets: '.stat-strip-track' })
   // The neighbouring lenses' tables, pre-rendered either side so a swipe shows them mid-drag.
   const neighbours = useMemo(() => {
     const side = (index: number) => {
