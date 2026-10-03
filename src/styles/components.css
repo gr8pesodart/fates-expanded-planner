@@ -1125,22 +1125,27 @@
 /* Figma 19:642: the splash art in its own inset, rounded container above the page (owner, v3.4 -
    it replaced fixed art behind tab cards, which couldn't reach under the iOS status bar). The art
    renders at the full screen width (390x316 - the files are crops at that ratio) and the container
-   shows its top --hero-h, 5px in from the screen edges. */
+   shows its top --hero-h. Owner: the container keeps the page margin (the character page's --s4,
+   which its sections use) and has that same padding inside on every side. */
 .screen.character {
   --hero-h: 233px;
-  --hero-inset: 8px;
-  /* Space under the tab pills, and their height: the back button's rail ends at the pills. */
-  --hero-foot-pad: 11px;
+  --page-margin: var(--s4);
+  --hero-pad: var(--page-margin);
   --hero-tabs-h: 32px;
+  --back-size: 40px;
+  /* Concentric corners: outer radius = inner radius + the padding between them. Of the two controls
+     that sit in corners - the tab pills (radius = half their height) and the round back button - use
+     whichever gives the smaller corner (owner). */
+  --hero-radius: calc(min(var(--hero-tabs-h), var(--back-size)) / 2 + var(--hero-pad));
 }
 
 .char-hero {
   position: relative;
   height: var(--hero-h);
-  /* Figma: 5px in from the screen edges; the page content starts right under it. */
-  margin: 5px 5px 0;
+  /* The page margin on the sides and top; the page content starts right under it. */
+  margin: var(--page-margin) var(--page-margin) 0;
   overflow: clip;
-  border-radius: var(--r-lg);
+  border-radius: var(--hero-radius);
   background: var(--scrim);
   color: var(--on-dark);
 }
@@ -1148,8 +1153,8 @@
 .char-art {
   position: absolute;
   top: 0;
-  left: -5px;
-  right: -5px;
+  left: calc(-1 * var(--page-margin));
+  right: calc(-1 * var(--page-margin));
   height: 316px;
 }
 
@@ -1199,20 +1204,20 @@
   position: absolute;
   inset: 0 0 auto;
   z-index: 2;
-  height: calc(var(--hero-h) - var(--hero-foot-pad) - var(--hero-tabs-h));
+  height: calc(var(--hero-h) - var(--hero-pad) - var(--hero-tabs-h));
   pointer-events: none;
 }
 
 .back-btn {
   position: sticky;
-  /* Pinned where it starts (the hero's 5px margin + the inset), so it doesn't nudge on scroll. */
-  top: calc(5px + var(--hero-inset) + env(safe-area-inset-top));
-  margin: var(--hero-inset) 0 0 var(--hero-inset);
+  /* Pinned where it starts (the hero's margin + its padding), so it doesn't nudge on scroll. */
+  top: calc(var(--page-margin) + var(--hero-pad) + env(safe-area-inset-top));
+  margin: var(--hero-pad) 0 0 var(--hero-pad);
   pointer-events: auto;
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: var(--back-size);
+  height: var(--back-size);
   border-radius: var(--r-pill);
   background: var(--surface);
   color: var(--ink);
@@ -1225,7 +1230,7 @@
   z-index: 1;
   display: grid;
   gap: 10px;
-  padding: 0 var(--hero-inset) var(--hero-foot-pad);
+  padding: 0 var(--hero-pad) var(--hero-pad);
 }
 
 .char-name-row {
@@ -1248,7 +1253,7 @@
 
 .char-tabs button {
   flex: none;
-  min-height: 32px;
+  min-height: var(--hero-tabs-h, 32px);
   padding: 0 12px;
   font: var(--t-sub);
   color: var(--on-dark);

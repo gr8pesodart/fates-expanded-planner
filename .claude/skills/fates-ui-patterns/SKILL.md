@@ -42,19 +42,21 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   splash (600ms) and scroll stays put. The scroll reset runs on mount only.
 - `--char-head-h` (measured sticky head height on the article) lets rails inside tabs stick under the
   head: Profile › Classes' lens rail is `.class-lens-rail` (sticky, `top: var(--char-head-h)`).
-- **Hero = inset art container (Figma 19:642, owner v3.4)**: `.char-hero` is 380x233 (`--hero-h`),
-  5px in from the screen edges (`margin: 5px 5px 0`, page content starts right under it), `--r-lg`
-  radius, `overflow: clip`; `.char-art` renders the splash at the full screen width (390x316, the files
-  are crops at that ratio) so the container shows its top 233px; gradient (Figma 19:644) `to top,
-  rgb(0 0 0 / 0.94) 24.148%, transparent 61.055%` over the 316px art. Back button, name and pills sit
-  `--hero-inset` (8px) in. History: the owner first asked for fixed art behind per-tab rounded cards
+- **Hero = inset art container (Figma 19:642, owner v3.4)**: `.char-hero` is `--hero-h` (233px) tall,
+  `--page-margin` (`--s4`, 12px - the character sections' margin) in from the sides and top (page
+  content starts right under it), with `--hero-pad` = the page margin as padding on every side (back
+  button, name, pills). Radius is concentric (owner): `min(pill height, back size) / 2 + padding` =
+  16 + 12 = 28px (the pills win over the back button's 20 + 12); the pills' min-height reads
+  `--hero-tabs-h` so the maths holds. `.char-art` renders the splash at the full screen width (390x316,
+  the files are crops at that ratio) so the container shows its top; gradient (Figma 19:644) `to top,
+  rgb(0 0 0 / 0.94) 24.148%, transparent 61.055%` over the 316px art. History: the owner first asked for fixed art behind per-tab rounded cards
   (2px apart); that couldn't reach under the iOS status bar (default status bar style = solid strip;
   `black-translucent` would turn the clock white on the white screens), so they chose this container
   and reverted the cards. Tab pages are plain again, `--pager-gap: var(--s2)` (6px, transparent).
 - Roster stat strips: `--strip-gap: var(--s6)` (30px, owner: "a fair bit larger" than 12px).
 - Back button (mobile): `.back-rail` (absolute, from the top to the hero's tab pills:
-  `--hero-h - --hero-foot-pad - --hero-tabs-h`) holds a sticky `.back-btn` pinned at its starting
-  13px (5px margin + inset), so it stays put over the art and the tab pills push it out (owner, v3.4);
+  `--hero-h - --hero-pad - --hero-tabs-h`) holds a sticky `.back-btn` pinned at its starting
+  24px (page margin + padding), so it stays put over the art and the tab pills push it out (owner, v3.4);
   the sticky head's own back button takes over.
 - General swipe/slider knowledge (physics, hand-over, profiling) is also in the global
   `frontend-dev` skill (`~/.claude/skills/frontend-dev/slider-physics/GUIDE.md`).
