@@ -42,20 +42,20 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   splash (600ms) and scroll stays put. The scroll reset runs on mount only.
 - `--char-head-h` (measured sticky head height on the article) lets rails inside tabs stick under the
   head: Profile › Classes' lens rail is `.class-lens-rail` (sticky, `top: var(--char-head-h)`).
-- **Fixed art + tab cards (owner, v3.4)**: the splash sits in `.char-backdrop` (sticky, `100dvh`,
-  `margin-bottom: -100dvh`, black) so it never scrolls; `.char-hero` is a transparent spacer
-  (`--hero-h` 316px, 300px ≥1024) holding the name and tabs. Each tab page is its own card
-  (`.char-panel > .pager > .pager-track > .pager-page`: surface, `--r-sheet` top corners, min-height
-  to the screen bottom; no `overflow: clip`, nothing paints into the corners) and the track has `--pager-gap: var(--s1)` (2px), so a
-  swipe slides whole cards with black between them. Splash files are crops at the hero's ratio
-  (mostly 780x632 = 390x316), so the art keeps the hero height and its gradient reaches solid black
-  exactly at the art's bottom edge (verified by pixel sampling). The bottom-nav clearance is inside
-  the cards on the mobile layer (not padding after the article), or the sticky art would be pushed up
-  at max scroll. TabPager's transform includes `var(--pager-gap, 0px)`.
+- **Hero = inset art container (Figma 19:642, owner v3.4)**: `.char-hero` is 380x233 (`--hero-h`),
+  5px in from the screen edges (`margin: 5px 5px 0`, page content starts right under it), `--r-lg`
+  radius, `overflow: clip`; `.char-art` renders the splash at the full screen width (390x316, the files
+  are crops at that ratio) so the container shows its top 233px; gradient (Figma 19:644) `to top,
+  rgb(0 0 0 / 0.94) 24.148%, transparent 61.055%` over the 316px art. Back button, name and pills sit
+  `--hero-inset` (8px) in. History: the owner first asked for fixed art behind per-tab rounded cards
+  (2px apart); that couldn't reach under the iOS status bar (default status bar style = solid strip;
+  `black-translucent` would turn the clock white on the white screens), so they chose this container
+  and reverted the cards. Tab pages are plain again, `--pager-gap: var(--s2)` (6px, transparent).
 - Roster stat strips: `--strip-gap: var(--s6)` (30px, owner: "a fair bit larger" than 12px).
 - Back button (mobile): `.back-rail` (absolute, from the top to the hero's tab pills:
-  `--hero-h - --hero-foot-pad - --hero-tabs-h`) holds a sticky `.back-btn`, so it stays pinned over
-  the art and the tab pills push it out (owner, v3.4); the sticky head's own back button takes over.
+  `--hero-h - --hero-foot-pad - --hero-tabs-h`) holds a sticky `.back-btn` pinned at its starting
+  13px (5px margin + inset), so it stays put over the art and the tab pills push it out (owner, v3.4);
+  the sticky head's own back button takes over.
 - General swipe/slider knowledge (physics, hand-over, profiling) is also in the global
   `frontend-dev` skill (`~/.claude/skills/frontend-dev/slider-physics/GUIDE.md`).
 - Opening animation: `.character-layer` slides in from 100% over 460ms, no fade (owner).

@@ -1122,39 +1122,35 @@
 
 /* ---------- character ---------- */
 
-/* The splash art stays put and each tab is its own card scrolling over it (owner, v3.4). The art
-   files are crops at the hero's own ratio (most 780x632 = 390x316), so the art keeps the hero's
-   height and the gradient reaches solid black at its bottom edge; black fills the rest of the
-   screen behind the cards (and shows in the gap between them mid-swipe). */
+/* Figma 19:642: the splash art in its own inset, rounded container above the page (owner, v3.4 -
+   it replaced fixed art behind tab cards, which couldn't reach under the iOS status bar). The art
+   renders at the full screen width (390x316 - the files are crops at that ratio) and the container
+   shows its top --hero-h, 5px in from the screen edges. */
 .screen.character {
-  --hero-h: 316px;
-  /* How far the tab cards ride up over the art. */
-  --card-overlap: 42px;
-  /* Hero foot: space under the tab pills (the card overlap + a gap), and the pills' height. */
-  --hero-foot-pad: calc(var(--card-overlap) + 14px);
+  --hero-h: 233px;
+  --hero-inset: 8px;
+  /* Space under the tab pills, and their height: the back button's rail ends at the pills. */
+  --hero-foot-pad: 11px;
   --hero-tabs-h: 32px;
-}
-
-.char-backdrop {
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  /* Takes no space: the hero and the cards scroll over it. */
-  margin-bottom: -100dvh;
-  overflow: hidden;
-  background: rgb(0 0 0);
-}
-
-.char-art {
-  position: relative;
-  height: var(--hero-h);
-  overflow: hidden;
 }
 
 .char-hero {
   position: relative;
   height: var(--hero-h);
+  /* Figma: 5px in from the screen edges; the page content starts right under it. */
+  margin: 5px 5px 0;
+  overflow: clip;
+  border-radius: var(--r-lg);
+  background: var(--scrim);
   color: var(--on-dark);
+}
+
+.char-art {
+  position: absolute;
+  top: 0;
+  left: -5px;
+  right: -5px;
+  height: 316px;
 }
 
 .splash {
@@ -1172,8 +1168,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  /* Solid exactly where the art ends, so it runs into the black below without an edge. */
-  background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.1) 40%, rgb(0 0 0 / 0.6) 68%, rgb(0 0 0 / 0.86) 86%, rgb(0 0 0));
+  /* Figma 19:644, over the full 316px art (the container shows its top 233px). */
+  background: linear-gradient(to top, rgb(0 0 0 / 0.94) 24.148%, transparent 61.055%);
 }
 
 .splash[data-fading] {
@@ -1209,8 +1205,9 @@
 
 .back-btn {
   position: sticky;
-  top: calc(10px + env(safe-area-inset-top));
-  margin: calc(10px + env(safe-area-inset-top)) 0 0 10px;
+  /* Pinned where it starts (the hero's 5px margin + the inset), so it doesn't nudge on scroll. */
+  top: calc(5px + var(--hero-inset) + env(safe-area-inset-top));
+  margin: var(--hero-inset) 0 0 var(--hero-inset);
   pointer-events: auto;
   display: grid;
   place-items: center;
@@ -1228,7 +1225,7 @@
   z-index: 1;
   display: grid;
   gap: 10px;
-  padding: 0 var(--s3) var(--hero-foot-pad);
+  padding: 0 var(--hero-inset) var(--hero-foot-pad);
 }
 
 .char-name-row {
@@ -1266,33 +1263,13 @@
 }
 
 .char-panel {
-  position: relative;
-  z-index: 1;
-  margin-top: calc(-1 * var(--card-overlap));
-}
-
-/* Tabs are cards: each page carries its own rounded top, so a swipe slides whole cards, --s1 apart.
-   At least as tall as the screen below the hero, so a short tab never shows the black behind it. */
-.char-panel > .pager > .pager-track {
-  --pager-gap: var(--s1);
-  gap: var(--pager-gap);
-}
-
-.char-panel > .pager > .pager-track > .pager-page {
-  min-height: calc(100dvh - var(--hero-h) + var(--card-overlap));
   padding-bottom: var(--s6);
-  background: var(--surface);
-  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  /* No overflow clip: nothing paints into the corners, and a clipping ancestor around the sticky
-     rails inside a moving card is the likely cause of a WebKit-only glitch (owner, iPhone: the far
-     side of a card vanished and popped back between Stats and Progression; desktop Chromium never
-     showed it). */
 }
 
-/* On the mobile layer the bottom nav's clearance lives in the cards, not under the page, so the
-   sticky art is never pushed up at the end of a scroll. */
-.character-layer > .character .char-panel > .pager > .pager-track > .pager-page {
-  padding-bottom: calc(var(--s6) + var(--nav-h) + env(safe-area-inset-bottom));
+/* Pages slide past each other --s2 apart; the gap is transparent (the page shows through). */
+.char-panel > .pager > .pager-track {
+  --pager-gap: var(--s2);
+  gap: var(--pager-gap);
 }
 
 .char-sticky {
@@ -1388,6 +1365,9 @@
 @media (min-width: 1024px) {
   .screen.character {
     --hero-h: 300px;
+  }
+  .char-art {
+    height: max(316px, var(--hero-h));
   }
 }
 
@@ -3064,6 +3044,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--surface);
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
   animation: character-slide-in 460ms cubic-bezier(0.25, 0.8, 0.25, 1) both;
 }
 
