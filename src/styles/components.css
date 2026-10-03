@@ -1122,11 +1122,33 @@
 
 /* ---------- character ---------- */
 
+/* The splash art stays put and each tab is its own card scrolling over it (owner, v3.4). The art
+   files are crops at the hero's own ratio (most 780x632 = 390x316), so the art keeps the hero's
+   height and the gradient reaches solid black at its bottom edge; black fills the rest of the
+   screen behind the cards (and shows in the gap between them mid-swipe). */
+.screen.character {
+  --hero-h: 316px;
+}
+
+.char-backdrop {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  /* Takes no space: the hero and the cards scroll over it. */
+  margin-bottom: -100dvh;
+  overflow: hidden;
+  background: rgb(0 0 0);
+}
+
+.char-art {
+  position: relative;
+  height: var(--hero-h);
+  overflow: hidden;
+}
+
 .char-hero {
   position: relative;
-  height: 316px;
-  overflow: hidden;
-  background: var(--scrim);
+  height: var(--hero-h);
   color: var(--on-dark);
 }
 
@@ -1145,7 +1167,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgb(0 0 0 / 0.78), rgb(0 0 0 / 0.1) 55%, transparent);
+  /* Solid exactly where the art ends, so it runs into the black below without an edge. */
+  background: linear-gradient(to bottom, transparent, rgb(0 0 0 / 0.1) 40%, rgb(0 0 0 / 0.6) 68%, rgb(0 0 0 / 0.86) 86%, rgb(0 0 0));
 }
 
 .splash[data-fading] {
@@ -1231,9 +1254,28 @@
   position: relative;
   z-index: 1;
   margin-top: -42px;
+}
+
+/* Tabs are cards: each page carries its own rounded top, so a swipe slides whole cards, --s1 apart.
+   At least as tall as the screen below the hero, so a short tab never shows the black behind it. */
+.char-panel > .pager > .pager-track {
+  --pager-gap: var(--s1);
+  gap: var(--pager-gap);
+}
+
+.char-panel > .pager > .pager-track > .pager-page {
+  min-height: calc(100dvh - var(--hero-h) + 42px);
   padding-bottom: var(--s6);
   background: var(--surface);
   border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  /* clip, not hidden: keeps sticky rails inside the tabs working. */
+  overflow: clip;
+}
+
+/* On the mobile layer the bottom nav's clearance lives in the cards, not under the page, so the
+   sticky art is never pushed up at the end of a scroll. */
+.character-layer > .character .char-panel > .pager > .pager-track > .pager-page {
+  padding-bottom: calc(var(--s6) + var(--nav-h) + env(safe-area-inset-bottom));
 }
 
 .char-sticky {
@@ -1327,8 +1369,8 @@
 }
 
 @media (min-width: 1024px) {
-  .char-hero {
-    height: 300px;
+  .screen.character {
+    --hero-h: 300px;
   }
 }
 
@@ -2929,11 +2971,14 @@
   overflow-x: clip;
 }
 
-/* Previous / current / next lens tables in a row, one gap apart; the middle one shows. */
+/* Previous / current / next lens tables in a row, one gap apart; the middle one shows. The gap is
+   wide (owner, v3.4) so a swiped-in table reads as the next page. Static, so the custom property
+   costs nothing (StatStrip's tap animation reads it too). */
 .stat-strip-track {
+  --strip-gap: var(--s6);
   display: flex;
-  gap: var(--s4);
-  transform: translateX(calc(-1 * (100% + var(--s4))));
+  gap: var(--strip-gap);
+  transform: translateX(calc(-1 * (100% + var(--strip-gap))));
 }
 
 /* The drag offset is an inline translate (useSwipePager), eased out by Web Animations - never a CSS
@@ -2999,7 +3044,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--surface);
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
   animation: character-slide-in 460ms cubic-bezier(0.25, 0.8, 0.25, 1) both;
 }
 

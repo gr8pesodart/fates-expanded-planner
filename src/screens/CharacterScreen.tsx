@@ -98,8 +98,13 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
           <CharacterTabs unitId={unitId} name={name} tabs={tabs} active={active} />
         </div>
       </div>
+      {/* The art stays put while the tab cards scroll over it (sticky, takes no space). */}
+      <div className="char-backdrop" aria-hidden="true">
+        <div className="char-art">
+          <SplashSwap unitId={unitId} name={name} />
+        </div>
+      </div>
       <header className="char-hero">
-        <SplashSwap unitId={unitId} name={name} />
         {embedded ? null : (
           <button type="button" className="back-btn" aria-label="Back" onClick={() => goBack()}>
             <Icon name="arrowLeft" size={24} />

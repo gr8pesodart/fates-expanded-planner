@@ -66,9 +66,9 @@ function StatStrip({ slide, current }: { slide: StatSlide; current: StatTablePro
     // A swipe is already carrying the track to this lens (useSwipePager hands its spring over).
     if (!track || !shown.dir || swipeSettling()) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    // A rail tap: the new lens's table sat one page (track width + the --s4 gap) to that side.
+    // A rail tap: the new lens's table sat one page (track width + --strip-gap) to that side.
     // In % so no row has to measure itself mid-commit.
-    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--s4)))`, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
+    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--strip-gap)))`, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
   }, [shown])
   const pages = [
     { lens: slide.index - 1, props: slide.prev },

@@ -10,7 +10,8 @@ import { SETTLE_MS } from '../lib/swipe'
  * fixed-height parent and scroll on their own (each keeps its scroll position).
  *
  * Position and height are plain properties on the track and viewport, not custom properties: those
- * inherit, so changing one restyles every node in every page.
+ * inherit, so changing one restyles every node in every page. (`--pager-gap`, a static gap between
+ * pages set in CSS, never changes.)
  */
 export function TabPager({ index, children, fill = false }: { index: number; children: ReactNode; fill?: boolean }) {
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -36,7 +37,7 @@ export function TabPager({ index, children, fill = false }: { index: number; chi
   }, [index, fill])
   return (
     <div ref={viewportRef} className={fill ? 'pager fill' : 'pager'}>
-      <div className="pager-track" style={{ transform: `translateX(${index * -100}%)` }}>{children}</div>
+      <div className="pager-track" style={{ transform: `translateX(calc(${-index} * (100% + var(--pager-gap, 0px))))` }}>{children}</div>
     </div>
   )
 }
