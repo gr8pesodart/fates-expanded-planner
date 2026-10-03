@@ -45,16 +45,21 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - **Fixed art + tab cards (owner, v3.4)**: the splash sits in `.char-backdrop` (sticky, `100dvh`,
   `margin-bottom: -100dvh`, black) so it never scrolls; `.char-hero` is a transparent spacer
   (`--hero-h` 316px, 300px ≥1024) holding the name and tabs. Each tab page is its own card
-  (`.char-panel > .pager > .pager-track > .pager-page`: surface, `--r-sheet` top corners, `overflow:
-  clip`, min-height to the screen bottom) and the track has `--pager-gap: var(--s1)` (2px), so a
+  (`.char-panel > .pager > .pager-track > .pager-page`: surface, `--r-sheet` top corners, min-height
+  to the screen bottom; **no `overflow: clip`** - the owner saw a card's far side vanish and pop back
+  mid swipe on iPhone (Stats <-> Progression, never reproduced in Chromium across ~1000 traced
+  frames); a clip around the sticky rails inside a moving card is the suspected WebKit cause) and the track has `--pager-gap: var(--s1)` (2px), so a
   swipe slides whole cards with black between them. Splash files are crops at the hero's ratio
   (mostly 780x632 = 390x316), so the art keeps the hero height and its gradient reaches solid black
   exactly at the art's bottom edge (verified by pixel sampling). The bottom-nav clearance is inside
   the cards on the mobile layer (not padding after the article), or the sticky art would be pushed up
   at max scroll. TabPager's transform includes `var(--pager-gap, 0px)`.
 - Roster stat strips: `--strip-gap: var(--s6)` (30px, owner: "a fair bit larger" than 12px).
+- Back button (mobile): `.back-rail` (absolute, the visible art = `--hero-h - --card-overlap`)
+  holds a sticky `.back-btn`, so it stays pinned over the art and the cards' top edge pushes it out;
+  the sticky head's own back button takes over just after (owner, v3.4).
 - General swipe/slider knowledge (physics, hand-over, profiling) is also in the global
-  `slider-physics` skill (`~/.claude/skills/slider-physics`).
+  `frontend-dev` skill (`~/.claude/skills/frontend-dev/slider-physics/GUIDE.md`).
 - Opening animation: `.character-layer` slides in from 100% over 460ms, no fade (owner).
 - Profile class cards: the favourite star sits *beside* the card button in `.class-card-wrap`
   (a button can't contain a button), absolutely over the head row.

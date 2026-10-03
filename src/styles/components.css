@@ -1128,6 +1128,8 @@
    screen behind the cards (and shows in the gap between them mid-swipe). */
 .screen.character {
   --hero-h: 316px;
+  /* How far the tab cards ride up over the art. */
+  --card-overlap: 42px;
 }
 
 .char-backdrop {
@@ -1192,11 +1194,21 @@
   background-color: transparent;
 }
 
-.back-btn {
+/* The back button stays pinned while the art is in view; the cards' top edge pushes it out, and the
+   sticky head (with its own back button) takes over (owner, v3.4). The rail is the visible art. */
+.back-rail {
   position: absolute;
-  top: calc(10px + env(safe-area-inset-top));
-  left: 10px;
+  inset: 0 0 auto;
   z-index: 2;
+  height: calc(var(--hero-h) - var(--card-overlap));
+  pointer-events: none;
+}
+
+.back-btn {
+  position: sticky;
+  top: calc(10px + env(safe-area-inset-top));
+  margin: calc(10px + env(safe-area-inset-top)) 0 0 10px;
+  pointer-events: auto;
   display: grid;
   place-items: center;
   width: 40px;
@@ -1253,7 +1265,7 @@
 .char-panel {
   position: relative;
   z-index: 1;
-  margin-top: -42px;
+  margin-top: calc(-1 * var(--card-overlap));
 }
 
 /* Tabs are cards: each page carries its own rounded top, so a swipe slides whole cards, --s1 apart.
@@ -1264,12 +1276,14 @@
 }
 
 .char-panel > .pager > .pager-track > .pager-page {
-  min-height: calc(100dvh - var(--hero-h) + 42px);
+  min-height: calc(100dvh - var(--hero-h) + var(--card-overlap));
   padding-bottom: var(--s6);
   background: var(--surface);
   border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  /* clip, not hidden: keeps sticky rails inside the tabs working. */
-  overflow: clip;
+  /* No overflow clip: nothing paints into the corners, and a clipping ancestor around the sticky
+     rails inside a moving card is the likely cause of a WebKit-only glitch (owner, iPhone: the far
+     side of a card vanished and popped back between Stats and Progression; desktop Chromium never
+     showed it). */
 }
 
 /* On the mobile layer the bottom nav's clearance lives in the cards, not under the page, so the

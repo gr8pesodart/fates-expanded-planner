@@ -106,9 +106,11 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
       </div>
       <header className="char-hero">
         {embedded ? null : (
-          <button type="button" className="back-btn" aria-label="Back" onClick={() => goBack()}>
-            <Icon name="arrowLeft" size={24} />
-          </button>
+          <div className="back-rail">
+            <button type="button" className="back-btn" aria-label="Back" onClick={() => goBack()}>
+              <Icon name="arrowLeft" size={24} />
+            </button>
+          </div>
         )}
         <div className="char-hero-foot">
           <div className="char-name-row">
