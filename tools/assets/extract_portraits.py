@@ -14,8 +14,8 @@ Two artworks per unit (docs/ASSETS.md "Portrait artwork (v3.4)"):
   512x512 ``_ct`` texture) with its matching ``_ct`` hair layer tinted the same
   way. Used as the character page hero.
 
-Tinting uses the same reference-grey multiply as the map sprites
-(``extract_sprites.py › tint_ramp``): ``out = grey * colour / 0xBB`` per channel.
+Tinting is an overlay blend of the grey hair layer with the colour (``tint_overlay``, measured
+against the game's own hair sheets); the map sprites keep their reference-grey multiply.
 Units with a hair layer also get a same-canvas hair-only WebP; the app tints it at
 run time for Corrin / children whose colour follows the run.
 
@@ -58,14 +58,31 @@ BUST_BOX = 248
 BUST_TOP_OFFSET = 28
 CUTIN_HEIGHT = 256
 
-# The hair grey whose tint shows the FaceData colour exactly (extract_sprites.py › HAIR_REFERENCE_GREY).
-HAIR_REFERENCE_GREY = 0xBB
 WEBP_QUALITY = 85
 
-# The avatar's fid is player-configured; FaceData ships default ST records per gender.
+# Every hair layer registers to its base at (0, 0) (SIFT, < 1 px) except Nina's cut-in: its base was
+# painted without the braid and with older hair, and no translation or affine maps the layer onto
+# it. (-14, 6) was picked by eye from a grid of shifts (2026-10-04): the fringe tucks under the coin
+# band and covers the old fringe, and the ear stays clear. A pixel-coverage score preferred (-11, -1),
+# which leaves a strip of untinted base hair under the band.
+HAIR_OFFSETS = {
+    "エポニーヌ_ct": (-14, 6),
+}
+
+# Hair-layer pieces drawn *behind* the base, as a seed pixel inside each piece (layer coordinates,
+# after HAIR_OFFSETS). Every other layer goes over its base, which carries a placeholder (or a hole)
+# where the hair goes. Nina's braid strand would otherwise run over her side coins and ear; behind
+# the head it hangs as in her talk portrait (checked against every cut-in and talk portrait: no
+# other layer covers non-hair base art).
+BACK_HAIR_SEEDS = {
+    "エポニーヌ_ct": [(86, 206)],
+}
+
+# The avatar's fid is player-configured; FaceData ships default ST records per gender and build.
+# Female Corrin uses body build 2 (owner, 2026-10-04); extract_sprites.py › AVATAR_HEAD_FOLDER matches.
 AVATAR_FALLBACK_FSID = {
     "male": "FSID_ST_マイユニ_男1_顔A",
-    "female": "FSID_ST_マイユニ_女1_顔A",
+    "female": "FSID_ST_マイユニ_女2_顔A",
 }
 
 FACE_CHIP = 64
@@ -179,28 +196,60 @@ def to_image(texture) -> Image.Image:
     return Image.frombytes("RGBA", (texture.width, texture.height), texture.rgba)
 
 
-def tint_ramp(image: Image.Image, color: bytes) -> Image.Image:
-    """Recolourable-hair tint: out = min(255, grey * colour / 0xBB) per channel.
+def tint_overlay(image: Image.Image, color: bytes) -> Image.Image:
+    """Recolourable-hair tint for talk portraits and cut-ins: an overlay blend with the grey hair
+    layer as the base - ``2*g*c`` below mid-grey, ``1 - 2*(1-g)*(1-c)`` above (0..1 values).
 
-    Mirrors tools/assets/extract_sprites.py › tint_ramp and src/components/art.tsx › tintTables.
+    Measured (2026-10-03) against the Fire Emblem Wiki's in-game child hair sheets (SereneSeas, 19
+    children x Corrin's 30 colours, 1.2M hair pixels registered to these textures): overlay MAE 9.7,
+    the sheets' own offset on untinted pixels (~+9); ``grey*colour/0xBB`` (the map sprites' formula)
+    33.2, multiply x2 10.1, soft light 15.1. Keeps the layer's alpha (4-bit edges stay soft). Mirrored
+    in src/components/art.tsx > tintTables('overlay').
     """
     lut = []
     for channel in range(3):
-        base = color[channel]
-        lut.extend(min(255, (value * base) // HAIR_REFERENCE_GREY) for value in range(256))
+        c = color[channel]
+        for g in range(256):
+            value = (2 * g * c) // 255 if g < 128 else 255 - (2 * (255 - g) * (255 - c)) // 255
+            lut.append(max(0, min(255, value)))
     rgb = image.convert("RGB").point(lut)
     result = rgb.convert("RGBA")
     result.putalpha(image.getchannel("A"))
     return result
 
 
-def composite_hair(base: Image.Image, hair: Image.Image | None, colour: bytes | None) -> Image.Image:
-    """Base with the recolourable hair layer tinted ``colour`` drawn over it."""
-    if hair is None or colour is None:
+def composite_hair(base: Image.Image, hair: Image.Image | None, colour: bytes | None, back: Image.Image | None = None) -> Image.Image:
+    """Base with the recolourable hair layer tinted ``colour`` drawn over it (``back`` behind it)."""
+    if colour is None or (hair is None and back is None):
         return base
-    result = base.copy()
-    result.alpha_composite(tint_ramp(hair, colour))
+    result = tint_overlay(back, colour) if back is not None else Image.new("RGBA", base.size)
+    result.alpha_composite(base)
+    if hair is not None:
+        result.alpha_composite(tint_overlay(hair, colour))
     return result
+
+
+def split_back_hair(hair: Image.Image, seeds: list[tuple[int, int]], label: str) -> tuple[Image.Image, Image.Image]:
+    """(front, back): the 8-connected pieces of ``hair`` containing ``seeds`` move to ``back``."""
+    width, height = hair.size
+    alpha = hair.getchannel("A").load()
+    inside = bytearray(width * height)
+    for seed in seeds:
+        x, y = seed
+        if not alpha[x, y]:
+            fail(f"{label}: back-hair seed {seed} is not on the hair layer")
+        stack = [(x, y)]
+        while stack:
+            px, py = stack.pop()
+            if not (0 <= px < width and 0 <= py < height) or inside[py * width + px] or not alpha[px, py]:
+                continue
+            inside[py * width + px] = 1
+            stack.extend((px + dx, py + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1) if dx or dy)
+    mask = Image.frombytes("L", (width, height), bytes(inside)).point(lambda v: 255 if v else 0)
+    transparent = Image.new("RGBA", hair.size)
+    back = Image.composite(hair, transparent, mask)
+    front = Image.composite(transparent, hair, mask)
+    return front, back
 
 
 # ----------------------------- crop boxes -----------------------------------
@@ -260,11 +309,12 @@ def build_unit_art(romfs: str, info: dict, lz13):
 
 
 def build_cutin(romfs: str, portrait_name: str, lz13):
-    """Phase 2 (bottom half) of the unit's cut-in texture and its hair layer."""
+    """Phase 2 (bottom half) of the unit's cut-in texture and its hair layer, split into the pieces
+    drawn over and behind the base (``BACK_HAIR_SEEDS``)."""
     ct_name = portrait_name[:-2] + "ct" if portrait_name.endswith("_st") else f"{portrait_name}_ct"
     texture = arc_bch_texture(romfs, ct_name, None, lz13)
     if texture is None or texture.height < CUTIN_HEIGHT * 2:
-        return None, None
+        return None, None, None
     base = to_image(texture).crop((0, CUTIN_HEIGHT, texture.width, CUTIN_HEIGHT * 2))
 
     hair_tex = hair_texture(romfs, ct_name, lz13)
@@ -275,7 +325,14 @@ def build_cutin(romfs: str, portrait_name: str, lz13):
     hair = to_image(hair_tex) if hair_tex is not None else None
     if hair is not None and (hair.width != base.width or hair.height != base.height):
         hair = None
-    return base, hair
+    if hair is not None and ct_name in HAIR_OFFSETS:
+        shifted = Image.new("RGBA", hair.size)
+        shifted.paste(hair, HAIR_OFFSETS[ct_name])
+        hair = shifted
+    back = None
+    if hair is not None and ct_name in BACK_HAIR_SEEDS:
+        hair, back = split_back_hair(hair, BACK_HAIR_SEEDS[ct_name], ct_name)
+    return base, hair, back
 
 
 # ------------------------------ contact sheet --------------------------------
@@ -341,9 +398,9 @@ def write_contact_sheet(rows: list[dict], out_dir: str, path: str) -> None:
     draw.text((SHEET_PAD, y), f"Cut-in phase 2 ({CUTIN_CARD}px wide)", font=title_font, fill="#1b1b1b")
     y += 56
     for index, row in enumerate(rows):
-        if "ct" not in row["entry"]:
+        cutin = row.get("cutin")
+        if cutin is None:
             continue
-        cutin = load(row["entry"]["ct"]["file"])
         scale = CUTIN_CARD / cutin.width
         place(cutin.resize((CUTIN_CARD, int(cutin.height * scale)), Image.LANCZOS), index, y, CUTIN_CARD)
 
@@ -412,8 +469,10 @@ def main() -> None:
             entry["hair"] = {"file": hair_name, "w": hair_canvas.width, "h": hair_canvas.height}
             hair_units += 1
 
-        ct_base, ct_hair = build_cutin(args.romfs, info["portrait"], lz13)
+        ct_base, ct_hair, ct_back = build_cutin(args.romfs, info["portrait"], lz13)
+        cutin_preview = None
         if ct_base is not None:
+            # Back pieces are left out of the base file: the app always draws them tinted behind it.
             ct_tinted = composite_hair(ct_base, ct_hair, colour)
             ct_name_file = f"assets/portraits/{key}-ct.webp"
             ct_tinted.save(os.path.join(args.out, f"{key}-ct.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
@@ -423,10 +482,15 @@ def main() -> None:
                 ct_hair.save(os.path.join(args.out, f"{key}-ct-hair.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
                 ct_entry["hair"] = {"file": ct_hair_file, "w": ct_base.width, "h": ct_base.height}
                 ct_hair_units += 1
+            if ct_back is not None:
+                ct_back_file = f"assets/portraits/{key}-ct-hair-back.webp"
+                ct_back.save(os.path.join(args.out, f"{key}-ct-hair-back.webp"), "WEBP", quality=WEBP_QUALITY, method=6)
+                ct_entry["hairBack"] = {"file": ct_back_file, "w": ct_base.width, "h": ct_base.height}
             entry["ct"] = ct_entry
+            cutin_preview = composite_hair(ct_base, ct_hair, colour, ct_back)
 
         entries[unit["id"]] = entry
-        rows.append({"name": unit["name"], "entry": entry})
+        rows.append({"name": unit["name"], "entry": entry, "cutin": cutin_preview})
 
     manifest = {
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

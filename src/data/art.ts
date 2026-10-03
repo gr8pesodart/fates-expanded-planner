@@ -29,6 +29,8 @@ export interface CutinEntry {
   w: number
   h: number
   hair?: PortraitHair
+  /** Hair pieces drawn behind the base (Nina's braid); not baked into `file`, so always tinted. */
+  hairBack?: PortraitHair
 }
 
 export interface SpriteImage {
@@ -122,6 +124,7 @@ export interface CutinArt {
   w: number
   h: number
   hair: PortraitHair | null
+  hairBack: PortraitHair | null
 }
 
 /** The unit's critical / skill cut-in (phase 2), the character page hero. */
@@ -134,6 +137,7 @@ export function cutinArt(unitId: string): CutinArt | null {
     w: entry.w,
     h: entry.h,
     hair: hairArt(entry.hair, PORTRAITS?.generatedAt),
+    hairBack: hairArt(entry.hairBack, PORTRAITS?.generatedAt),
   }
 }
 

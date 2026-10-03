@@ -54,7 +54,7 @@ FRAME_FALLBACK_TEAMS = ("青0.bch.lz", "緑0.bch.lz", "赤0.bch.lz", "紫0.bch.l
 # The avatar's fid is player-configured; FaceData ships a default face per gender.
 AVATAR_FALLBACK_FSID = {
     "male": "FSID_BU_マイユニ_男1_顔A",
-    "female": "FSID_BU_マイユニ_女1_顔A",
+    "female": "FSID_BU_マイユニ_女2_顔A",  # body build 2 (owner, 2026-10-04), as extract_portraits.py
 }
 
 

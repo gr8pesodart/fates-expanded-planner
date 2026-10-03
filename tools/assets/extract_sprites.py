@@ -77,9 +77,11 @@ FRAME_STRUCT = "<bbbbhhbbbbhhii"
 
 HEAD_FILE = "青0.bch.lz"
 
+# Female Corrin uses body build 2 (owner, 2026-10-04: "Female Build 2" in Serenes Forest's Kamui
+# customizer); extract_portraits.py › AVATAR_FALLBACK_FSID matches.
 AVATAR_HEAD_FOLDER = {
     "male": "プレイヤー男1_01",
-    "female": "プレイヤー女1_01",
+    "female": "プレイヤー女2_01",
 }
 
 CONTACT_SHEET = [

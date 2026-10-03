@@ -1172,17 +1172,15 @@
   object-fit: cover;
 }
 
-/* Cut-in phase 2 fits the hero width (2:1), head up; the hair overlay shares the exact frame.
-   Mirrored: the game draws cut-ins facing right, the owner wants characters looking left. */
+/* Cut-in phase 2 fits the hero width (2:1), head up; the hair layers share the exact frame and
+   stack in DOM order (back hair, base, front hair). Mirrored: the game draws cut-ins facing right,
+   the owner wants characters looking left. */
 .splash.cutin img {
+  position: absolute;
+  inset: 0;
   object-fit: contain;
   object-position: top center;
   transform: scaleX(-1);
-}
-
-.splash.cutin img.cutin-hair {
-  position: absolute;
-  inset: 0;
 }
 
 .splash::after {

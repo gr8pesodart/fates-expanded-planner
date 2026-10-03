@@ -24,7 +24,7 @@ the sheet's native resolution ×4; skill icons ship at their native 24×24.
 Missing class sprites (no sprite folder exists in the dump): `None`, `Silent Dragon` (×2) and
 `Outrealm Class` — all non-recruitable/enemy-only classes. Corrin (M/F) has no fid in the
 character table because the avatar's face is player-configured; the pipeline falls back to the
-default avatar face from FaceData (`FSID_BU_マイユニ_男1_顔A` / `_女1_顔A`).
+default avatar face from FaceData (`FSID_BU_マイユニ_男1_顔A` / `_女2_顔A`, female body build 2).
 
 ## Decoders — `tools/assets/fe_assets.py`
 
@@ -105,7 +105,10 @@ merged the same way as the `_bu` faces: only units whose FaceData record carries
 (Corrin and the second-gen children, whose hair is recoloured by the variable parent) composite
 `face/hair/<hair>/髪0.bch.lz` tinted with the FaceData hair colour; everyone else has their hair
 baked into the body texture. Corrin M/F have no `fid` and fall back to the default avatar records
-`FSID_ST_マイユニ_男1_顔A` / `FSID_ST_マイユニ_女1_顔A`.
+`FSID_ST_マイユニ_男1_顔A` / `FSID_ST_マイユニ_女2_顔A` - female Corrin uses body build 2 (owner,
+2026-10-04; "Female Build 2" in Serenes Forest's Kamui customizer). The map sprites follow
+(`extract_sprites.py › AVATAR_HEAD_FOLDER` = `プレイヤー女2_01`), though the dump's build 1 and build 2
+map heads are byte-identical.
 
 | Set | Source in the dump | Files | Coverage |
 |---|---|---|---|
@@ -172,12 +175,28 @@ Started by the DeepSeek lane, finished on `opus`.
 - **Hair:** units with a recolourable layer (Corrin M/F + 21 children) ship the base without
   hair plus a same-canvas `<slot>-hair.webp` (and `<slot>-ct-hair.webp` for the cut-in); the app
   tints them at run time (`art.tsx › useTintedImage`) with `logic/hair.ts › hairColourOf`.
-- **Tint model:** `out = grey * colour / 0xBB` per channel, the map sprites' formula
-  (`extract_sprites.py › tint_ramp`, `art.tsx › tintTables`). Calibrating against the owner's Nina /
-  Soleil colour sheets numerically failed (the sheet art couldn't be registered to the game
-  textures - body pixels differed by ~63 even when aligned), so the choice rests on the sprite
-  formula's earlier validation and visual comparison (closer than overlay, which washed hair out).
-  Paragon has no tint code to copy (its portrait service pastes the raw hair texture).
+- **Tint model (2026-10-03/04):** an **overlay** blend with the grey layer as the base, alpha kept
+  (`extract_portraits.py › tint_overlay`, `logic/hair.ts › tintChannel('overlay')`). Measured
+  against the Fire Emblem Wiki's in-game child hair sheets (SereneSeas, 19 children × Corrin's 30
+  swatches, 1.2M hair pixels registered to these textures): overlay MAE 9.7, ×2 multiply 10.1, soft
+  light 15.1, the map sprites' `grey·colour/0xBB` 33.2. End to end (app screenshots registered to the
+  sheet cells, Nina × 6 swatches): hair 9-11 darker than the sheet in every channel and every
+  colour, while the untinted skin/clothes of the same cells are 18-22 darker - the sheets are
+  brighter overall, the tint itself has no colour-dependent error. Serenes Forest's Kamui customizer
+  uses the same overlay formula; our Corrin (F) hair matches its render within MAE 4-9 (screenshot
+  resampling). Its 30 swatches are ~3 darker than the ROM table (`MyUnitEdit.bin`); swapping them in
+  moves the match by < 1.3, so the ROM table stays.
+- **Soft edges:** portrait hair layers have 4-bit alpha and their edge pixels are the dark ink
+  outline. The run-time tint keeps that alpha; forcing edge pixels opaque (as the sprite tint does
+  for binary-alpha pixel art) drew a hard black ring round recoloured hair (fixed 2026-10-04).
+- **Alignment and layering:** every hair layer registers to its base at (0, 0) (SIFT, < 1 px) and
+  goes over it - the base has a placeholder (Soleil, Kiragi, Rhajat, Kana F) or a hole (Percy,
+  Ophelia) where the hair goes - except **Nina's cut-in**: its base was painted without the braid and
+  with older hair, and no translation or affine maps the layer onto it. `HAIR_OFFSETS` shifts the
+  layer (-14, 6) (picked by eye; the fringe tucks under the coin band) and `BACK_HAIR_SEEDS` moves
+  the braid piece behind the base, as in her talk portrait. Back pieces ship as
+  `<slot>-ct-hair-back.webp` (`ct.hairBack`), are left out of the base file and are always tinted
+  at run time (default colour included); `CutinArt` stacks back hair, base, front hair.
 - **Cut-ins:** `face/face/<name>_ct.arc` is 512x512 with two phases stacked; phase 2 = the bottom
   512x256 (`<slot>-ct.webp`). The game draws them facing right; the hero mirrors them in CSS
   (`.splash.cutin img { transform: scaleX(-1) }`) so characters look left. 4-bit alpha (16 levels)
@@ -320,8 +339,9 @@ modulate (light colours — Camilla, Jakob, Soleil, Corrin's white — clipped t
 32px on white cards read as missing heads; owner report 2026-10-01). The game's combiner itself is
 unverified. Colour source: Corrin's chosen swatch, or a child's variable
 parent's colour (Fire Emblem Wiki › Inheritance: mothers pass hair colour, male Kana his father's —
-always the variable parent in planner terms; Shigure's hair is fixed). Portraits are not recoloured
-yet.
+always the variable parent in planner terms; Shigure's hair is fixed). Portraits and cut-ins are
+recoloured too, with the overlay blend (Portrait artwork (v3.4) › Tint model). No in-game map sprite
+reference has been checked yet, so the sprite ramp remains calibrated on first-gen hand-drawn hair.
 
 Corrin's 30 swatches come from the ROM: `GameData/MyUnitEdit.bin.lz`, the BinArchive table
 labelled `カラーテーブル` (descriptor: u32 label ptr, u16 count 30, u16 entry size 4, u32 data ptr;

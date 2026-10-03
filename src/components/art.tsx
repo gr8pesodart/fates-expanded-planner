@@ -4,7 +4,8 @@ import { PlannerContext } from '../app/plannerContext'
 import { ASSETS_ENABLED, cutinArt, defaultHairColour, portraitArt, spriteLayers } from '../data/art'
 import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
-import { hairColourOf } from '../logic/hair'
+import { hairColourOf, hairTintTables } from '../logic/hair'
+import type { HairTintMode } from '../logic/hair'
 import { motionPaused, onMotionChange } from '../lib/motion'
 
 function monogram(label: string): string {
@@ -50,14 +51,19 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
   )
 }
 
-/** Character page hero: the unit's critical / skill cut-in (phase 2), hair tinted per run. */
+/**
+ * Character page hero: the unit's critical / skill cut-in (phase 2), hair tinted per run. Back hair
+ * isn't baked into the base, so it is tinted even in the default colour.
+ */
 export function CutinArt({ unitId }: { unitId: string }) {
   const art = cutinArt(unitId)
   const hairColour = useHairColour(unitId)
   const tintedHairUrl = useTintedImage(art?.hair?.file ?? null, hairColour)
+  const tintedBackUrl = useTintedImage(art?.hairBack?.file ?? null, art?.hairBack ? hairColour ?? defaultHairColour(unitId) : null)
   if (!art) return null
   return (
     <>
+      {tintedBackUrl ? <img className="cutin-hair" src={tintedBackUrl} width={art.w} height={art.h} alt="" /> : null}
       <img className="cutin-base" src={art.src} width={art.w} height={art.h} alt="" loading="eager" decoding="async" fetchPriority="high" />
       {tintedHairUrl ? <img className="cutin-hair" src={tintedHairUrl} width={art.w} height={art.h} alt="" /> : null}
     </>
@@ -210,21 +216,7 @@ function useImagesReady(urls: readonly string[]): boolean {
   return ready
 }
 
-// The hair mask's main lit grey shows exactly the colour; darker greys shade it (as
-// tools/assets/extract_sprites.py › tint_ramp, so runtime tints match the extracted defaults).
-// Overlay washed hair out and a ×2 modulate clipped light colours to pure white.
-const HAIR_REFERENCE_GREY = 0xbb
-
-function tintTables(hex: string): Uint8Array[] {
-  return [1, 3, 5].map((offset) => {
-    const colour = parseInt(hex.slice(offset, offset + 2), 16)
-    const table = new Uint8Array(256)
-    for (let value = 0; value < 256; value += 1) table[value] = Math.min(255, Math.floor((value * colour) / HAIR_REFERENCE_GREY))
-    return table
-  })
-}
-
-/** `${hair strip}|${colour}` → tinted hair-only strip URL, or null when tinting failed (default shows). */
+/** `${hair strip}|${colour}|${mode}` → tinted hair-only URL, or null when tinting failed (default shows). */
 const tintedHair = new Map<string, string | null>()
 const tinting = new Map<string, Promise<void>>()
 
@@ -247,8 +239,8 @@ const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() 
  * the extracted head, so a failed or blank tint can only leave the default hair colour showing —
  * never remove the head.
  */
-function tintHair(hair: string, colour: string): Promise<void> {
-  const key = `${hair}|${colour}`
+function tintHair(hair: string, colour: string, mode: HairTintMode): Promise<void> {
+  const key = `${hair}|${colour}|${mode}`
   const existing = tinting.get(key)
   if (existing) return existing
   const draw = async (attempt: number): Promise<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; pixels: ImageData }> => {
@@ -269,14 +261,16 @@ function tintHair(hair: string, colour: string): Promise<void> {
     return { canvas, context, pixels }
   }
   const job = draw(0).then(({ canvas, context, pixels }) => {
-    const tables = tintTables(colour)
+    const tables = hairTintTables(colour, mode)
     const data = pixels.data
     for (let i = 0; i < data.length; i += 4) {
       if (!data[i + 3]) continue
       data[i] = tables[0][data[i]]
       data[i + 1] = tables[1][data[i + 1]]
       data[i + 2] = tables[2][data[i + 2]]
-      data[i + 3] = 255
+      // Sprite strips are pixel art (binary alpha). Portrait layers keep their soft 4-bit edges: those
+      // pixels are the dark ink outline, and forcing them opaque drew a hard black ring round the hair.
+      if (mode === 'sprite') data[i + 3] = 255
     }
     context.putImageData(pixels, 0, 0)
     return new Promise<void>((resolve) => canvas.toBlob((blob) => {
@@ -291,13 +285,13 @@ function tintHair(hair: string, colour: string): Promise<void> {
 /** A same-layout overlay of `image`'s hair tinted `colour`; `pending` until it exists. */
 function useTintedHair(image: SpriteImage | null, colour: string | null): { overlay: SpriteImage | null; pending: boolean } {
   const hair = image?.hair
-  const key = hair && colour ? `${hair}|${colour}` : null
+  const key = hair && colour ? `${hair}|${colour}|sprite` : null
   const done = key !== null && tintedHair.has(key)
   const [, rerender] = useState(0)
   useEffect(() => {
     if (!key || done || !hair || !colour) return
     let cancelled = false
-    void tintHair(hair, colour).then(() => {
+    void tintHair(hair, colour, 'sprite').then(() => {
       if (!cancelled) rerender((count) => count + 1)
     })
     return () => { cancelled = true }
@@ -308,13 +302,13 @@ function useTintedHair(image: SpriteImage | null, colour: string | null): { over
 
 /** A whole-image version of the hair tint (talk portraits, cut-ins): the tinted URL, or null. */
 function useTintedImage(src: string | null, colour: string | null): string | null {
-  const key = src && colour ? `${src}|${colour}` : null
+  const key = src && colour ? `${src}|${colour}|overlay` : null
   const done = key !== null && tintedHair.has(key)
   const [, rerender] = useState(0)
   useEffect(() => {
     if (!key || done || !src || !colour) return
     let cancelled = false
-    void tintHair(src, colour).then(() => {
+    void tintHair(src, colour, 'overlay').then(() => {
       if (!cancelled) rerender((count) => count + 1)
     })
     return () => { cancelled = true }

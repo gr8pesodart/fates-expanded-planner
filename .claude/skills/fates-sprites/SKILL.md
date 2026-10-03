@@ -61,7 +61,9 @@ clips address `青1`.
 
 ## Heads: two variants, no rescaling
 
-- Unit → folder: `FID_リョウマ` → `リョウマ`; Corrin → `プレイヤー男1_01` / `プレイヤー女1_01`.
+- Unit → folder: `FID_リョウマ` → `リョウマ`; Corrin → `プレイヤー男1_01` / `プレイヤー女2_01` (female
+  Corrin uses body build 2, owner 2026-10-04; build 1 and 2 map heads are byte-identical, the build
+  only changes portraits: `FSID_ST_マイユニ_女2_顔A`).
 - Large cell = rotated `(0,0,32,32)`; small = rotated `(0,32,16,48)`. The small head is separately
   drawn art (Ryoma: 13×17 vs 11×15 px) — **never scale one variant into the other**; the body says
   which it needs via `head.variant: "small"`.
@@ -94,7 +96,18 @@ runtime maths identical to `extract_sprites.tint_ramp` (`min(255, grey·c // 0xB
 repeat: overlay washed hair out (greys ≥ 0x80 → white); ×2 modulate clipped light colours to pure white
 (owner saw "heads missing" on iPhone). 0xBB is calibrated on hand-drawn first-gen sprite hair, which
 sits at ~0.5–1.1× its FaceData colour's lightness.
-Portraits still use overlay. The Parents tab draws the child with each candidate's colour (`hair` prop).
+Portraits and cut-ins use **overlay** (`logic/hair.ts › tintChannel('overlay')`, mirrored by
+`extract_portraits.py › tint_overlay`), verified 2026-10-04 against in-game references: the Fire
+Emblem Wiki child hair sheets (SereneSeas, imgur album `O40MN`) and Serenes Forest's Kamui customizer
+(same overlay formula; its swatches are ~3 darker than the ROM table, which stays). Method that
+worked: register each sheet cell and an app screenshot into our texture canvas with SIFT
+(`cv2.estimateAffinePartial2D`), compare eroded hair-interior pixels, and compare untinted
+skin/clothes too - the sheets are ~10-20 brighter overall, so judge hair against that offset, not
+zero. Portrait tints keep the layer's 4-bit alpha: edge pixels are the dark ink outline and forcing
+them opaque (right for binary-alpha sprite strips) drew hard black rings. Every portrait hair layer
+registers to its base at (0, 0) and goes over it, except Nina's cut-in (curated `HAIR_OFFSETS` +
+`BACK_HAIR_SEEDS` braid behind the base, shipped as `ct.hairBack`; see docs/ASSETS.md). The Parents
+tab draws the child with each candidate's colour (`hair` prop).
 Corrin's swatches: ROM `GameData/MyUnitEdit.bin.lz` › `カラーテーブル` (30 × RGBA) →
 `sprites.json › corrinHairColours` (`corrin_hair_swatches`). Animation timing: every `ClassSprite`
 reads one shared clock at its class's native loop length (`art.tsx › frameAt`), so sprites sharing a
