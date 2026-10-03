@@ -2933,12 +2933,14 @@
 .stat-strip-track {
   display: flex;
   gap: var(--s4);
-  transform: translateX(calc(-1 * (100% + var(--s4)) + var(--swipe-dx, 0px)));
-  transition: transform 200ms var(--ease);
+  transform: translateX(calc(-1 * (100% + var(--s4))));
 }
 
-[data-dragging] .stat-strip-track {
-  transition: none;
+/* The drag offset is an inline translate (useSwipePager), eased out by Web Animations - never a CSS
+   transition, so StatStrip can swap it for its own ease-in. Its own layer while dragging, so a drag
+   moves pixels instead of repainting every row each frame. */
+.stat-strip-track[data-dragging] {
+  will-change: translate;
 }
 
 .stat-strip-page {
@@ -2946,34 +2948,23 @@
   min-width: 0;
 }
 
-/* A new lens eases in from where its table was when the drag let go (0 for a rail tap). */
-.stat-strip-track[data-dir="1"] { animation: strip-from-next 240ms var(--ease); }
-.stat-strip-track[data-dir="-1"] { animation: strip-from-prev 240ms var(--ease); }
-
-@keyframes strip-from-next { from { transform: translateX(var(--swipe-from, 0px)); } }
-@keyframes strip-from-prev { from { transform: translateX(calc(-2 * (100% + var(--s4)) + var(--swipe-from, 0px))); } }
-
-@media (prefers-reduced-motion: reduce) {
-  .stat-strip-track, .stat-strip-track[data-dir] { animation: none; transition: none; }
-}
-
 /* ---------- character tab pager ---------- */
 
-/* clip, not hidden: hidden would make this a scroll container and break sticky descendants. */
+/* clip, not hidden: hidden would make this a scroll container and break sticky descendants.
+   TabPager sets the height (the active page's) and the track's transform inline. */
 .pager {
   overflow: clip;
-  height: var(--pager-h, auto);
 }
 
 .pager-track {
   display: flex;
   align-items: flex-start;
-  transform: translateX(calc(var(--page, 0) * -100% + var(--swipe-dx, 0px)));
   transition: transform 380ms var(--ease);
 }
 
-[data-dragging] .pager-track {
-  transition: none;
+/* As the stat strip: the drag is an inline translate on its own layer, eased out by useSwipePager. */
+.pager-track[data-dragging] {
+  will-change: translate;
 }
 
 .pager-page {

@@ -32,9 +32,9 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - **Tab pager (v3.3; shared `components/TabPager.tsx` since v3.4)**: all tabs sit side by side in
   `TabPager` (`.pager` > `.pager-track` > `PagerPage`), mounted once shown (`lib/useMountedTabs`: the
   opening tab first, the rest after a delay). Also used by the Chart (tab swipes) and the skill
-  picker (`fill`: pages fill the fixed-height sheet and each scrolls itself). The track translates by `--page` and the live `--swipe-dx` from
-  `useSwipePager(panelRef, …)`; the viewport takes the active page's height (ResizeObserver →
-  `--pager-h`) with `overflow: clip` (not hidden — sticky must keep working inside). Owner asked for
+  picker (`fill`: pages fill the fixed-height sheet and each scrolls itself). The track's inline `transform` places the active page and
+  `useSwipePager(panelRef, …)` adds the live drag as an inline `translate`; the viewport takes the
+  active page's height (ResizeObserver → inline `height`) with `overflow: clip` (not hidden — sticky must keep working inside). Owner asked for
   this because SlideSwap only rendered the neighbour on commit ("content pops in mid swipe").
   Inactive pages are `inert` + `aria-hidden`.
 - `CharacterPage` keys the screen by unit, except both Corrins share the key `corrin`: the Avatar
@@ -54,8 +54,23 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   surfaces with `data-swipe` (CSS gives them `touch-action: pan-y`). Commit: |dx| > 48px or
   |velocity| > 0.3 px/ms (v3.3; was 72 / 0.45 — owner found it sticky). When testing with CDP
   touches, don't start the drag on an input (the Avatar Name field) — it's ignored by design.
-- `useSwipePager(ref, index, count, onChange)`: live drag via `--swipe-dx` (damped at ends), commit
-  on distance/velocity (`swipeDirection`), exit animation starts from `--swipe-from`.
+- `useSwipePager(ref, index, count, onChange, { enabled, targets, releaseMs })`: the drag writes an
+  inline **`translate`** on the `targets` only (default `PAGER_TRACK` = the TabPager track; Roster:
+  every `.stat-strip-track`), damped at the ends, with `[data-dragging]` → `will-change: translate`.
+  Commit on distance/velocity (`swipeDirection`). Release is a **Web Animation** of `translate` back
+  to 0 (never a CSS transition, so StatStrip can take over); on a commit it waits for the new `index`
+  (layout effect; `navigate` lands a task later) so the page change and the release start together.
+  `releaseOffset()` = where a committed swipe let go (300 ms window, else 0).
+- **Swipe performance rules (v3.4, owner: "major slow down while swiping"; sprite pausing didn't fix
+  it):** never set a custom property on a swipe surface or pager ancestor - custom properties
+  inherit, so `--swipe-dx` on the list restyled 16-27k nodes per pointermove (100-200 ms frames on a
+  phone). TabPager places its track with an inline `transform` and sizes the viewport with plain
+  `height` for the same reason (`--page`/`--pager-h` were removed). StatStrip keys its pages by lens
+  so a lens change reuses two of three tables per row, and eases in with `translate` in % (no
+  per-row measuring mid-commit). Sprites share one IntersectionObserver (`art.tsx ›
+  observeViewport`). `content-visibility: auto` on rows would roughly halve the Roster's release cost
+  but was removed in v3.2 as a suspected iOS name-clipping cause - don't re-add without the owner.
+  Measure with `scripts/swipe-profile.mjs` (`fates-dev-workflow` › Performance profiling).
 - `SlideSwap`: on `index` change the old content slides out one side while the new enters from the
   other; the outgoing layer keeps its React key (no remount). Uses React's "store info from previous
   renders" state pattern — **don't read refs during render** (oxlint `react(refs)` fails the lint).
@@ -71,7 +86,8 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   smooth-scrolls a rail (and the character tab pills) to keep the selection centred.
 - Roster: the list is the swipe surface; every row's `StatTable` gets `slide` = { index, prev, next }
   (v3.4 strip: the neighbouring lenses' tables are rendered either side, so a drag shows them; on
-  commit the track remounts centred and eases in from `--swipe-from`). SlideSwap is gone.
+  commit the pages re-key around the new lens and the track eases in from the release offset).
+  SlideSwap is gone.
 - **Progression foot (v3.4)**: `SealTally` shows icons + "x2" only with an info button opening a
   dark `--scrim` tooltip list whose rows show the item sprite inline with the name. On the
   Progression page the foot owns the chart's bottom border (`border-top`) and the bare row (no pill

@@ -69,12 +69,14 @@ an export named …" / `Cannot read properties of undefined` while `tsc` and tes
 ## Ports and other worktrees
 
 - **5173**: this checkout's dev server (check before assuming).
-- **4173**: owned by a `vite preview` from the `v2-prototype` worktree — **not this app**. A test once
-  ran against it by mistake. Use another port (e.g. `npx vite preview --port 4199 --strictPort`).
+- **5174**: the `deepseek` worktree's dev server - don't use it from the `opus` lane.
+- **4173**: historically another worktree's `vite preview` (a test once ran against the wrong app).
+  Use your own port (e.g. `npx vite preview --port 4199 --strictPort`) and check ownership first.
 - Check ownership: `Get-NetTCPConnection -LocalPort <p> -State Listen` → `Get-CimInstance Win32_Process
   -Filter "ProcessId=<pid>"` and read `CommandLine`. Only stop processes whose command line is this
   repo's path.
-- Paseo worktrees live in `C:\Users\jacob\.paseo\worktrees\2vplw8a2\<slug>`; all v3 lanes are merged.
+- Paseo worktrees live in `C:\Users\jacob\.paseo\worktrees\2vplw8a2\<slug>`; only `deepseek` should
+  exist (the v3 lanes were archived 2026-10-03, with their `vite preview` servers on 4173/5199).
 
 ## Screenshots and browser checks
 
@@ -96,6 +98,20 @@ an export named …" / `Cannot read properties of undefined` while `tsc` and tes
   `Input.dispatchTouchEvent` on a `hasTouch`/`isMobile` context. WebKit for Playwright is installed
   (`npx playwright install webkit`) — use it for iOS-ish checks.
 
+## Performance profiling (swipes, renders)
+
+- Owner reports of mobile lag: **measure before fixing.** `scripts/swipe-profile.mjs` drives a CDP
+  touch swipe on the Roster, Chart and two character pages under 4x CPU throttling and prints frame
+  times (drag / after release), style/layout/script totals and long tasks; `TRACE=1` adds Chrome trace
+  totals, `PROFILE=1` the top JS self-time (build with `npx vite build --minify false --outDir
+  dist-prof` for names, preview it on its own port, **delete `dist-prof` after** - oxlint scans it).
+  Always against a production build (`npm run build; npx vite preview --port 4199 --strictPort`).
+- Baseline after the v3.4 swipe fix (4x): drags ~16.7-19 ms/frame on every screen; worst frame on
+  release roster ~270 ms, chart ~180 ms, character ~120 ms (was 53-81 ms/frame dragging, ~600 ms).
+- Read the breakdown: `RecalcStyleDuration` dominating = an inherited property (custom property) is
+  changing on a big ancestor; `Paint` dominating while dragging = the moving element isn't on its own
+  layer; a big `get offsetLeft`/`offsetWidth` self-time = a forced layout paying for the whole commit.
+
 ## Data regeneration rule
 
 Never hand-edit generated pack files (`src/data/packs/**`, `src/data/*.json` manifests). Change the
@@ -104,11 +120,23 @@ extractor or curated source and rerun, e.g. `python tools/extract/build_recruitm
 
 ## Commits, branches, deploy
 
-- Work on branch **`v3`**. `main` is the deploy branch; GitHub Pages deploys on push to `main`
+- **Three branches only (owner, 2026-10-03): `main`, `opus`, `deepseek`.** The owner runs two agents at
+  once. Claude/Opus works on **`opus`** in the main checkout (`D:\Local Work\Dev Projects\fates expanded
+  planner`); DeepSeek works on **`deepseek`** in its own worktree
+  `C:\Users\jacob\.paseo\worktrees\2vplw8a2\deepseek` (Paseo workspace "Fates planner — DeepSeek lane").
+  Two agents can't share a checkout - each stays in its own folder and never commits to the other's
+  branch. Work Opus delegates stays on `opus`: if a delegate needs isolation, give it a short-lived
+  worktree branched off `opus`, merge it back and delete the branch + worktree in the same session.
+  Don't create other long-lived branches. The old lanes (v2, v3, v3-*, chart-seal-pill) were merged
+  and deleted 2026-10-03; v2-prototype's one unmerged commit is tag `archive/v2-prototype`.
+- Dev ports per lane: `opus` **5173**, `deepseek` **5174** (`npm run dev -- --port 5174 --strictPort`).
+- `main` is the deploy branch; GitHub Pages deploys on push to `main`
   (`.github/workflows/deploy.yml`, runs lint + build).
-- **Commit/push only when the owner asks.** "Push" = fast-forward: confirm
-  `git merge-base --is-ancestor origin/main v3`, then `git push origin v3:main`, then
-  `git branch -f main origin/main`.
+- **Commit/push only when the owner asks.** "Push" = fast-forward from your lane: confirm
+  `git merge-base --is-ancestor origin/main <lane>`, then `git push origin <lane>:main`, then
+  `git branch -f main origin/main`. If the other lane has shipped meanwhile, `git merge origin/main`
+  into your lane first (gates again), then push. After a deploy the other lane merges `origin/main`
+  before its next push.
 - Commit messages end with `Co-Authored-By: <model> <noreply@…>`.
 - After pushing: `gh run watch <id> --exit-status`, then confirm the live bundle matches a local build
   (compare `assets/index-*.js` in `dist/index.html` with the live page HTML at
@@ -128,8 +156,9 @@ extractor or curated source and rerun, e.g. `python tools/extract/build_recruitm
 - The owner is cost-conscious. Profiles (Paseo `list_profiles`): **DS** = DeepSeek V4.1 Flash (cheap
   builder/researcher, opencode), **Luna** = GPT Luna (open-web/Reddit research, network access,
   codex), Sol/GLM/Astra exist for heavier work. Usual split: web research → Luna (read-only, report in
-  final message), tedious UI tasks → DS **in its own worktree branch** (avoids CSS conflicts), hard
-  design/debug work → the orchestrator. Review and merge delegated branches yourself.
+  final message), hard design/debug work → the orchestrator. Since 2026-10-03 the owner drives
+  DeepSeek directly on the `deepseek` lane; work Opus delegates stays on `opus` (see Commits,
+  branches, deploy). Review and merge delegated work yourself.
 - Give delegated agents exact file pointers and the gates; tell them not to push/merge and which
   ports to avoid.
 - If DS fails with HTTP 402 "Insufficient account funds", the opencode account is empty — GLM shares

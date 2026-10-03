@@ -62,14 +62,29 @@ function SpriteCell({ image, x, y, scale, cell }: { image: SpriteImage; x: numbe
  */
 const STACK: readonly (readonly ['head' | 'body', number])[] = [['head', 0], ['body', 0], ['head', 1]]
 
+// One observer for every sprite: hundreds of per-sprite observers each cost a pass on every frame
+// that moves anything (swipes showed it in traces).
+const viewportListeners = new Map<Element, (visible: boolean) => void>()
+let viewportObserver: IntersectionObserver | null = null
+
+function observeViewport(node: Element, listener: (visible: boolean) => void): () => void {
+  viewportObserver ??= new IntersectionObserver((entries) => {
+    for (const entry of entries) viewportListeners.get(entry.target)?.(entry.isIntersecting)
+  }, { rootMargin: '64px' })
+  viewportListeners.set(node, listener)
+  viewportObserver.observe(node)
+  return () => {
+    viewportListeners.delete(node)
+    viewportObserver?.unobserve(node)
+  }
+}
+
 function useInViewport(ref: { current: HTMLSpanElement | null }): boolean {
   const [visible, setVisible] = useState(() => !('IntersectionObserver' in window))
   useEffect(() => {
     const node = ref.current
     if (!node || !('IntersectionObserver' in window)) return
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { rootMargin: '64px' })
-    observer.observe(node)
-    return () => observer.disconnect()
+    return observeViewport(node, setVisible)
   }, [ref])
   return visible
 }

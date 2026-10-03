@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { holdMotion, settleMotion } from './motion'
 
 export interface SwipeHandlers {
@@ -97,40 +97,91 @@ export function useHorizontalSwipe(ref: { current: HTMLElement | null }, handler
   }, [ref, enabled])
 }
 
+let lastRelease = { dx: 0, at: -Infinity }
+
 /**
- * Swipe between pages: drags the element's content live (`--swipe-dx`, damped at the ends),
- * commits to the neighbouring page on release, or springs back. Pairs with TabPager or the Roster's
- * stat strips, which ease in from the release offset (`--swipe-from`).
- * animation starts from the release offset (`--swipe-from`).
+ * Where the last committed swipe let go, for content that re-centres on the new page and eases in
+ * from there (the Roster's stat strips). 0 when the change didn't come from a swipe (a rail tap).
  */
-export function useSwipePager(ref: { current: HTMLElement | null }, index: number, count: number, onChange: (next: number) => void, enabled = true): void {
-  const settle = (node: HTMLElement) => {
-    delete node.dataset.dragging
-    node.style.setProperty('--swipe-dx', '0px')
+export function releaseOffset(): number {
+  return performance.now() - lastRelease.at < 300 ? lastRelease.dx : 0
+}
+
+/** Dragged targets get their own compositor layer (CSS `[data-dragging]`), so moving them repaints nothing. */
+const markDragging = (targets: HTMLElement[]) => {
+  for (const target of targets) target.toggleAttribute('data-dragging', true)
+}
+
+const offsetTo = (targets: HTMLElement[], offset: string) => {
+  for (const target of targets) target.style.translate = offset
+}
+
+/**
+ * Lets go of the drag: each target eases from its offset back to 0. A Web Animation rather than a CSS
+ * transition, so content that remounts or re-centres on the new page (StatStrip) can clear the inline
+ * offset itself and run its own animation without a transition fighting it.
+ */
+const release = (targets: HTMLElement[], ms: number) => {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  for (const target of targets) {
+    const offset = target.style.translate
+    target.style.removeProperty('translate')
+    target.removeAttribute('data-dragging')
+    if (offset && offset !== '0px' && !reduced && target.isConnected) {
+      target.animate({ translate: [offset, '0px'] }, { duration: ms, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' })
+    }
   }
+}
+
+/** The TabPager's track, the default thing a swipe pager drags. */
+export const PAGER_TRACK = ':scope > .pager > .pager-track'
+
+/**
+ * Swipe between pages: drags the `targets` inside the element live (an inline `translate`, damped at
+ * the ends), commits to the neighbouring page on release, or springs back.
+ *
+ * Only the targets are written to, never the swipe surface: a custom property on the surface is
+ * inherited by every node below it, so each pointermove restyled the whole page (thousands of nodes;
+ * 100-200 ms a frame on a phone). `translate` isn't inherited and composes with the targets' own
+ * `transform`, so their CSS keeps placing the page (TabPager transitions it) while the offset eases
+ * out over `releaseMs`.
+ */
+export function useSwipePager(ref: { current: HTMLElement | null }, index: number, count: number, onChange: (next: number) => void, { enabled = true, targets = PAGER_TRACK, releaseMs = 380 }: { enabled?: boolean; targets?: string; releaseMs?: number } = {}): void {
+  const dragged = useRef<HTMLElement[]>([])
+  const fallback = useRef(0)
+  const settle = () => {
+    window.clearTimeout(fallback.current)
+    release(dragged.current, releaseMs)
+    dragged.current = []
+  }
+  // A committed swipe lets go once the new page is in the DOM (some owners navigate, which lands a
+  // task later), so the page change and the release start on the same frame instead of springing back.
+  useLayoutEffect(settle, [index, releaseMs])
   useHorizontalSwipe(ref, {
     onDrag(dx) {
       const node = ref.current
       if (!node) return
+      if (!dragged.current.length) {
+        holdMotion()
+        dragged.current = [...node.querySelectorAll<HTMLElement>(targets)]
+        markDragging(dragged.current)
+      }
       const blocked = (dx > 0 && index === 0) || (dx < 0 && index === count - 1)
-      holdMotion()
-      node.dataset.dragging = ''
-      node.style.setProperty('--swipe-dx', `${blocked ? dx / 4 : dx}px`)
+      offsetTo(dragged.current, `${blocked ? dx / 4 : dx}px`)
     },
     onEnd(dx, velocity) {
-      const node = ref.current
-      if (!node) return
       const next = index + swipeDirection(dx, velocity)
       if (next !== index && next >= 0 && next < count) {
-        node.style.setProperty('--swipe-from', `${dx}px`)
-        window.setTimeout(() => node.style.removeProperty('--swipe-from'), 400)
+        lastRelease = { dx, at: performance.now() }
+        fallback.current = window.setTimeout(settle, 500)
         onChange(next)
+      } else {
+        settle()
       }
-      settle(node)
       settleMotion()
     },
     onCancel() {
-      if (ref.current) settle(ref.current)
+      settle()
       settleMotion()
     },
   }, enabled)

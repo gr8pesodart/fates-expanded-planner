@@ -10,8 +10,14 @@ order: [docs/design/SPEC.md](docs/design/SPEC.md) (visual + interaction source o
 [docs/DATA.md](docs/DATA.md) before touching data and [docs/MODS.md](docs/MODS.md) before changing mod
 assumptions. `docs/design/reference.html` and the v1/v2 UIs are **not** design references.
 
-**Status (2026-10-02):** v3.3 is live on GitHub Pages (`main`; work happens on `v3`). Progress and
+**Status (2026-10-03):** v3.3+ is live on GitHub Pages (`main`); v3.4 in progress. Progress and
 backlog: `docs/BUILD_PLAN.md` › v3.
+
+**Branches (2026-10-03): only `main`, `opus` and `deepseek`.** Two agents work in parallel: Claude
+(Opus) on `opus` in the main checkout, DeepSeek on `deepseek` in its own worktree
+(`C:\Users\jacob\.paseo\worktrees\2vplw8a2\deepseek`). Never commit to the other agent's branch;
+`main` is deploy-only. Details (ports, merging, deploying): `fates-dev-workflow` › Commits, branches,
+deploy.
 
 ## Agent skills — read before working
 

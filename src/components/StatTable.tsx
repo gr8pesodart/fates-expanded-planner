@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import type { StatRow } from '../logic/lenses'
 import { formatCell } from '../logic/lenses'
+import { releaseOffset } from '../lib/swipe'
 
 export interface StatTableProps {
   row: StatRow
@@ -51,19 +52,41 @@ function Table({ row, signed = false, inverse = false, muted = false, label, ref
 }
 
 /**
- * Previous / current / next lens side by side. The track follows the list's live `--swipe-dx`; when
- * the lens changes it remounts centred on the new lens and eases in from where the drag let go
- * (`--swipe-from`), so the table that was being dragged in keeps moving instead of popping.
+ * Previous / current / next lens side by side. The track follows the Roster's live drag (an inline
+ * `translate`). Pages are keyed by lens, so a lens change reuses the two tables already built and only
+ * adds the newly exposed neighbour (remounting all three in every row stalled the swipe's release);
+ * the track then eases in from where the drag let go, so the table being dragged in keeps moving.
  */
 function StatStrip({ slide, current }: { slide: StatSlide; current: StatTableProps }) {
-  const [shown, setShown] = useState({ index: slide.index, dir: 0 })
-  if (slide.index !== shown.index) setShown({ index: slide.index, dir: slide.index > shown.index ? 1 : -1 })
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const [shown, setShown] = useState({ index: slide.index, dir: 0, from: 0 })
+  if (slide.index !== shown.index) setShown({ index: slide.index, dir: slide.index > shown.index ? 1 : -1, from: releaseOffset() })
+  useLayoutEffect(() => {
+    const track = trackRef.current
+    if (!track || !shown.dir) return
+    // Take over from the drag's offset (useSwipePager then has nothing left to ease back).
+    track.style.removeProperty('translate')
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    // The new lens's table sat one page (track width + the --s4 gap) to that side, plus wherever the
+    // drag left it. In % so no row has to measure itself mid-commit.
+    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--s4)) + ${shown.from}px)`, '0px'] }, { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' })
+  }, [shown])
+  const pages = [
+    { lens: slide.index - 1, props: slide.prev },
+    { lens: slide.index, props: current },
+    { lens: slide.index + 1, props: slide.next },
+  ]
   return (
     <div className="stat-strip">
-      <div key={shown.index} className="stat-strip-track" data-dir={shown.dir || undefined}>
-        <div className="stat-strip-page" aria-hidden="true" inert>{slide.prev ? <Table {...slide.prev} /> : null}</div>
-        <div className="stat-strip-page"><Table {...current} /></div>
-        <div className="stat-strip-page" aria-hidden="true" inert>{slide.next ? <Table {...slide.next} /> : null}</div>
+      <div ref={trackRef} className="stat-strip-track">
+        {pages.map(({ lens, props }) => {
+          const side = lens !== slide.index
+          return (
+            <div key={lens} className="stat-strip-page" aria-hidden={side || undefined} inert={side}>
+              {props ? <Table {...props} /> : null}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

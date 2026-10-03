@@ -89,6 +89,12 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   Round 7: "levels in the selected class" priority; book and Offspring routes planned side by side
   in a "Choose a route" sheet; Festival of Bonds DLC switch (New Run + run menu, with a DLC switch
   there too); `--t-note` token; equal-width sheet buttons.
+  Round 8 (2026-10-03, branch `opus`): branches cut to `main` / `opus` / `deepseek` (two agents in
+  parallel). Swipe lag fixed at the cause (sprite pausing hadn't): the drag wrote `--swipe-dx` on the
+  swipe surface and every descendant restyled each pointermove; now an inline `translate` on the
+  tracks only, own layer while dragging, Web Animation release; TabPager without inherited variables;
+  Roster strips reuse tables across lens changes; one shared IntersectionObserver for sprites.
+  `scripts/swipe-profile.mjs` measures it (4x CPU: drag 53-81 → ~17-19 ms/frame).
 
 ### Backlog
 

@@ -70,7 +70,7 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
   ] : []
   const active = tabs.includes(tab) ? tab : 'profile'
   const activeIndex = tabs.indexOf(active)
-  useSwipePager(panelRef, activeIndex, tabs.length, (next) => navigate({ name: 'unit', unitId, tab: tabs[next] }, { replace: true }), tabs.length > 1)
+  useSwipePager(panelRef, activeIndex, tabs.length, (next) => navigate({ name: 'unit', unitId, tab: tabs[next] }, { replace: true }), { enabled: tabs.length > 1 })
   const mounted = useMountedTabs(active, tabs)
   if (!ctx) {
     return (
