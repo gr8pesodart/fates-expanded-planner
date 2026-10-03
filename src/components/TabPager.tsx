@@ -4,7 +4,7 @@ import { settleMotion } from '../lib/motion'
 import { SETTLE_MS } from '../lib/swipe'
 
 /**
- * Horizontal strip of every page. The strip follows the drag (an inline `translate` from
+ * Horizontal strip of every page. The strip follows the drag (an inline `transform` from
  * useSwipePager) and eases to the active page. By default the viewport takes the active page's
  * height so shorter pages don't inherit a longer one's scroll length; `fill` pages instead fill a
  * fixed-height parent and scroll on their own (each keeps its scroll position).
@@ -37,7 +37,9 @@ export function TabPager({ index, children, fill = false }: { index: number; chi
   }, [index, fill])
   return (
     <div ref={viewportRef} className={fill ? 'pager fill' : 'pager'}>
-      <div className="pager-track" style={{ transform: `translateX(calc(${-index} * (100% + var(--pager-gap, 0px))))` }}>{children}</div>
+      {/* The page position is the `translate` property; swipes animate `transform` (see swipe.ts: WebKit
+          only pre-paints a layer's whole path for transform animations). */}
+      <div className="pager-track" style={{ translate: `calc(${-index} * (100% + var(--pager-gap, 0px)))` }}>{children}</div>
     </div>
   )
 }

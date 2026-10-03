@@ -46,18 +46,16 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   `margin-bottom: -100dvh`, black) so it never scrolls; `.char-hero` is a transparent spacer
   (`--hero-h` 316px, 300px ≥1024) holding the name and tabs. Each tab page is its own card
   (`.char-panel > .pager > .pager-track > .pager-page`: surface, `--r-sheet` top corners, min-height
-  to the screen bottom; **no `overflow: clip`** - the owner saw a card's far side vanish and pop back
-  mid swipe on iPhone (Stats <-> Progression, never reproduced in Chromium across ~1000 traced
-  frames); a clip around the sticky rails inside a moving card is the suspected WebKit cause) and the track has `--pager-gap: var(--s1)` (2px), so a
+  to the screen bottom; no `overflow: clip`, nothing paints into the corners) and the track has `--pager-gap: var(--s1)` (2px), so a
   swipe slides whole cards with black between them. Splash files are crops at the hero's ratio
   (mostly 780x632 = 390x316), so the art keeps the hero height and its gradient reaches solid black
   exactly at the art's bottom edge (verified by pixel sampling). The bottom-nav clearance is inside
   the cards on the mobile layer (not padding after the article), or the sticky art would be pushed up
   at max scroll. TabPager's transform includes `var(--pager-gap, 0px)`.
 - Roster stat strips: `--strip-gap: var(--s6)` (30px, owner: "a fair bit larger" than 12px).
-- Back button (mobile): `.back-rail` (absolute, the visible art = `--hero-h - --card-overlap`)
-  holds a sticky `.back-btn`, so it stays pinned over the art and the cards' top edge pushes it out;
-  the sticky head's own back button takes over just after (owner, v3.4).
+- Back button (mobile): `.back-rail` (absolute, from the top to the hero's tab pills:
+  `--hero-h - --hero-foot-pad - --hero-tabs-h`) holds a sticky `.back-btn`, so it stays pinned over
+  the art and the tab pills push it out (owner, v3.4); the sticky head's own back button takes over.
 - General swipe/slider knowledge (physics, hand-over, profiling) is also in the global
   `frontend-dev` skill (`~/.claude/skills/frontend-dev/slider-physics/GUIDE.md`).
 - Opening animation: `.character-layer` slides in from 100% over 460ms, no fade (owner).
@@ -72,9 +70,16 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   surfaces with `data-swipe` (CSS gives them `touch-action: pan-y`). Commit: |dx| > 48px or
   |velocity| > 0.3 px/ms (v3.3; was 72 / 0.45 — owner found it sticky). When testing with CDP
   touches, don't start the drag on an input (the Avatar Name field) — it's ignored by design.
+- **Page position = `translate`, swipe motion = `transform` (WebKit)**: the owner's iPhone recording
+  showed an incoming card painted only as far as the screen edge at release (black beyond it for ~3
+  frames, Profile -> Stats) while the release animated `translate`: WebKit only pre-paints the whole
+  path of `transform` animations, and the main thread was busy re-rendering. So TabPager places its
+  track with inline `translate` (CSS transition on `translate` for taps), StatStrip's CSS uses
+  `translate`, and the drag / springs / tap ease-in animate `transform`. Chromium never showed it
+  (~1000 traced frames) - test swipe painting on a device.
 - `useSwipePager(ref, index, count, onChange, { enabled, targets })`: the drag writes an inline
-  **`translate`** on the `targets` only (default `PAGER_TRACK` = the TabPager track; Roster: every
-  `.stat-strip-track`), damped at the ends, with `[data-dragging]` → `will-change: translate`.
+  **`transform`** on the `targets` only (default `PAGER_TRACK` = the TabPager track; Roster: every
+  `.stat-strip-track`), damped at the ends, with `[data-dragging]` → `will-change: transform`.
   Commit on distance/velocity (`swipeDirection`; velocity averaged over the last 80 ms of moves, 0 if
   the finger stopped before lifting). A drag that catches a page mid-settle picks it up where it is.
 - **Release = velocity-matched spring (owner, v3.4: fixed ease-outs "snapped")**: `lib/spring.ts ›

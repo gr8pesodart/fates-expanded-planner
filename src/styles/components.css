@@ -1130,6 +1130,9 @@
   --hero-h: 316px;
   /* How far the tab cards ride up over the art. */
   --card-overlap: 42px;
+  /* Hero foot: space under the tab pills (the card overlap + a gap), and the pills' height. */
+  --hero-foot-pad: calc(var(--card-overlap) + 14px);
+  --hero-tabs-h: 32px;
 }
 
 .char-backdrop {
@@ -1194,13 +1197,13 @@
   background-color: transparent;
 }
 
-/* The back button stays pinned while the art is in view; the cards' top edge pushes it out, and the
-   sticky head (with its own back button) takes over (owner, v3.4). The rail is the visible art. */
+/* The back button stays pinned while the art is in view; the tab pills' top edge pushes it out, and
+   the sticky head (with its own back button) takes over (owner, v3.4). The rail ends at the pills. */
 .back-rail {
   position: absolute;
   inset: 0 0 auto;
   z-index: 2;
-  height: calc(var(--hero-h) - var(--card-overlap));
+  height: calc(var(--hero-h) - var(--hero-foot-pad) - var(--hero-tabs-h));
   pointer-events: none;
 }
 
@@ -1225,7 +1228,7 @@
   z-index: 1;
   display: grid;
   gap: 10px;
-  padding: 0 var(--s3) 56px;
+  padding: 0 var(--s3) var(--hero-foot-pad);
 }
 
 .char-name-row {
@@ -2992,14 +2995,17 @@
   --strip-gap: var(--s6);
   display: flex;
   gap: var(--strip-gap);
-  transform: translateX(calc(-1 * (100% + var(--strip-gap))));
+  translate: calc(-1 * (100% + var(--strip-gap)));
 }
 
-/* The drag offset is an inline translate (useSwipePager), eased out by Web Animations - never a CSS
-   transition, so StatStrip can swap it for its own ease-in. Its own layer while dragging, so a drag
-   moves pixels instead of repainting every row each frame. */
+/* Page position is `translate`; the drag offset is an inline `transform` (useSwipePager), eased out by
+   Web Animations - never a CSS transition, so StatStrip can swap it for its own ease-in. Swipes must
+   animate `transform`: WebKit only pre-paints the whole path of transform animations, and with
+   `translate` an incoming page showed black beyond the screen edge until the main thread caught up
+   (owner's iPhone recording). Own layer while dragging, so a drag moves pixels instead of repainting
+   every row each frame. */
 .stat-strip-track[data-dragging] {
-  will-change: translate;
+  will-change: transform;
 }
 
 .stat-strip-page {
@@ -3010,7 +3016,7 @@
 /* ---------- character tab pager ---------- */
 
 /* clip, not hidden: hidden would make this a scroll container and break sticky descendants.
-   TabPager sets the height (the active page's) and the track's transform inline. */
+   TabPager sets the height (the active page's) and the track's `translate` inline. */
 .pager {
   overflow: clip;
 }
@@ -3018,13 +3024,13 @@
 .pager-track {
   display: flex;
   align-items: flex-start;
-  /* Matches swipe.ts SETTLE_MS / SETTLE_EASE: the swipe release runs alongside this. */
-  transition: transform 480ms cubic-bezier(0.33, 1, 0.68, 1);
+  /* Rail taps slide the page (swipe.ts SETTLE_MS / SETTLE_EASE); swipes run their own spring. */
+  transition: translate 480ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-/* As the stat strip: the drag is an inline translate on its own layer, eased out by useSwipePager. */
+/* As the stat strip: the drag is an inline transform on its own layer, eased out by useSwipePager. */
 .pager-track[data-dragging] {
-  will-change: translate;
+  will-change: transform;
 }
 
 .pager-page {

@@ -53,7 +53,7 @@ function Table({ row, signed = false, inverse = false, muted = false, label, ref
 
 /**
  * Previous / current / next lens side by side. The track follows the Roster's live drag (an inline
- * `translate`). Pages are keyed by lens, so a lens change reuses the two tables already built and only
+ * `transform`). Pages are keyed by lens, so a lens change reuses the two tables already built and only
  * adds the newly exposed neighbour (remounting all three in every row stalled the swipe's release).
  * After a swipe the swipe's own spring keeps moving the track; a rail tap slides it in here.
  */
@@ -68,7 +68,7 @@ function StatStrip({ slide, current }: { slide: StatSlide; current: StatTablePro
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     // A rail tap: the new lens's table sat one page (track width + --strip-gap) to that side.
     // In % so no row has to measure itself mid-commit.
-    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--strip-gap)))`, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
+    track.animate({ transform: [`translateX(calc(${shown.dir} * (100% + var(--strip-gap))))`, 'translateX(0px)'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
   }, [shown])
   const pages = [
     { lens: slide.index - 1, props: slide.prev },

@@ -126,15 +126,15 @@ const markDragging = (targets: HTMLElement[]) => {
 }
 
 const offsetTo = (targets: HTMLElement[], offset: number) => {
-  for (const target of targets) target.style.translate = `${offset}px`
+  for (const target of targets) target.style.transform = `translateX(${offset}px)`
 }
 
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** The animated translate right now (px), for picking a moving page up mid-flight. */
+/** The animated drag offset right now (px), for picking a moving page up mid-flight. */
 const currentOffset = (target: HTMLElement): number => {
-  const value = getComputedStyle(target).translate
-  return value === 'none' ? 0 : parseFloat(value) || 0
+  const value = getComputedStyle(target).transform
+  return value === 'none' ? 0 : new DOMMatrixReadOnly(value).m41
 }
 
 const timelineNow = (): number | null => {
@@ -143,14 +143,14 @@ const timelineNow = (): number | null => {
 }
 
 /**
- * Runs a sampled spring on `translate`, around `base` px, from `startTime` on the document timeline
+ * Runs a sampled spring on `transform`, around `base` px, from `startTime` on the document timeline
  * (default: this frame). Setting the start time - rather than letting the animation wait for its first
  * frame - means it runs from the very next frame, and the hand-over to the new page can reuse the
  * first spring's start time so both describe the same instant. `hold` keeps the last frame until the
  * spring is replaced.
  */
 const play = (target: HTMLElement, spring: SpringFrames, base: number, { startTime = timelineNow(), hold = false }: { startTime?: number | null; hold?: boolean } = {}): Animation => {
-  const keyframes = spring.values.map((value, i) => ({ translate: `${base + value}px`, offset: spring.offsets[i] }))
+  const keyframes = spring.values.map((value, i) => ({ transform: `translateX(${base + value}px)`, offset: spring.offsets[i] }))
   const animation = target.animate(keyframes, { duration: spring.duration, fill: hold ? 'forwards' : 'none' })
   if (startTime !== null) animation.startTime = startTime
   return animation
@@ -168,7 +168,7 @@ export const PAGER_TRACK = ':scope > .pager > .pager-track'
 
 /**
  * One page's width for a target, in px: its parent's width plus its own flex gap (TabPager track:
- * the viewport; Roster strip: the strip, + --s4 between tables). Read once per release.
+ * the viewport; Roster strip: the strip, + --strip-gap between tables). Read once per release.
  */
 const pageSize = (target: HTMLElement): number => {
   const gap = parseFloat(getComputedStyle(target).columnGap)
@@ -176,13 +176,17 @@ const pageSize = (target: HTMLElement): number => {
 }
 
 /**
- * Swipe between pages: drags the `targets` inside the element live (an inline `translate`, damped at
+ * Swipe between pages: drags the `targets` inside the element live (an inline `transform`, damped at
  * the ends), commits to the neighbouring page on release, or springs back.
  *
  * Only the targets are written to, never the swipe surface: a custom property on the surface is
  * inherited by every node below it, so each pointermove restyled the whole page (thousands of nodes;
- * 100-200 ms a frame on a phone). `translate` isn't inherited and composes with the targets' own
- * page position (TabPager's transform, StatStrip's keyed pages).
+ * 100-200 ms a frame on a phone). Drag and release move `transform`, never `translate`: WebKit
+ * pre-paints the whole path of a transform animation, but with `translate` an incoming page was only
+ * painted as far as the screen edge at release and showed black beyond it until the main thread
+ * (busy with the owner's re-render) caught up (owner's iPhone recording, Profile -> Stats).
+ * `transform` isn't inherited and composes with the targets' own
+ * page position (the `translate` property: TabPager's inline style, StatStrip's CSS).
  *
  * Release: a spring (lib/spring.ts) starting at the finger's speed, playing the moment the finger
  * lifts - not when React has rendered the new page (the Chart's render showed as a stutter). It aims
@@ -207,7 +211,7 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
       stop(target)
       target.style.transition = 'none'
     }
-    void getComputedStyle(current.targets[0] ?? document.body).transform
+    void getComputedStyle(current.targets[0] ?? document.body).translate
     for (const target of current.targets) {
       target.style.removeProperty('transition')
       if (target.isConnected && !reducedMotion()) play(target, current.spring, 0, { startTime: current.startTime })
@@ -217,7 +221,7 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
   const springBack = (list: HTMLElement[], from: number, velocity: number) => {
     const spring = settleSpring(from, velocity)
     for (const target of list) {
-      target.style.removeProperty('translate')
+      target.style.removeProperty('transform')
       target.removeAttribute('data-dragging')
       if (!reducedMotion()) play(target, spring, 0)
     }
@@ -257,7 +261,7 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
       const spring = settleSpring(offset + dir * page, velocity)
       const startTime = timelineNow()
       for (const target of list) {
-        target.style.removeProperty('translate')
+        target.style.removeProperty('transform')
         target.removeAttribute('data-dragging')
         if (!reducedMotion()) play(target, spring, -dir * page, { startTime, hold: true })
       }
