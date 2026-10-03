@@ -95,6 +95,9 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   tracks only, own layer while dragging, Web Animation release; TabPager without inherited variables;
   Roster strips reuse tables across lens changes; one shared IntersectionObserver for sprites.
   `scripts/swipe-profile.mjs` measures it (4x CPU: drag 53-81 → ~17-19 ms/frame).
+  Release feel: a velocity-matched critically damped spring (`lib/spring.ts`) starting the moment the
+  finger lifts, handed over to the new page by shared `startTime`; React's update deferred a frame so
+  it can't hold the page still; Chart tabs memoised (the release stutter there).
 
 ### Backlog
 

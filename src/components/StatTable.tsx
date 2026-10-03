@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import type { StatRow } from '../logic/lenses'
 import { formatCell } from '../logic/lenses'
-import { releaseOffset, SETTLE_EASE, SETTLE_MS } from '../lib/swipe'
+import { SETTLE_EASE, SETTLE_MS, swipeSettling } from '../lib/swipe'
 
 export interface StatTableProps {
   row: StatRow
@@ -54,22 +54,21 @@ function Table({ row, signed = false, inverse = false, muted = false, label, ref
 /**
  * Previous / current / next lens side by side. The track follows the Roster's live drag (an inline
  * `translate`). Pages are keyed by lens, so a lens change reuses the two tables already built and only
- * adds the newly exposed neighbour (remounting all three in every row stalled the swipe's release);
- * the track then eases in from where the drag let go, so the table being dragged in keeps moving.
+ * adds the newly exposed neighbour (remounting all three in every row stalled the swipe's release).
+ * After a swipe the swipe's own spring keeps moving the track; a rail tap slides it in here.
  */
 function StatStrip({ slide, current }: { slide: StatSlide; current: StatTableProps }) {
   const trackRef = useRef<HTMLDivElement | null>(null)
-  const [shown, setShown] = useState({ index: slide.index, dir: 0, from: 0 })
-  if (slide.index !== shown.index) setShown({ index: slide.index, dir: slide.index > shown.index ? 1 : -1, from: releaseOffset() })
+  const [shown, setShown] = useState({ index: slide.index, dir: 0 })
+  if (slide.index !== shown.index) setShown({ index: slide.index, dir: slide.index > shown.index ? 1 : -1 })
   useLayoutEffect(() => {
     const track = trackRef.current
-    if (!track || !shown.dir) return
-    // Take over from the drag's offset (useSwipePager then has nothing left to ease back).
-    track.style.removeProperty('translate')
+    // A swipe is already carrying the track to this lens (useSwipePager hands its spring over).
+    if (!track || !shown.dir || swipeSettling()) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    // The new lens's table sat one page (track width + the --s4 gap) to that side, plus wherever the
-    // drag left it. In % so no row has to measure itself mid-commit.
-    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--s4)) + ${shown.from}px)`, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
+    // A rail tap: the new lens's table sat one page (track width + the --s4 gap) to that side.
+    // In % so no row has to measure itself mid-commit.
+    track.animate({ translate: [`calc(${shown.dir} * (100% + var(--s4)))`, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
   }, [shown])
   const pages = [
     { lens: slide.index - 1, props: slide.prev },

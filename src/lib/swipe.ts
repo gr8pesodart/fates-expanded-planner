@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { holdMotion, settleMotion } from './motion'
+import { settleSpring } from './spring'
+import type { SpringFrames } from './spring'
 
 export interface SwipeHandlers {
   /** Horizontal offset while a horizontal drag is in progress. */
@@ -13,6 +15,7 @@ export interface SwipeHandlers {
 // iOS's own back gesture starts at the left screen edge; leave that strip to the system.
 const EDGE = 24
 const LOCK = 8
+const VELOCITY_WINDOW = 80
 // Horizontal scrollers and form controls own their own horizontal gestures.
 const IGNORE = 'input, select, textarea, .rail, .char-tabs, [data-swipe-ignore]'
 
@@ -37,18 +40,21 @@ export function useHorizontalSwipe(ref: { current: HTMLElement | null }, handler
     if (!node || !enabled) return
     let start: { id: number; x: number; y: number; t: number } | null = null
     let horizontal = false
-    let lastX = 0
-    let lastT = 0
-    let velocity = 0
+    // Recent [x, time] samples: release speed is averaged over the last VELOCITY_WINDOW ms, not the
+    // last two events (single-event deltas swing wildly with touch sampling).
+    let samples: [number, number][] = []
+    const velocity = () => {
+      const [x0, t0] = samples[0]
+      const [x1, t1] = samples[samples.length - 1]
+      return t1 > t0 ? (x1 - x0) / (t1 - t0) : 0
+    }
 
     const down = (event: PointerEvent) => {
       if (event.pointerType === 'mouse' || start) return
       if (event.clientX < EDGE || (event.target instanceof Element && event.target.closest(IGNORE))) return
       start = { id: event.pointerId, x: event.clientX, y: event.clientY, t: event.timeStamp }
       horizontal = false
-      lastX = event.clientX
-      lastT = event.timeStamp
-      velocity = 0
+      samples = [[event.clientX, event.timeStamp]]
     }
     const move = (event: PointerEvent) => {
       if (!start || event.pointerId !== start.id) return
@@ -62,10 +68,8 @@ export function useHorizontalSwipe(ref: { current: HTMLElement | null }, handler
         if (Math.abs(dx) < LOCK || Math.abs(dx) < Math.abs(dy) * 1.2) return
         horizontal = true
       }
-      const dt = event.timeStamp - lastT
-      if (dt > 0) velocity = (event.clientX - lastX) / dt
-      lastX = event.clientX
-      lastT = event.timeStamp
+      samples.push([event.clientX, event.timeStamp])
+      while (samples.length > 2 && event.timeStamp - samples[0][1] > VELOCITY_WINDOW) samples.shift()
       latest.current.onDrag(dx)
     }
     const up = (event: PointerEvent) => {
@@ -74,7 +78,9 @@ export function useHorizontalSwipe(ref: { current: HTMLElement | null }, handler
       const wasHorizontal = horizontal
       start = null
       horizontal = false
-      if (wasHorizontal) latest.current.onEnd(dx, event.timeStamp - lastT > 80 ? 0 : velocity)
+      // A finger that stopped before lifting has no speed left.
+      const still = event.timeStamp - samples[samples.length - 1][1] > VELOCITY_WINDOW
+      if (wasHorizontal) latest.current.onEnd(dx, still ? 0 : velocity())
     }
     const cancel = (event: PointerEvent) => {
       if (!start || event.pointerId !== start.id) return
@@ -97,14 +103,21 @@ export function useHorizontalSwipe(ref: { current: HTMLElement | null }, handler
   }, [ref, enabled])
 }
 
-let lastRelease = { dx: 0, at: -Infinity }
+/**
+ * Page changes that don't come from a swipe (rail taps) slide with these: TabPager's CSS transition
+ * (`.pager-track` in components.css - keep the literal copy equal) and StatStrip's ease-in.
+ */
+export const SETTLE_MS = 480
+export const SETTLE_EASE = 'cubic-bezier(0.33, 1, 0.68, 1)'
+
+let settling = false
 
 /**
- * Where the last committed swipe let go, for content that re-centres on the new page and eases in
- * from there (the Roster's stat strips). 0 when the change didn't come from a swipe (a rail tap).
+ * True between a committed swipe's release and its hand-over to the new page: content that would
+ * animate its own page change (StatStrip) leaves it to the swipe, which is already moving it.
  */
-export function releaseOffset(): number {
-  return performance.now() - lastRelease.at < 300 ? lastRelease.dx : 0
+export function swipeSettling(): boolean {
+  return settling
 }
 
 /** Dragged targets get their own compositor layer (CSS `[data-dragging]`), so moving them repaints nothing. */
@@ -112,38 +125,55 @@ const markDragging = (targets: HTMLElement[]) => {
   for (const target of targets) target.toggleAttribute('data-dragging', true)
 }
 
-const offsetTo = (targets: HTMLElement[], offset: string) => {
-  for (const target of targets) target.style.translate = offset
+const offsetTo = (targets: HTMLElement[], offset: number) => {
+  for (const target of targets) target.style.translate = `${offset}px`
+}
+
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/** The animated translate right now (px), for picking a moving page up mid-flight. */
+const currentOffset = (target: HTMLElement): number => {
+  const value = getComputedStyle(target).translate
+  return value === 'none' ? 0 : parseFloat(value) || 0
+}
+
+const timelineNow = (): number | null => {
+  const now = document.timeline.currentTime
+  return typeof now === 'number' ? now : null
 }
 
 /**
- * How a released swipe settles, shared by every piece that moves (the drag offset, TabPager's page
- * transition in components.css `.pager-track`, the Roster strips' ease-in) - they run together, so
- * they must match. A cubic ease-out over 480 ms (owner, v3.4: the old 200-380 ms with a steeper curve
- * "snapped"): it leaves at a speed close to a finger's and glides in.
+ * Runs a sampled spring on `translate`, around `base` px, from `startTime` on the document timeline
+ * (default: this frame). Setting the start time - rather than letting the animation wait for its first
+ * frame - means it runs from the very next frame, and the hand-over to the new page can reuse the
+ * first spring's start time so both describe the same instant. `hold` keeps the last frame until the
+ * spring is replaced.
  */
-export const SETTLE_MS = 480
-export const SETTLE_EASE = 'cubic-bezier(0.33, 1, 0.68, 1)'
+const play = (target: HTMLElement, spring: SpringFrames, base: number, { startTime = timelineNow(), hold = false }: { startTime?: number | null; hold?: boolean } = {}): Animation => {
+  const keyframes = spring.values.map((value, i) => ({ translate: `${base + value}px`, offset: spring.offsets[i] }))
+  const animation = target.animate(keyframes, { duration: spring.duration, fill: hold ? 'forwards' : 'none' })
+  if (startTime !== null) animation.startTime = startTime
+  return animation
+}
 
-/**
- * Lets go of the drag: each target eases from its offset back to 0. A Web Animation rather than a CSS
- * transition, so content that remounts or re-centres on the new page (StatStrip) can clear the inline
- * offset itself and run its own animation without a transition fighting it.
- */
-const release = (targets: HTMLElement[]) => {
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  for (const target of targets) {
-    const offset = target.style.translate
-    target.style.removeProperty('translate')
-    target.removeAttribute('data-dragging')
-    if (offset && offset !== '0px' && !reduced && target.isConnected) {
-      target.animate({ translate: [offset, '0px'] }, { duration: SETTLE_MS, easing: SETTLE_EASE })
-    }
+/** Cancels this hook's springs on a target (CSS transitions, e.g. a rail tap's slide, are left alone). */
+const stop = (target: HTMLElement) => {
+  for (const animation of target.getAnimations()) {
+    if (!(animation instanceof CSSTransition) && !(animation instanceof CSSAnimation)) animation.cancel()
   }
 }
 
 /** The TabPager's track, the default thing a swipe pager drags. */
 export const PAGER_TRACK = ':scope > .pager > .pager-track'
+
+/**
+ * One page's width for a target, in px: its parent's width plus its own flex gap (TabPager track:
+ * the viewport; Roster strip: the strip, + --s4 between tables). Read once per release.
+ */
+const pageSize = (target: HTMLElement): number => {
+  const gap = parseFloat(getComputedStyle(target).columnGap)
+  return (target.parentElement?.clientWidth ?? 0) + (Number.isFinite(gap) ? gap : 0)
+}
 
 /**
  * Swipe between pages: drags the `targets` inside the element live (an inline `translate`, damped at
@@ -152,20 +182,48 @@ export const PAGER_TRACK = ':scope > .pager > .pager-track'
  * Only the targets are written to, never the swipe surface: a custom property on the surface is
  * inherited by every node below it, so each pointermove restyled the whole page (thousands of nodes;
  * 100-200 ms a frame on a phone). `translate` isn't inherited and composes with the targets' own
- * `transform`, so their CSS keeps placing the page (TabPager transitions it) while the offset eases
- * out alongside it (`SETTLE_MS`).
+ * page position (TabPager's transform, StatStrip's keyed pages).
+ *
+ * Release: a spring (lib/spring.ts) starting at the finger's speed, playing the moment the finger
+ * lifts - not when React has rendered the new page (the Chart's render showed as a stutter). It aims
+ * at the new page in the old layout; when the owner commits the new index, the same spring is
+ * swapped for one around the new layout sharing its start time, so the motion carries straight on.
  */
 export function useSwipePager(ref: { current: HTMLElement | null }, index: number, count: number, onChange: (next: number) => void, { enabled = true, targets = PAGER_TRACK }: { enabled?: boolean; targets?: string } = {}): void {
   const dragged = useRef<HTMLElement[]>([])
+  const carry = useRef(0)
+  const flight = useRef<{ spring: SpringFrames; startTime: number | null; targets: HTMLElement[] } | null>(null)
   const fallback = useRef(0)
-  const settle = () => {
+
+  // The new page is in the DOM: continue the release around it.
+  useLayoutEffect(() => {
+    const current = flight.current
+    if (!current) return
+    flight.current = null
+    settling = false
     window.clearTimeout(fallback.current)
-    release(dragged.current)
-    dragged.current = []
+    // Its page position just jumped by one page; it mustn't transition there as well.
+    for (const target of current.targets) {
+      stop(target)
+      target.style.transition = 'none'
+    }
+    void getComputedStyle(current.targets[0] ?? document.body).transform
+    for (const target of current.targets) {
+      target.style.removeProperty('transition')
+      if (target.isConnected && !reducedMotion()) play(target, current.spring, 0, { startTime: current.startTime })
+    }
+  }, [index])
+
+  const springBack = (list: HTMLElement[], from: number, velocity: number) => {
+    const spring = settleSpring(from, velocity)
+    for (const target of list) {
+      target.style.removeProperty('translate')
+      target.removeAttribute('data-dragging')
+      if (!reducedMotion()) play(target, spring, 0)
+    }
+    settleMotion(spring.duration)
   }
-  // A committed swipe lets go once the new page is in the DOM (some owners navigate, which lands a
-  // task later), so the page change and the release start on the same frame instead of springing back.
-  useLayoutEffect(settle, [index])
+
   useHorizontalSwipe(ref, {
     onDrag(dx) {
       const node = ref.current
@@ -173,25 +231,57 @@ export function useSwipePager(ref: { current: HTMLElement | null }, index: numbe
       if (!dragged.current.length) {
         holdMotion()
         dragged.current = [...node.querySelectorAll<HTMLElement>(targets)]
+        // Caught mid-settle: pick the page up where it is rather than snapping it to rest.
+        const first = dragged.current[0]
+        carry.current = first && !flight.current ? currentOffset(first) : 0
+        for (const target of dragged.current) stop(target)
         markDragging(dragged.current)
       }
-      const blocked = (dx > 0 && index === 0) || (dx < 0 && index === count - 1)
-      offsetTo(dragged.current, `${blocked ? dx / 4 : dx}px`)
+      const offset = carry.current + dx
+      const blocked = (offset > 0 && index === 0) || (offset < 0 && index === count - 1)
+      offsetTo(dragged.current, blocked ? offset / 4 : offset)
     },
     onEnd(dx, velocity) {
-      const next = index + swipeDirection(dx, velocity)
-      if (next !== index && next >= 0 && next < count) {
-        lastRelease = { dx, at: performance.now() }
-        fallback.current = window.setTimeout(settle, 500)
-        onChange(next)
-      } else {
-        settle()
+      const list = dragged.current
+      dragged.current = []
+      const offset = carry.current + dx
+      const dir = swipeDirection(offset, velocity)
+      const next = index + dir
+      const blocked = (offset > 0 && index === 0) || (offset < 0 && index === count - 1)
+      if (next === index || next < 0 || next >= count || !list.length) {
+        springBack(list, blocked ? offset / 4 : offset, blocked ? velocity / 4 : velocity)
+        return
       }
-      settleMotion(SETTLE_MS)
+      // Aim at the neighbouring page: it sits one page away, so the spring's rest is there.
+      const page = pageSize(list[0])
+      const spring = settleSpring(offset + dir * page, velocity)
+      const startTime = timelineNow()
+      for (const target of list) {
+        target.style.removeProperty('translate')
+        target.removeAttribute('data-dragging')
+        if (!reducedMotion()) play(target, spring, -dir * page, { startTime, hold: true })
+      }
+      flight.current = { spring, startTime, targets: list }
+      settling = true
+      // If the owner never moves to the new page, don't leave it parked there.
+      fallback.current = window.setTimeout(() => {
+        if (!flight.current) return
+        flight.current = null
+        settling = false
+        const from = list[0] ? currentOffset(list[0]) : 0
+        for (const target of list) stop(target)
+        springBack(list, from, 0)
+      }, 1000)
+      settleMotion(spring.duration)
+      // A new animation only starts once a frame is painted, and the owner's re-render would otherwise
+      // run in this same task (React flushes pointer events synchronously) and hold the page still
+      // until it finished. Let the spring start first; the compositor keeps it moving while React works.
+      requestAnimationFrame(() => window.setTimeout(() => onChange(next)))
     },
     onCancel() {
-      settle()
-      settleMotion(SETTLE_MS)
+      const list = dragged.current
+      dragged.current = []
+      springBack(list, list[0] ? currentOffset(list[0]) : 0, 0)
     },
   }, enabled)
 }

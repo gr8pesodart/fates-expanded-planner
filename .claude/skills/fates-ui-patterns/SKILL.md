@@ -54,18 +54,31 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   surfaces with `data-swipe` (CSS gives them `touch-action: pan-y`). Commit: |dx| > 48px or
   |velocity| > 0.3 px/ms (v3.3; was 72 / 0.45 — owner found it sticky). When testing with CDP
   touches, don't start the drag on an input (the Avatar Name field) — it's ignored by design.
-- `useSwipePager(ref, index, count, onChange, { enabled, targets, releaseMs })`: the drag writes an
-  inline **`translate`** on the `targets` only (default `PAGER_TRACK` = the TabPager track; Roster:
-  every `.stat-strip-track`), damped at the ends, with `[data-dragging]` → `will-change: translate`.
-  Commit on distance/velocity (`swipeDirection`). Release is a **Web Animation** of `translate` back
-  to 0 (never a CSS transition, so StatStrip can take over); on a commit it waits for the new `index`
-  (layout effect; `navigate` lands a task later) so the page change and the release start together.
-  `releaseOffset()` = where a committed swipe let go (300 ms window, else 0).
-- **Settle timing (owner, v3.4: the release "snapped")**: every release motion uses `swipe.ts ›
-  SETTLE_MS` (480) + `SETTLE_EASE` (cubic ease-out `0.33, 1, 0.68, 1`) - the drag offset's Web
-  Animation, StatStrip's ease-in and `.pager-track`'s CSS transition (literal copy in
-  components.css; keep them equal or the composed motion wobbles). The old 200-380 ms with
-  `--ease` (`0.2, 0.8, 0.2, 1`, starting slope 4) left at ~2x finger speed.
+- `useSwipePager(ref, index, count, onChange, { enabled, targets })`: the drag writes an inline
+  **`translate`** on the `targets` only (default `PAGER_TRACK` = the TabPager track; Roster: every
+  `.stat-strip-track`), damped at the ends, with `[data-dragging]` → `will-change: translate`.
+  Commit on distance/velocity (`swipeDirection`; velocity averaged over the last 80 ms of moves, 0 if
+  the finger stopped before lifting). A drag that catches a page mid-settle picks it up where it is.
+- **Release = velocity-matched spring (owner, v3.4: fixed ease-outs "snapped")**: `lib/spring.ts ›
+  settleSpring(x0, v0)` is a critically damped spring (no bounce; flicks toward rest capped at ω·x0
+  so it never overshoots) starting at the finger's speed, sampled into WAAPI keyframes (compositor;
+  `SPRING_OMEGA` 0.016/ms is the one feel knob, pinned by `spring.test.ts`). On a commit it plays
+  **the moment the finger lifts**, aimed at the neighbouring page in the old layout (`fill:
+  forwards`), with `startTime` set to the timeline's now (no pending first frame). `onChange` is
+  deferred a frame (`requestAnimationFrame` → `setTimeout`): React flushes native pointer events
+  synchronously, so the owner's re-render in the same task held the page still (the Chart stutter).
+  When the new `index` commits, the hook's layout effect swaps each target's spring for the same
+  spring around the new layout **sharing the first one's `startTime`** (seamless), with the pager's
+  CSS transform transition suppressed for that one change. `swipeSettling()` tells StatStrip to leave
+  the motion to the swipe; it only animates rail taps itself. Verified with trace screenshots: a new
+  compositor frame every ~16 ms after lift on Roster, Chart and character pages, through React's
+  render, at 4x CPU.
+- Rail taps (no swipe) still slide with `SETTLE_MS` (480) + `SETTLE_EASE` (cubic ease-out
+  `0.33, 1, 0.68, 1`): TabPager's `.pager-track` CSS transition (literal copy in components.css) and
+  StatStrip's ease-in.
+- Chart tab changes are cheap: each tab is a memoised `ChartList` (stable `cards`/`byId`, constant
+  `PARTS[tab]`), so a change only flips the active page - it used to re-render every row of all four
+  tabs as the swipe let go.
 - **Swipe performance rules (v3.4, owner: "major slow down while swiping"; sprite pausing didn't fix
   it):** never set a custom property on a swipe surface or pager ancestor - custom properties
   inherit, so `--swipe-dx` on the list restyled 16-27k nodes per pointermove (100-200 ms frames on a

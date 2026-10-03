@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef } from 'react'
+import { Fragment, memo, useMemo, useRef } from 'react'
 import { usePlanner } from '../app/plannerContext'
 import { usePickers } from '../app/pickerStore'
 import { useUi } from '../app/ui'
@@ -40,17 +40,12 @@ interface RowParts {
 }
 
 // Every tab keeps the skills; front and back units both show their pair-up bonus (owner, v3.4).
-function partsFor(tab: ChartTab): RowParts {
-  switch (tab) {
-    case 'full':
-      return { skills: true, route: true, pairUp: true }
-    case 'progression':
-      return { skills: true, route: true, pairUp: false }
-    case 'pairUp':
-      return { skills: true, route: false, pairUp: true }
-    default:
-      return { skills: true, route: false, pairUp: false }
-  }
+// Constant objects, so memoised rows see the same parts on every render.
+const PARTS: Record<ChartTab, RowParts> = {
+  full: { skills: true, route: true, pairUp: true },
+  skills: { skills: true, route: false, pairUp: false },
+  progression: { skills: true, route: true, pairUp: false },
+  pairUp: { skills: true, route: false, pairUp: true },
 }
 
 export function ChartScreen() {
@@ -59,8 +54,8 @@ export function ChartScreen() {
   const openPicker = usePickers((state) => state.open)
   const { entries, sort } = useSortedRoster(rosterLens, chartSort, { favouritesFirst: chartFavouritesFirst, linkPairs: chartLinkPairs, generation: chartGeneration })
   const { sentinelRef, scrolled } = useScrolled()
-  const byId = new Map(entries.map((entry) => [entry.unitId, entry]))
-  const cards = chartCards(entries.map((entry) => entry.unitId), run, chartLinkPairs)
+  const byId = useMemo(() => new Map(entries.map((entry) => [entry.unitId, entry])), [entries])
+  const cards = useMemo(() => chartCards(entries.map((entry) => entry.unitId), run, chartLinkPairs), [entries, run, chartLinkPairs])
   // Cumulative over the whole run: every roster unit's planned path, memoised away from tab changes.
   const tally = useMemo(() => runTallyItems(dataset, run, entries.map((entry) => entry.ctx)), [dataset, run, entries])
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -68,28 +63,6 @@ export function ChartScreen() {
   // Tabs swipe like the character page: each tab is a full chart, mounted once seen.
   useSwipePager(pagesRef, tabIndex, TABS.length, (next) => setChartTab(TABS[next].id))
   const mounted = useMountedTabs(chartTab, TAB_IDS, 600)
-  const chartList = (tab: ChartTab) => (
-    <ul className="chart-list">
-      {cards.map((card) => {
-        if (card.kind === 'solo') {
-          const entry = byId.get(card.unitId)
-          return entry ? <li key={card.unitId} className="chart-card"><ChartRow entry={entry} parts={partsFor(tab)} /></li> : null
-        }
-        const front = byId.get(card.front)
-        const back = byId.get(card.back)
-        if (!front || !back) return null
-        return (
-          <li key={`${card.front}+${card.back}`} className="chart-card pair">
-            <ChartRow entry={front} parts={partsFor(tab)} />
-            <div className="chart-swap">
-              <SwapButton unitId={card.front} frontName={front.name} backName={back.name} />
-            </div>
-            <ChartRow entry={back} parts={partsFor(tab)} />
-          </li>
-        )
-      })}
-    </ul>
-  )
   return (
     <section className="screen chart" aria-labelledby="chart-title">
       <span ref={sentinelRef} className="sticky-sentinel" aria-hidden="true" />
@@ -109,7 +82,7 @@ export function ChartScreen() {
         <TabPager index={tabIndex}>
           {TABS.map((tab) => (
             <PagerPage key={tab.id} active={tab.id === chartTab} label={tab.label}>
-              {mounted.has(tab.id) ? chartList(tab.id) : null}
+              {mounted.has(tab.id) ? <ChartList tab={tab.id} cards={cards} byId={byId} /> : null}
             </PagerPage>
           ))}
         </TabPager>
@@ -120,6 +93,36 @@ export function ChartScreen() {
     </section>
   )
 }
+
+/**
+ * One tab's chart. Memoised on its inputs, so changing tab (a swipe or a rail tap) re-renders none of
+ * the lists - only which page is active. Re-rendering every row of all four tabs on each change
+ * blocked the main thread right as a swipe let go (a visible stutter on the Chart).
+ */
+const ChartList = memo(function ChartList({ tab, cards, byId }: { tab: ChartTab; cards: ReturnType<typeof chartCards>; byId: Map<string, RosterEntry> }) {
+  return (
+    <ul className="chart-list">
+      {cards.map((card) => {
+        if (card.kind === 'solo') {
+          const entry = byId.get(card.unitId)
+          return entry ? <li key={card.unitId} className="chart-card"><ChartRow entry={entry} parts={PARTS[tab]} /></li> : null
+        }
+        const front = byId.get(card.front)
+        const back = byId.get(card.back)
+        if (!front || !back) return null
+        return (
+          <li key={`${card.front}+${card.back}`} className="chart-card pair">
+            <ChartRow entry={front} parts={PARTS[tab]} />
+            <div className="chart-swap">
+              <SwapButton unitId={card.front} frontName={front.name} backName={back.name} />
+            </div>
+            <ChartRow entry={back} parts={PARTS[tab]} />
+          </li>
+        )
+      })}
+    </ul>
+  )
+})
 
 function ChartRow({ entry, parts }: { entry: RosterEntry; parts: RowParts }) {
   const { dataset, run, readOnly, mutate } = usePlanner()
