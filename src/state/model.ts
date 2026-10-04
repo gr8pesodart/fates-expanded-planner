@@ -51,6 +51,8 @@ export interface CorrinPlan {
  * A child's second parent is never stored: it is the fixed parent's `sPartner`.
  */
 export interface UnitPlan {
+  /** Freeform planning note shared by the Roster, Chart and Profile. */
+  note?: string
   sPartner?: string
   aPlusPartner?: string
   pairPartner?: string

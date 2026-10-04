@@ -107,6 +107,10 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   the 2:1 art didn't fit the box), linear route gradient light on the right, black overlay 0.94 →
   0.6; Corrin (F) portraits and fallback faces switched to build 2 (map sprite unchanged - the game
   reuses one head for both builds); cut-in assets deleted (portraits 2.5 MB → 910 KB).
+  Round 10 (2026-10-04, branch `opus`): per-unit multiline notes shared across Roster, Chart and
+  Profile and stored in runs; Roster notes visibility toggle; Chart tabs replaced with a persisted
+  information sheet grouped into Favourites and Stats; Chart Sort gained Favourites only. Screenshot
+  journey checks note expansion, reload persistence and the Chart filter.
 
 ### Backlog
 

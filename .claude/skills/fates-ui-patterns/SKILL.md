@@ -112,9 +112,8 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Rail taps (no swipe) still slide with `SETTLE_MS` (480) + `SETTLE_EASE` (cubic ease-out
   `0.33, 1, 0.68, 1`): TabPager's `.pager-track` CSS transition (literal copy in components.css) and
   StatStrip's ease-in.
-- Chart tab changes are cheap: each tab is a memoised `ChartList` (stable `cards`/`byId`, constant
-  `PARTS[tab]`), so a change only flips the active page - it used to re-render every row of all four
-  tabs as the swipe let go.
+- The Chart now renders one memoised `ChartList`; changing information switches re-renders only
+  that list. The four full-page tab lists and their swipe pager were removed on 2026-10-04.
 - **Swipe performance rules (v3.4, owner: "major slow down while swiping"; sprite pausing didn't fix
   it):** never set a custom property on a swipe surface or pager ancestor - custom properties
   inherit, so `--swipe-dx` on the list restyled 16-27k nodes per pointermove (100-200 ms frames on a
@@ -219,10 +218,14 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   for a child with a second parent). Class bodies collapse by animating `grid-template-rows` 0fr↔1fr
   (always rendered, `inert` when closed). Sheets are fixed at 88dvh when they hold the picker. Inherit
   picker: the parent's equipped skills first. Chart, New Run, Runs and pickers are lazy chunks.
-- Chart tabs (`ui.chartTab`, ids unchanged): Full / Skills Only / Skills + Progression / Skills + Pair
-  Up (v3.4 labels; skills on every tab, pair-up on front and back units alike); `partsFor(tab)`
-  decides skills / class path (`progression.ts › routeSteps`) / effective pair-up table per row.
-  v3.4: each tab is a full chart in a `TabPager` (swipe to change tab). Rows use the normal `--s3`
+- Chart information (owner, 2026-10-04): the tabs were replaced by one persisted switch sheet
+  (`ui.chartDisplay`, opened from the tune button beside Sort). Favourites contains Notes, Skills,
+  Progression routing, Pair up bonuses and Expected final stats. Stats contains the other stat
+  lenses. `ChartScreen` renders one card list and filters out unhearted units when Chart Sort's
+  Favourites only switch is on. A pair with just one heart becomes a solo card. Notes are stored
+  as `UnitPlan.note`; `UnitNote` is shared by the Chart, the Roster's notes toggle and the top of
+  the Profile tab. The note uses regular 12px text with its first line vertically centred in the
+  one-line field, then grows by 20px per line. Rows use the normal `--s3`
   inset, starting with a real `chip-32` portrait (owner, v3.4) then the sprite at the Roster's `--s2`. The
   swap button lives in a zero-height `.chart-swap` between the rows so uneven rows don't misplace it.
 - Class sprites: sizes in multiples of 32 only (see `fates-sprites`).

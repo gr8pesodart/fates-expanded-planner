@@ -36,6 +36,7 @@ const demoRun = {
     [CORRIN]: plan({
       sPartner: JAKOB, pairPartner: JAKOB, pairRole: 'front', aPlusPartner: ANNA,
       skills: [53, 59, 21, 30, 43],
+      note: 'Train Swordmaster before the final map.\nKeep Jakob paired for support.',
       reclasses: [{ segment: 0, level: 10, classId: 34 }, { segment: 0, level: 12, classId: 32 }, { segment: 1, level: 15, classId: 36 }],
     }),
     [JAKOB]: plan({ sPartner: CORRIN, pairPartner: CORRIN, pairRole: 'back', skills: [53, 59, 21, null, null] }),
@@ -115,7 +116,7 @@ async function main() {
   await shot('m-10-roster')
   await click('.rail-tabs .rail-item:nth-child(2)')
   await shot('m-11-roster-growths')
-  await click('.sort-btn')
+  await click('.roster-sticky-head .sort-btn:last-child')
   await shot('m-12-sort-sheet')
   await page.keyboard.press('Escape')
   await click('.roster-row .sprite-btn')
@@ -130,6 +131,9 @@ async function main() {
   await page.locator('.roster-sticky-head .rail-item', { hasText: 'Expected Final' }).click()
   await sleep(300)
   await shot('m-16-roster-expected-final')
+  await click('.roster-head-actions .sort-btn:first-child')
+  await shot('m-17-roster-notes')
+  await click('.roster-head-actions .sort-btn:first-child')
 
   await goto(unit(CORRIN, 'profile'))
   await shot('m-20-character-profile')
@@ -153,11 +157,24 @@ async function main() {
 
   await goto('chart')
   await shot('m-30-chart')
-  await page.locator('.chart-sticky-head .rail-item', { hasText: 'Full' }).click()
-  await shot('m-31-chart-full')
-  await page.locator('.chart-sticky-head .rail-item', { hasText: 'Pair Up' }).click()
-  await shot('m-32-chart-pair-up')
-  await page.locator('.chart-sticky-head .rail-item', { hasText: 'Skills' }).first().click()
+  await click('.chart-sticky-head .sort-btn:first-child')
+  await shot('m-31-chart-display')
+  await page.keyboard.press('Escape')
+  await click('.chart-sticky-head .sort-btn:last-child')
+  await shot('m-32-chart-sort')
+  await page.getByRole('switch', { name: 'Favourites only' }).click()
+  await page.keyboard.press('Escape')
+  await shot('m-33-chart-favourites-only')
+  if (await page.locator('.chart-row').count() !== demoRun.favourites.length) throw new Error('Favourites only did not hide other chart rows')
+  const editedNote = 'Plan the final class.\nKeep the support pair together.\nCheck seal timing.'
+  await page.getByRole('textbox', { name: 'Corrin note' }).fill(editedNote)
+  const noteFits = await page.getByRole('textbox', { name: 'Corrin note' }).evaluate((node) => node.scrollHeight <= node.clientHeight + 1)
+  if (!noteFits) throw new Error('The multiline chart note did not expand')
+  await sleep(600)
+  await goto(unit(CORRIN, 'profile'))
+  if (await page.locator('.char-panel').getByRole('textbox', { name: 'Corrin note' }).inputValue() !== editedNote) throw new Error('Chart note did not appear on the Profile')
+  await page.reload()
+  if (await page.locator('.char-panel').getByRole('textbox', { name: 'Corrin note' }).inputValue() !== editedNote) throw new Error('The note did not survive a reload')
   await goto('runs')
   await click('.run-card .icon-btn')
   await shot('m-40-runs')

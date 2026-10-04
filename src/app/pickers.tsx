@@ -17,7 +17,8 @@ import { useMountedTabs } from '../lib/useMountedTabs'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import { displayName, unitContext } from '../logic/army'
 import { classFamily, sexedClassId } from '../logic/classes'
-import { blankColumns } from '../logic/lenses'
+import { blankColumns, LENSES } from '../logic/lenses'
+import type { ChartField } from './ui'
 import type { ClassPoolEntry } from '../logic/classes'
 import { dlcClassesFor } from '../logic/progression'
 import type { ClassAccess, SkillAccess, SkillFilters, SkillGroup } from '../logic/skillAccess'
@@ -40,12 +41,13 @@ import { useSwipePager } from '../lib/swipe'
 import { candidatesFor } from './selectors'
 
 export function Pickers() {
-  const { character, classes, skill, sort, close } = usePickers()
+  const { character, classes, skill, sort, chartDisplay, close } = usePickers()
   if (character) return <CharacterPicker {...character} onClose={close} />
   if (classes) return <ClassPicker unitId={classes} onClose={close} />
   if (skill) return <SkillPicker {...skill} onClose={close} />
   if (sort === 'parents') return <ParentSortSheet onClose={close} />
   if (sort) return <SortSheet target={sort} onClose={close} />
+  if (chartDisplay) return <ChartDisplaySheet onClose={close} />
   return null
 }
 
@@ -580,6 +582,31 @@ function InheritSkillPicker({ unitId, slot, onClose }: { unitId: string; slot: '
   )
 }
 
+const CHART_FAVOURITES: { id: ChartField; label: string }[] = [
+  { id: 'notes', label: 'Notes' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'progression', label: 'Progression routing' },
+  { id: 'pairUp', label: 'Pair up bonuses' },
+  { id: 'expectedFinal', label: 'Expected final stats' },
+]
+const CHART_STATS = LENSES.filter((lens) => lens.id !== 'expectedFinal' && lens.id !== 'effectivePairUp').map((lens) => ({ id: lens.id as ChartField, label: lens.label }))
+
+function ChartDisplaySheet({ onClose }: { onClose(): void }) {
+  const display = useUi((state) => state.chartDisplay)
+  const setField = useUi((state) => state.setChartField)
+  const group = (title: string, fields: { id: ChartField; label: string }[]) => (
+    <section className="chart-display-group" aria-label={title}>
+      <h3 className="sub-title">{title}</h3>
+      {fields.map((field) => <div key={field.id} className="switch-row"><span className="sub-title">{field.label}</span><Switch checked={display[field.id]} label={field.label} onChange={(value) => setField(field.id, value)} /></div>)}
+    </section>
+  )
+  return <Sheet title="Chart information" onClose={onClose}>
+    {group('Favourites', CHART_FAVOURITES)}
+    {group('Stats', CHART_STATS)}
+    <button type="button" className="btn primary sort-done" onClick={onClose}>Done</button>
+  </Sheet>
+}
+
 function SortSheet({ target, onClose }: { target: 'roster' | 'chart'; onClose(): void }) {
   const ui = useUi()
   const [closing, setClosing] = useState(false)
@@ -625,6 +652,7 @@ function SortSheet({ target, onClose }: { target: 'roster' | 'chart'; onClose():
         <Segmented label="Show units" value={generation} options={[{ id: 'all', label: 'All' }, { id: 'first', label: 'First gen' }, { id: 'children', label: 'Children' }]} onChange={setGeneration} />
       </div>
       <div className="sort-toggles">
+        {target === 'chart' ? <div className="switch-row"><span className="sub-title">Favourites only</span><Switch checked={ui.chartFavouritesOnly} label="Favourites only" onChange={ui.setChartFavouritesOnly} /></div> : null}
         <label className="switch-row">
           <span className="sub-title">Favourites first</span>
           <Switch checked={favouritesFirst} onChange={setFavourites} />

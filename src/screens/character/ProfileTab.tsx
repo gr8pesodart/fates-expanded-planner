@@ -13,6 +13,7 @@ import { SkillCard } from '../../components/SkillCard'
 import { ConflictNotice, SkillNotice } from '../../components/SkillNotice'
 import { skillAccess, unreachableSkill } from '../../logic/skillAccess'
 import { StatTable } from '../../components/StatTable'
+import { UnitNote } from '../../components/UnitNote'
 import type { Dataset, UnitDef } from '../../data/types'
 import type { UnitContext } from '../../logic/army'
 import { armyUnits, displayName, personalSkill } from '../../logic/army'
@@ -91,6 +92,7 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
 
   return (
     <>
+      <div className="profile-note"><UnitNote unitId={unitId} name={displayName(ctx.unit, run)} /></div>
       <section className="panel-section" aria-labelledby="rel-title">
         <h2 id="rel-title" className="section-title">Relationships</h2>
         <div className="rel-grid" data-count={relations.length}>

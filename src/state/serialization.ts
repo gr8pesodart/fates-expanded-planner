@@ -43,6 +43,7 @@ function isRunPlan(value: unknown): value is RunPlan {
 
   for (const unit of Object.values(value.units)) {
     if (!isRecord(unit)) return false
+    if (!isOptionalString(unit.note)) return false
     if (!Array.isArray(unit.skills) || unit.skills.length !== SKILL_SLOTS) return false
     if (!unit.skills.every((skill) => skill === null || typeof skill === 'number')) return false
     if (!Array.isArray(unit.reclasses)) return false

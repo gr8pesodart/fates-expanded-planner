@@ -12,6 +12,8 @@ import { RelationSlot } from '../components/relations'
 import { StatTable } from '../components/StatTable'
 import type { StatSlide, StatTableProps } from '../components/StatTable'
 import { SwapButton } from '../components/SwapButton'
+import { UnitNote } from '../components/UnitNote'
+import { Icon } from '../components/icons'
 import { displayName } from '../logic/army'
 import { lensDef, lensRow, LENSES } from '../logic/lenses'
 import { expectedFinal } from '../logic/progression'
@@ -22,7 +24,7 @@ import { useSwipePager } from '../lib/swipe'
 const SORT_LABEL = { recruit: 'Recruit order', name: 'Name', stat: 'Stat' } as const
 
 export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
-  const { rosterLens, rosterSort, rosterFavouritesFirst, rosterLinkPairs, rosterGeneration, setRosterLens } = useUi()
+  const { rosterLens, rosterSort, rosterFavouritesFirst, rosterLinkPairs, rosterGeneration, rosterNotes, setRosterLens, setRosterNotes } = useUi()
   const { dataset, run } = usePlanner()
   const { entries, sort } = useSortedRoster(rosterLens, rosterSort, { favouritesFirst: rosterFavouritesFirst, linkPairs: rosterLinkPairs, generation: rosterGeneration })
   const openPicker = usePickers((state) => state.open)
@@ -53,9 +55,12 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
       <div className="roster-sticky-head">
         <div className="screen-head">
           <h1 id="roster-title" className="screen-title">Roster</h1>
-          <button type="button" className="icon-btn sort-btn" aria-label={`Sort: ${SORT_LABEL[sort.kind]}. Change sort`} onClick={() => openPicker({ sort: 'roster' })}>
-            <SortIcon sort={sort} size={34} />
-          </button>
+          <div className="roster-head-actions">
+            <button type="button" className="icon-btn sort-btn" aria-label="Show character notes" aria-pressed={rosterNotes} data-active={rosterNotes || undefined} onClick={() => setRosterNotes(!rosterNotes)}><Icon name="notes" size={30} /></button>
+            <button type="button" className="icon-btn sort-btn" aria-label={`Sort: ${SORT_LABEL[sort.kind]}. Change sort`} onClick={() => openPicker({ sort: 'roster' })}>
+              <SortIcon sort={sort} size={34} />
+            </button>
+          </div>
         </div>
         <Rail
           variant="tabs"
@@ -79,6 +84,7 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
                 slide={{ index: lensIndex, prev: neighbours.prev?.(entry.unitId), next: neighbours.next?.(entry.unitId) }}
                 active={entry.unitId === activeUnitId}
                 referenceRows={referenceRows}
+                showNote={rosterNotes}
               />
               {swap ? (
                 <li className="roster-swap">
@@ -93,7 +99,7 @@ export function RosterScreen({ activeUnitId }: { activeUnitId?: string }) {
   )
 }
 
-const RosterRow = memo(function RosterRow({ entry, signed, slide, active, referenceRows }: { entry: RosterEntry; signed: boolean; slide: StatSlide; active: boolean; referenceRows: (number | null)[][] }) {
+const RosterRow = memo(function RosterRow({ entry, signed, slide, active, referenceRows, showNote }: { entry: RosterEntry; signed: boolean; slide: StatSlide; active: boolean; referenceRows: (number | null)[][]; showNote: boolean }) {
   const { dataset, run, readOnly, mutate } = usePlanner()
   const openPicker = usePickers((state) => state.open)
   const { ctx, name, unitId } = entry
@@ -126,6 +132,7 @@ const RosterRow = memo(function RosterRow({ entry, signed, slide, active, refere
           <EditButton label={`Open ${name}`} onClick={open} />
         </div>
       </div>
+      {showNote ? <UnitNote unitId={unitId} name={name} /> : null}
       <StatTable row={entry.lensRow} signed={signed} muted={entry.muted} label={`${name} stats`} referenceRows={referenceRows} slide={slide} />
     </li>
   )

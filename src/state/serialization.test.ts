@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { emptyRun, PLAN_SCHEMA } from './model'
+import { decodeSharedRun, encodeSharedRun, parsePlanDocument, serializePlanDocument } from './serialization'
+import { emptyRun, emptyUnitPlan, PLAN_SCHEMA } from './model'
 import type { PlanDocument } from './model'
 import { parseHash } from '../lib/router'
-import {
-  decodeSharedRun,
-  encodeSharedRun,
-  parsePlanDocument,
-  serializePlanDocument,
-  shareUrlForRun,
-} from './serialization'
+import { shareUrlForRun } from './serialization'
 
 describe('plan serialization', () => {
   it('round-trips an export', () => {
@@ -35,7 +30,6 @@ describe('plan serialization', () => {
     const run = emptyRun('run-share')
     run.createdAt = '2026-09-29T00:00:00.000Z'
     run.updatedAt = '2026-09-29T00:00:00.000Z'
-    // Find a run whose token contains '+', the character URLSearchParams would turn into a space.
     for (let i = 0; !encodeSharedRun(run).includes('+') && i < 200; i += 1) run.name = `Run ${i}`
     const token = encodeSharedRun(run)
     expect(token).toContain('+')
@@ -48,5 +42,21 @@ describe('plan serialization', () => {
   it('rejects unsupported and malformed exports', () => {
     expect(() => parsePlanDocument('{')).toThrow('valid JSON')
     expect(() => parsePlanDocument('{"schema":1,"runs":[],"activeRunId":""}')).toThrow(`schema ${PLAN_SCHEMA}`)
+  })
+})
+
+describe('unit notes', () => {
+  it('keeps multiline notes in exports and share links', () => {
+    const run = emptyRun('notes')
+    run.units.ryoma = { ...emptyUnitPlan(), note: 'First line\nSecond line' }
+    const document = { schema: PLAN_SCHEMA, runs: [run], activeRunId: run.id }
+    expect(parsePlanDocument(serializePlanDocument(document)).runs[0].units.ryoma.note).toBe('First line\nSecond line')
+    expect(decodeSharedRun(encodeSharedRun(run)).units.ryoma.note).toBe('First line\nSecond line')
+  })
+
+  it('rejects a note that is not text', () => {
+    const run = emptyRun('notes')
+    const document = { schema: PLAN_SCHEMA, runs: [{ ...run, units: { ryoma: { ...emptyUnitPlan(), note: 12 } } }], activeRunId: run.id }
+    expect(() => parsePlanDocument(JSON.stringify(document))).toThrow()
   })
 })

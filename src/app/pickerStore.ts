@@ -12,6 +12,7 @@ interface PickerState {
   classes: string | null
   skill: { unitId: string; slot: SkillTarget } | null
   sort: 'roster' | 'chart' | 'parents' | false
+  chartDisplay: boolean
   open(next: Partial<Omit<PickerState, 'open' | 'close'>>): void
   close(): void
 }
@@ -21,8 +22,9 @@ export const usePickers = create<PickerState>((set) => ({
   classes: null,
   skill: null,
   sort: false,
-  open: (next) => set({ character: null, classes: null, skill: null, sort: false, ...next }),
-  close: () => set({ character: null, classes: null, skill: null, sort: false }),
+  chartDisplay: false,
+  open: (next) => set({ character: null, classes: null, skill: null, sort: false, chartDisplay: false, ...next }),
+  close: () => set({ character: null, classes: null, skill: null, sort: false, chartDisplay: false }),
 }))
 
 export function bondOf(kind: SlotKind): 'sPartner' | 'aPlusPartner' | 'pairPartner' {
@@ -32,4 +34,3 @@ export function bondOf(kind: SlotKind): 'sPartner' | 'aPlusPartner' | 'pairPartn
 export function applyBond(dataset: Dataset, run: RunPlan, unitId: string, kind: SlotKind, partnerId: string | null): RunPlan {
   return kind === 'parent' ? setVariableParent(dataset, run, unitId, partnerId) : setBond(run, unitId, bondOf(kind), partnerId)
 }
-

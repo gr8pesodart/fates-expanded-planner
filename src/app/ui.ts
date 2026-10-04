@@ -8,7 +8,13 @@ import type { ParentSort } from '../logic/parents'
 import type { SkillFilters } from '../logic/skillAccess'
 import { ALL_WAYS } from '../logic/skillAccess'
 
-export type ChartTab = 'full' | 'skills' | 'progression' | 'pairUp'
+export type ChartField = 'notes' | 'skills' | 'progression' | 'pairUp' | 'expectedFinal' | 'statModifiers' | 'personalGrowths' | 'effectiveGrowths' | 'maxStats' | 'personalPairUp' | 'baseStats' | 'classGrowths' | 'classPairUp'
+export type ChartDisplay = Record<ChartField, boolean>
+export const DEFAULT_CHART_DISPLAY: ChartDisplay = {
+  notes: true, skills: true, progression: true, pairUp: true, expectedFinal: true,
+  statModifiers: false, personalGrowths: false, effectiveGrowths: false, maxStats: false,
+  personalPairUp: false, baseStats: false, classGrowths: false, classPairUp: false,
+}
 export type SkillPickerTab = 'starred' | 'grouped' | 'ungrouped'
 import { DEFAULT_PARENT_SORT } from '../logic/parents'
 
@@ -18,11 +24,13 @@ interface UiState {
   rosterFavouritesFirst: boolean
   rosterLinkPairs: boolean
   rosterGeneration: GenerationFilter
+  rosterNotes: boolean
   chartSort: RosterSort
   chartFavouritesFirst: boolean
   chartLinkPairs: boolean
   chartGeneration: GenerationFilter
-  chartTab: ChartTab
+  chartFavouritesOnly: boolean
+  chartDisplay: ChartDisplay
   skillPickerTab: SkillPickerTab
   /** Skill picker, per unit: count new S / A+ relationships and other second parents as ways in. */
   skillFilters: Record<string, SkillFilters>
@@ -43,11 +51,13 @@ interface UiState {
   setRosterFavouritesFirst(value: boolean): void
   setRosterLinkPairs(value: boolean): void
   setRosterGeneration(value: GenerationFilter): void
+  setRosterNotes(value: boolean): void
   setChartSort(sort: RosterSort): void
   setChartFavouritesFirst(value: boolean): void
   setChartLinkPairs(value: boolean): void
   setChartGeneration(value: GenerationFilter): void
-  setChartTab(tab: ChartTab): void
+  setChartFavouritesOnly(value: boolean): void
+  setChartField(field: ChartField, value: boolean): void
   setSkillPickerTab(tab: SkillPickerTab): void
   setSkillFilters(unitId: string, filters: SkillFilters): void
   toggleSkillClass(unitId: string, key: string): void
@@ -61,11 +71,13 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   rosterFavouritesFirst: true,
   rosterLinkPairs: false,
   rosterGeneration: 'all',
+  rosterNotes: false,
   chartSort: DEFAULT_ROSTER_SORT,
   chartFavouritesFirst: true,
   chartLinkPairs: true,
   chartGeneration: 'all',
-  chartTab: 'skills',
+  chartFavouritesOnly: false,
+  chartDisplay: DEFAULT_CHART_DISPLAY,
   skillPickerTab: 'grouped',
   skillFilters: {},
   collapsedSkillClasses: {},
@@ -82,11 +94,13 @@ export const useUi = create<UiState>()(persist((set, get) => ({
   setRosterFavouritesFirst: (rosterFavouritesFirst) => set({ rosterFavouritesFirst }),
   setRosterLinkPairs: (rosterLinkPairs) => set({ rosterLinkPairs }),
   setRosterGeneration: (rosterGeneration) => set({ rosterGeneration }),
+  setRosterNotes: (rosterNotes) => set({ rosterNotes }),
   setChartSort: (chartSort) => set({ chartSort }),
   setChartFavouritesFirst: (chartFavouritesFirst) => set({ chartFavouritesFirst }),
   setChartLinkPairs: (chartLinkPairs) => set({ chartLinkPairs }),
   setChartGeneration: (chartGeneration) => set({ chartGeneration }),
-  setChartTab: (chartTab) => set({ chartTab }),
+  setChartFavouritesOnly: (chartFavouritesOnly) => set({ chartFavouritesOnly }),
+  setChartField: (field, value) => set({ chartDisplay: { ...get().chartDisplay, [field]: value } }),
   setSkillPickerTab: (skillPickerTab) => set({ skillPickerTab }),
   setSkillFilters: (unitId, filters) => set({ skillFilters: { ...get().skillFilters, [unitId]: filters } }),
   toggleSkillClass: (unitId, key) => {
@@ -115,10 +129,12 @@ export const useUi = create<UiState>()(persist((set, get) => ({
       chartFavouritesFirst: persisted.chartFavouritesFirst ?? true,
       chartLinkPairs: persisted.chartLinkPairs ?? true,
       rosterGeneration: persisted.rosterGeneration ?? 'all',
+      rosterNotes: persisted.rosterNotes ?? false,
       chartGeneration: persisted.chartGeneration ?? 'all',
+      chartFavouritesOnly: persisted.chartFavouritesOnly ?? false,
+      chartDisplay: { ...DEFAULT_CHART_DISPLAY, ...persisted.chartDisplay },
       parentSort: persisted.parentSort ?? DEFAULT_PARENT_SORT,
       parentEffective: persisted.parentEffective ?? false,
-      chartTab: persisted.chartTab ?? 'skills',
       skillPickerTab: persisted.skillPickerTab ?? 'grouped',
       // v3.3 kept one global { s, a }; v3.4 keeps them per unit.
       skillFilters: persisted.skillFilters && !('s' in persisted.skillFilters) ? persisted.skillFilters : {},

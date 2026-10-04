@@ -718,6 +718,45 @@
   margin-top: 16px;
 }
 
+.roster-head-actions,
+.chart-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+
+.roster-head-actions .icon-btn[data-active] {
+  color: var(--accent-strong);
+}
+
+.unit-note {
+  display: block;
+  width: 100%;
+  min-height: 30px;
+  box-sizing: border-box;
+  overflow: hidden;
+  resize: none;
+  padding: 4px var(--s2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: 400 12px/20px var(--f-ui);
+}
+
+.unit-note:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.unit-note::placeholder { color: var(--ink-2); }
+.unit-note:read-only { background: var(--surface-2); }
+.profile-note { padding: var(--s4) var(--s3) 0; }
+.chart-display-group { display: grid; gap: var(--s2); }
+.chart-display-group + .chart-display-group { margin-top: var(--s5); }
+.chart-display-group > .sub-title { margin: 0; }
+.chart-empty { padding: var(--s4); }
+
 /* ---------- sheets ---------- */
 
 .sheet-scrim {
@@ -2510,6 +2549,8 @@
   display: grid;
   gap: 4px;
 }
+
+.chart-stat { display: grid; gap: 4px; }
 
 .chart-card.pair .chart-row:first-child {
   border-bottom: 1px solid var(--line);

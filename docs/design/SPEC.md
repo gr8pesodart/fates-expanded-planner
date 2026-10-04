@@ -366,20 +366,29 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
 
 ## Chart (`3:10134`)
 
+**Owner update (2026-10-04):** The Chart no longer has tabs. A tune button beside Sort opens
+Chart information, with independent switches grouped under Favourites (Notes, Skills,
+Progression routing, Pair up bonuses, Expected final stats) and Stats (every other Roster stat
+lens). The selected fields appear together on each character row. Notes sit immediately above
+progression routing, grow with entered lines, and are shared with the Roster and Profile through
+the unit's run plan. The first note line is vertically centred in the one-line field with regular
+weight text. The Roster has a notes icon beside Sort that toggles notes above each stat
+table. The Profile shows the note immediately below its hero header. Chart Sort also has a
+Favourites only switch that hides unhearted units, including an unfavourited member of a pair.
+These controls and Chart field choices persist locally; note text is part of run export and share.
+
 - The "Chart" title and sort button in a sticky white header (as the Roster's, no shadow; a 1px
-  `--line` bottom border fades in over 150ms only once the page has scrolled), with an underline
-  tab rail like the Roster's: **Full**, **Skills Only** (default), **Skills + Progression**,
-  **Skills + Pair Up** (v3.4 names; swipe between them). Then a list of cards (`--line` border,
+  `--line` bottom border fades in over 150ms only once the page has scrolled). Then a list of cards (`--line` border,
   `--r-lg`, gap 20, padding 10). Each row starts with the 32px portrait chip, aligned with the stat
   table's left edge, then the sprite at the Roster's spacing (`--s2`); skill icons sit 1px apart.
   Map sprites render at whole-number scales only (32px = 1×), so Chart and Roster sprites are 32px.
-- Tabs: every tab keeps each row's skill icons. *Skills + Progression* adds a grey inset with the
+- Progression routing adds a grey inset with the
   compact class path ("Lv 1: Nohr Princess → Lv 10: Samurai → Lv 12: Swordmaster → Lv 15: Master of
-  Arms": the join class, then each class change at the level it's taken); *Skills + Pair Up* adds
+  Arms": the join class, then each class change at the level it's taken); Pair up bonuses adds
   every unit's **Effective Pair Up Bonuses** table, front and back alike (at the pair's actual
-  support rank - A but not S means no S bonus); *Full* shows skills, path and pair-up bonuses. The swap button sits on the divider between the two rows.
+  support rank - A but not S means no S bonus). The swap button sits on the divider between the two rows.
 - A sort button opens its own Recruit / Name / Stat sheet with direction, a **Show** filter (All /
-  First gen / Children), Favourites-first and Link pair-up partners; these settings do not share state with the Roster. Class sprites have no chip
+  First gen / Children), Favourites-first, Favourites only, and Link pair-up partners; these settings do not share state with the Roster. Class sprites have no chip
   background and sit between the portrait and name.
 - A **pair card** has two rows, front on top. Each row has a ClassSprite chip (24), name (21/400),
   a favourite star, the unit's **five equipped skill icons** (20px, gap 5) and an edit arrow (20px)

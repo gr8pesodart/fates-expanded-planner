@@ -2,6 +2,8 @@
 import type { SVGProps } from 'react'
 
 const ICONS = {
+  notes: { viewBox: '0 0 24 24', body: `<path fill="currentColor" d="M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1m2 4v2h12V7zm0 4v2h12v-2zm0 4v2h8v-2z"/>` },
+  tune: { viewBox: '0 0 24 24', body: `<path fill="currentColor" d="M3 6h9v2H3zm13 0h5v2h-5zM3 11h3v2H3zm7 0h11v2H10zM3 16h12v2H3zm16 0h2v2h-2zM14 4h2v6h-2zM8 9h2v6H8zm9 5h2v6h-2z"/>` },
   openInNew: { viewBox: '0 0 24 24', body: `<path fill="currentColor" d="M14 3v2h3.59l-9.83 9.83l1.41 1.41L19 6.41V10h2V3m-2 16H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2z"/>` },
   arrowRight: { viewBox: '0 0 20 20', body: `<path d="M5.11188 10.5493L12.8558 10.5493L10.0457 13.4567L10.7964 14.2334L14.8882 10.0001L10.7964 5.7667L10.0457 6.54339L12.8558 9.45076L5.11188 9.45076L5.11188 10.5493Z" fill="currentColor"/>` },
   arrowLeft: { viewBox: '16 10 40 40', body: `<path d="M44.6797 29.0246H30.9291L35.919 23.8621L34.5859 22.483L27.3204 30L34.5859 37.5169L35.919 36.1378L30.9291 30.9753H44.6797V29.0246Z" fill="currentColor"/>` },
