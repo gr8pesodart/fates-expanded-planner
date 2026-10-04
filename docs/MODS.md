@@ -2,22 +2,30 @@
 
 What the installed game build changes, and what that means for the planner. Source of truth is
 the companion workspace `../3ds-games/fe-fates/` (`inbox/mod-list.md`, `tools/mod-manifest.json`,
-`AGENTS.md`). Build date: 2026-09-28, USA Special Edition (`0004000000179800`, `CTR-P-BFZE`).
+`AGENTS.md`). Build date: 2026-10-04, USA Special Edition (`0004000000179800`, `CTR-P-BFZE`).
 
-## Installed mods
+## Per-run Mods checklist
 
-| Mod | Version | Gameplay? | What it changes | Planner effect |
-|---|---|---|---|---|
-| **Unofficial Gay Fates (UGF)** | 2.5.2 | ✅ | Expands the support graph to near-universal coverage: same-sex S supports, huge new conversation sets, Corrin/child/sibling additions, adjusted support routes | Drives the whole support dataset; never apply vanilla pairing limits |
-| **Free Renown Rewards** | 1.0 | ✅ | All 160 minimum BP/VP requirements zeroed | Renown rewards are effectively free; no grind budget needed |
-| **Free battle and visitation rewards** | 1.0 | ✅ | Same GameData edit (verified identical) | Battle/visit rewards free |
-| **Tru's Accessory Shop** | v2 | ✅ | Full accessory catalog added to the shop (models via Texture Compilation ROM6) | All accessories obtainable in one shop |
-| **Tru's Free Accessory Prices** | addon | ✅ | `AcceShop.bin.lz` replaced: prices set to free | Accessory spending ≈ 0 gold |
-| Unit Select Voice | 1.3.4 | ❌ (audio) | Per-unit voice selection; adds missing Corrin voice strings | Voice picker someday; no planning math |
-| Fates Icon Project (regular) | 1.0 | ❌ | Menu/skill/item icons | None |
-| Texture Compilation | 6.7 | ❌ | Class/outfit textures (+ Gold faceless fix) | None |
-| Furry Fates | 2.2 | ❌ | Model/texture swaps | None |
-| Dragon-Hare Corrin | 5.0 | ❌ | Corrin model (Male+Female variant) | None |
+Only switches that change the planner's support or class data, or have alternate art the planner can
+show, belong in the checklist. The installed build has four such switches:
+
+| Category | Mod | Version | Planner effect |
+|---|---|---|---|
+| Game data | **Unofficial Gay Fates (UGF)** | 2.5.2 | Expands the support graph to near-universal coverage. Required until a vanilla support pack exists. |
+| Game data | **Unisex DLC Classes** | 2024-07-24 | With DLC enabled, opens female Ballistician, Lodestar, Vanguard and Grandmaster, and male Witch and Great Lord (installed build jobs 138-143). Dread Fighter and Dark Falcon are available to both genders even without this mod. |
+| Vanity | **Furry Fates** | 2.2 | Shows alternate talk portraits for Kaden, Keaton, Selkie and Velouria, plus Kaden/Keaton map sprite variants. |
+| Vanity | **Dragon-Hare Corrin** | 5.0 | Shows alternate talk portraits for male and female Corrin. |
+
+The following installed mods stay out of the per-run checklist because none changes a value the
+planner calculates or displays as game data:
+
+| Mod | Version | Installed effect |
+|---|---|---|
+| Free Renown Rewards and Free battle and visitation rewards | 1.0 | Zero BP/VP reward thresholds; the planner does not schedule reward grinding. |
+| Tru's Accessory Shop and Tru's Free Accessory Prices | v2 / addon | Full accessory catalog in the shop and zero prices; the planner does not track accessories or gold. |
+| Unit Select Voice | 1.3.4 | Per-unit voice selection and Corrin voice strings. |
+| Fates Icon Project (regular) | 1.0 | Installed item icons are used as the app's fixed icon set. They do not vary by run. |
+| Texture Compilation | 6.7 | Model and outfit textures, including the Gold Faceless fix; no corresponding planner art view. |
 
 ### Not installed (deliberately)
 
@@ -51,7 +59,7 @@ the companion workspace `../3ds-games/fe-fates/` (`inbox/mod-list.md`, `tools/mo
 ## Maintenance when the build changes
 
 1. Read `inbox/mod-list.md` / `tools/mod-manifest.json` in the fe-fates workspace.
-2. Update `src/data/modProfiles.ts`: mod list, versions, feature flags, notes.
+2. Update `src/data/modProfiles.ts`: the per-run data and vanity switches, versions, feature flags, notes.
 3. If UGF changed: rerun `python tools/extract/extract_ugf_supports.py` and update
    docs/DATA.md verification notes.
 4. If a new gameplay mod landed: decide its planner effect (flag or data delta) and record it here.

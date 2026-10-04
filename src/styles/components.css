@@ -1125,16 +1125,16 @@
 
 /* ---------- character ---------- */
 
-/* Figma 19:642: the splash art in its own inset, rounded container above the page (owner, v3.4 -
-   it replaced fixed art behind tab cards, which couldn't reach under the iOS status bar). The art
-   renders at the full screen width (390x316 - the files are crops at that ratio) and the container
-   shows its top --hero-h. Owner: the container keeps the page margin (the character page's --s4,
-   which its sections use) and has that same padding inside on every side. */
+/* Figma 19:642: the portrait in its own inset, rounded container above the page (owner, v3.4 -
+   it replaced fixed art behind tab cards, which couldn't reach under the iOS status bar). The
+   gradient covers a 316px art area and the container shows its top --hero-h. The container keeps
+   the page margin (the character page's --s4) and has that same padding inside on every side. */
 .screen.character {
   --hero-h: 233px;
   --page-margin: var(--s4);
   --hero-pad: var(--page-margin);
   --hero-tabs-h: 32px;
+  --hero-foot-gap: 10px;
   --back-size: 40px;
   /* Concentric corners: outer radius = inner radius + the padding between them. Of the two controls
      that sit in corners - the tab pills (radius = half their height) and the round back button - use
@@ -1172,24 +1172,14 @@
   object-fit: cover;
 }
 
-/* The talk portrait, zoomed so FaceData's face rect (top of hair to chin, --face texture px) spans
-   --hero-face-size of the visible hero, centred at --hero-face-x across the art box and
-   --hero-face-y down (owner, v3.4: the critical cut-ins were dropped - their layout didn't work).
-   --art-w/--art-h and --face-x/--face-y come from portraits.json (art.tsx › HeroPortrait). */
-.splash.portrait-hero {
-  /* Owner, 2026-10-04: 150% of the first 0.6, nudged up from 0.4. */
-  --hero-face-size: 0.9;
-  --hero-face-x: 66%;
-  --hero-face-y: calc(var(--hero-h) * 0.34);
-}
-
+/* Show each talk portrait at its original pixel size, with its top edge at the hero's top.
+   FaceData keeps the face horizontally placed across different portrait widths. */
 .hero-portrait {
-  --scale: calc(var(--hero-h) * var(--hero-face-size) / var(--face));
   position: absolute;
-  width: calc(var(--art-w) * var(--scale));
-  height: calc(var(--art-h) * var(--scale));
-  left: calc(var(--hero-face-x) - var(--face-x) * var(--scale));
-  top: calc(var(--hero-face-y) - var(--face-y) * var(--scale));
+  width: var(--art-w);
+  height: var(--art-h);
+  left: calc(66% - var(--face-x));
+  top: 0;
 }
 
 .hero-portrait img {
@@ -1220,13 +1210,12 @@
   background: linear-gradient(to right, var(--accent-strong), color-mix(in oklab, var(--accent) 55%, white));
 }
 
-/* The back button stays pinned while the art is in view; the tab pills' top edge pushes it out, and
-   the sticky head (with its own back button) takes over (owner, v3.4). The rail ends at the pills. */
+/* The back button stops one foot gap above the name row, matching the name-to-tabs gap. */
 .back-rail {
   position: absolute;
   inset: 0 0 auto;
   z-index: 2;
-  height: calc(var(--hero-h) - var(--hero-pad) - var(--hero-tabs-h));
+  height: calc(var(--hero-h) - var(--hero-pad) - var(--hero-tabs-h) - var(--hero-foot-gap) - var(--hero-foot-gap) - var(--hero-name-h, 42px));
   pointer-events: none;
 }
 
@@ -1251,7 +1240,7 @@
   inset: auto 0 0;
   z-index: 1;
   display: grid;
-  gap: 10px;
+  gap: var(--hero-foot-gap);
   padding: 0 var(--hero-pad) var(--hero-pad);
 }
 
@@ -1306,8 +1295,8 @@
   height: 0;
 }
 
-/* Rail sits at the very top of the page, so it is pinned from the start: the head slides in and
-   out in place instead of riding down with the panel when scrolling back up. */
+/* Rail sits at the very top of the page, so it slides in and out in place when the hero back
+   arrow crosses the halfway point, instead of riding down with the panel when scrolling back up. */
 .char-sticky-head {
   display: grid;
   gap: 10px;
@@ -2588,6 +2577,8 @@
 
 .mod-checklist legend { padding: 0; }
 .mod-note { margin: 0; font: var(--t-cell); }
+.mod-group { display: grid; gap: var(--s2); }
+.mod-group-title { margin: var(--s2) 0 0; font: var(--t-sub); }
 .mod-option {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

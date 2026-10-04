@@ -36,6 +36,10 @@ const NAMED_PAIRS: [male: string, female: string][] = [
 export function sexedClassId(dataset: Dataset, classId: number, gender: 'male' | 'female'): number {
   const def = dataset.classesById.get(classId)
   if (!def) return classId
+  if (def.dlc) {
+    const counterpart = dataset.classes.find((candidate) => candidate.dlc && classFamily(candidate.name) === classFamily(def.name) && candidate.jid.endsWith(gender === 'male' ? '男' : '女'))
+    if (counterpart) return counterpart.id
+  }
   const pair = NAMED_PAIRS.find((names) => names.includes(classFamily(def.name)))
   const wanted = pair
     ? (name: string) => classFamily(name) === pair[gender === 'male' ? 0 : 1]

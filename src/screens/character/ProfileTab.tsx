@@ -71,7 +71,7 @@ export function ProfileTab({ ctx }: { ctx: UnitContext }) {
   })
 
   const favouriteClasses = ctx.plan.favouriteClasses ?? []
-  const classIds = favouriteClassesFirst(unitClassIds(dataset, ctx, run.dlc).filter((id) => {
+  const classIds = favouriteClassesFirst(unitClassIds(dataset, ctx, run).filter((id) => {
     const tier = dataset.classesById.get(id)?.tier
     if (classFilter === 'all') return true
     return classFilter === 'base' ? tier === 'base' : tier !== 'base'

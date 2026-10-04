@@ -1,8 +1,9 @@
 # Assets pipeline
 
-Official game art makes the planner feel like Fates. Every asset is extracted from the **owner's
-own romfs dump** (`../3ds-games/fe-fates/work/cia-extract/romfs/`) by
-`tools/assets/extract_assets.py`, converted to WebP and recorded per game id in
+Official game art makes the planner feel like Fates. Game assets are extracted from the **owner's
+own romfs dump** (`../3ds-games/fe-fates/work/cia-extract/romfs/`), and optional vanity art comes
+from the owner's installed mod overlay (`../3ds-games/fe-fates/work/overlay/romfs/`).
+`tools/assets/extract_assets.py` converts the original sets to WebP and records them per game id in
 `src/data/assets.json`. Nothing is taken from other planners or fan re-uploads; no audio, models or
 full textures are used.
 
@@ -198,9 +199,9 @@ for the talk portrait zoomed on the face.
   goes over it - the base has a placeholder (Kiragi, Rhajat, Midori) or a hole (Percy, Ophelia)
   where the hair goes.
 - **Hero (2026-10-04):** the character page shows the talk portrait (`art.tsx › HeroPortrait`)
-  scaled so FaceData's face rect (`faceRect` in `portraits.json`, 128px) spans 90% of the visible
-  hero height, its centre at 66% across the art box and 34% down (`.splash.portrait-hero` /
-  `.hero-portrait` CSS variables), over the route-hue gradient; tinted hair rides on the same frame.
+  at its original pixel size, with its top edge at the top of the hero container. FaceData's face
+  rect keeps the face centred at 66% across the art box; tinted hair rides on the same frame over
+  the route-hue gradient.
 - **Dropped: cut-ins.** `face/face/<name>_ct.arc` is 512x512 with two phases stacked (phase 2 = the
   bottom 512x256), with `_ct` hair layers. They registered at (0, 0) too except Nina's, whose base
   was painted without her braid and with older hair (no translation or affine maps the layer on;
@@ -208,6 +209,24 @@ for the talk portrait zoomed on the face.
   sat well in the hero box, and they are no longer extracted.
 - **Splash art (below) is no longer used by the app** (only `splash.test.ts` reads its manifest);
   the files and `fetch_splash.py` remain until the owner decides to drop them.
+
+### Per-run vanity art
+
+`python tools/assets/extract_vanity.py` reads the owner's installed mod overlay at
+`../3ds-games/fe-fates/work/overlay/romfs/` and writes `public/assets/vanity/` plus
+`src/data/vanityArt.json`. The clean romfs FaceData supplies crop and hair metadata. The generated
+manifest records the source archive or sprite folder for every file. `docs/screenshots/v3/vanity.png`
+compares base and mod art, and `src/data/vanityArt.test.ts` checks the shipped files and selectors.
+
+| Mod | Source in installed overlay | Planner assets |
+|---|---|---|
+| Dragon-Hare Corrin 5.0 | `face/face/` archives for both Corrins and their `face/hair/` layers | Two neutral talk portraits with recolourable hair; both face chips and character heroes use them. |
+| Furry Fates 2.2 | `face/face/` archives for Kaden, Keaton, Selkie and Velouria; `unit/Head/` for Kaden/Keaton, `unit/Body/` for male Kitsune, and `unit/Unique/` for their class forms | Four neutral talk portraits (two child hair layers), two unit heads with small variants, one class body and 20 unit-specific body strips. |
+
+Furry Fates' `unit/Unique` sheets still use separate unit heads on many class forms, so the extractor
+stores them as bodies with the animation's head offsets. The two vanity switches change only art;
+base portraits and sprites remain available when a switch is off. The game dump contains no
+replacement map sprites for Corrin, Selkie or Velouria in these mods.
 
 ## Splash art (v3, online)
 
@@ -243,10 +262,12 @@ writes native-pixel WebP plus `src/data/sprites.json`:
 
 | Set | Source in the dump | Files | Coverage |
 |---|---|---|---|
-| Bodies | `unit/Body/<class>/青0.bch.lz` — the four unique body cells referenced by idle clip 0 | `public/assets/sprites/bodies/<classId>.webp` | **125/129 (96.9%)** |
+| Bodies | `unit/Body/<class>/青0.bch.lz` - the four unique body cells referenced by idle clip 0 | `public/assets/sprites/bodies/<classId>.webp` | **131/135 (97.0%)** |
 | Unit heads | `unit/Head/<fid or avatar>/青0.bch.lz` — four large 32×32 poses and four small 16×16 mounted poses | `public/assets/sprites/heads/<slot>.webp`, `…-small.webp` | **71/71 (100%)** |
-| Generic heads | `unit/Head/<class folder>/青0.bch.lz` (four class-generic poses, whichever sizes the sheet carries) | `public/assets/sprites/generic-heads/<classId>.webp` | 113/129 |
+| Generic heads | `unit/Head/<class folder>/青0.bch.lz` (four class-generic poses, whichever sizes the sheet carries) | `public/assets/sprites/generic-heads/<classId>.webp` | 113/135 |
 | Unique overrides | `unit/Unique/<class>_<unit>/青0.bch.lz` — four idle cells; the body already includes the head | `public/assets/sprites/unique/<slot>-<classId>.webp` | 13 unit×class pairs |
+
+The six added Unisex DLC Classes bodies (jobs 138-143) come from the owner's installed mod overlay at `../3ds-games/fe-fates/work/overlay/romfs/unit/Body/`. The other bodies and all character heads come from the owner's clean romfs dump. The contact sheet includes both vanilla genders of Dread Fighter and Dark Falcon plus all six added jobs.
 
 The four body misses are the non-recruitable `None`, the two `Silent Dragon` slots and
 `Outrealm Class` — the same gaps the old class-sprites set had. Songstress, monsters and other

@@ -21,7 +21,7 @@ export function StatsTab({ ctx }: { ctx: UnitContext }) {
   const { dataset, run } = usePlanner()
   const [picked, setPicked] = useState<number | null>(null)
   const favouriteClasses = ctx.plan.favouriteClasses ?? []
-  const classIds = favouriteClassesFirst(unitClassIds(dataset, ctx, run.dlc), favouriteClasses)
+  const classIds = favouriteClassesFirst(unitClassIds(dataset, ctx, run), favouriteClasses)
   const classId = picked !== null && classIds.includes(picked) ? picked : ctx.currentClassId
   const rosterContexts = useMemo(() => armyUnits(dataset, run).flatMap((unit) => {
     const unitCtx = unitContext(dataset, run, unit.id)

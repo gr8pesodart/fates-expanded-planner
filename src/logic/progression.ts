@@ -7,6 +7,7 @@ import type { StatRow } from './lenses'
 import { classFamily, sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
 import { projectUnit } from './stats'
+import { hasUnisexDlcClasses } from '../data/modProfiles'
 
 export type ReclassSeal = 'offspring' | 'master' | 'heart' | 'partner' | 'friendship' | 'dlc'
 
@@ -65,10 +66,8 @@ export const ETERNAL_SEAL_LEVEL_INCREASE = 5
 export const SPECIAL_LEVEL_CAP = 40
 export const DLC_SEAL_MIN_LEVEL = 10
 
-// Vanilla DLC gender locks; the table carries both variants for some of these but only one is obtainable.
+// Dread Fighter and Dark Falcon have both usable variants in vanilla Fates.
 const DLC_GENDER: Record<string, 'male' | 'female'> = {
-  'Dread Fighter': 'male',
-  'Dark Falcon': 'female',
   Ballistician: 'male',
   Witch: 'female',
   Lodestar: 'male',
@@ -76,6 +75,7 @@ const DLC_GENDER: Record<string, 'male' | 'female'> = {
   'Great Lord': 'female',
   Grandmaster: 'male',
 }
+const UNISEX_MOD_CLASS_IDS = new Set([138, 139, 140, 141, 142, 143])
 
 const SEGMENT_LABEL: Record<ClassTier, string> = { base: 'Base', promoted: 'Advanced', special: 'Special' }
 
@@ -89,14 +89,18 @@ export function tierCap(tier: ClassTier, eternalSeals = 0, unitLevelCap: number 
   return cap + eternalSeals * ETERNAL_SEAL_LEVEL_INCREASE
 }
 
-export function dlcClassesFor(dataset: Dataset, gender: 'male' | 'female'): ClassDef[] {
+export function dlcClassesFor(dataset: Dataset, gender: 'male' | 'female', unisex = false): ClassDef[] {
   const seen = new Set<number>()
   const result: ClassDef[] = []
   for (const def of dataset.classes) {
-    if (!def.dlc || DLC_GENDER[classFamily(def.name)] !== gender) continue
-    const id = sexedClassId(dataset, def.id, gender)
+    if (!def.dlc) continue
+    if (!unisex && UNISEX_MOD_CLASS_IDS.has(def.id)) continue
+    const family = classFamily(def.name)
+    if (!unisex && DLC_GENDER[family] && DLC_GENDER[family] !== gender) continue
+    if (unisex && DLC_GENDER[family] && !def.jid.endsWith(gender === 'male' ? '男' : '女')) continue
+    const id = DLC_GENDER[family] ? def.id : sexedClassId(dataset, def.id, gender)
     const sexed = dataset.classesById.get(id)
-    if (!sexed || seen.has(id)) continue
+    if (!sexed || classFamily(sexed.name) !== family || seen.has(id)) continue
     seen.add(id)
     result.push(sexed)
   }
@@ -169,7 +173,7 @@ export function reclassOptions(
   }
 
   if (run.dlc) {
-    for (const target of dlcClassesFor(dataset, ctx.unit.gender)) {
+    for (const target of dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run))) {
       if (current.tier === 'base' && level >= DLC_SEAL_MIN_LEVEL) offer({ classId: target.id, seal: 'dlc', level, newSegment: true })
       if (current.tier === 'promoted') offer({ classId: target.id, seal: 'dlc', level: level + BASE_LEVEL_CAP, newSegment: true })
       if (current.tier === 'special') offer({ classId: target.id, seal: 'dlc', level, newSegment: false })

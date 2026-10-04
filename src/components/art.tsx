@@ -4,8 +4,10 @@ import { PlannerContext } from '../app/plannerContext'
 import { ASSETS_ENABLED, defaultHairColour, heroArt, portraitArt, spriteLayers } from '../data/art'
 import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
+import { selectedModIds } from '../data/modProfiles'
 import { hairColourOf, hairTintTables } from '../logic/hair'
 import type { HairTintMode } from '../logic/hair'
+import type { RunPlan } from '../state/model'
 import { motionPaused, onMotionChange } from '../lib/motion'
 
 function monogram(label: string): string {
@@ -14,23 +16,29 @@ function monogram(label: string): string {
   return (words[0] ?? '?').slice(0, 2)
 }
 
+function useArtMods(override?: RunPlan): string[] {
+  const planner = useContext(PlannerContext)
+  const run = override ?? planner?.run
+  return run ? selectedModIds(run.modpackId, run.mods) : []
+}
+
 /**
  * Talk-portrait crop. The crop box is square, so percentage background sizing frames it in any
  * square container without knowing its pixel size. Units with a recolourable hair layer get the
  * layer tinted to their run colour drawn on top of the same crop.
  */
-export function Portrait({ unitId, name, crop = 'face', className = '' }: { unitId: string; name: string; crop?: 'face' | 'bust'; className?: string }) {
-  const art = portraitArt(unitId, crop)
-  const [failed, setFailed] = useState(false)
-  const hairColour = useHairColour(unitId)
+export function Portrait({ unitId, name, crop = 'face', className = '', run, hair }: { unitId: string; name: string; crop?: 'face' | 'bust'; className?: string; run?: RunPlan; hair?: string | null }) {
+  const art = portraitArt(unitId, crop, useArtMods(run))
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
+  const hairColour = useHairColour(unitId, hair)
   const tintedHairUrl = useTintedImage(art?.hair?.file ?? null, hairColour)
-  if (!art || failed) {
+  if (!art || failedSrc === art.src) {
     return <span className={`portrait mono ${className}`} role="img" aria-label={name}>{monogram(name)}</span>
   }
   if (!art.box) {
     return (
       <span className={`portrait ${className}`} role="img" aria-label={name}>
-        <img src={art.src} alt="" draggable={false} onError={() => setFailed(true)} />
+        <img src={art.src} alt="" draggable={false} onError={() => setFailedSrc(art.src)} />
       </span>
     )
   }
@@ -51,17 +59,14 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
   )
 }
 
-/**
- * Character page hero: the talk portrait, scaled and placed by FaceData's face rect (CSS
- * `.hero-portrait`), hair tinted per run over the same frame.
- */
+/** Character page hero: the talk portrait at native size, with hair tinted over the same frame. */
 export function HeroPortrait({ unitId }: { unitId: string }) {
-  const art = heroArt(unitId)
+  const art = heroArt(unitId, useArtMods())
   const hairColour = useHairColour(unitId)
   const tintedHairUrl = useTintedImage(art?.hair?.file ?? null, hairColour)
   if (!art) return null
-  const [x, y, side] = art.faceRect
-  const frame = { '--art-w': art.w, '--art-h': art.h, '--face-x': x + side / 2, '--face-y': y + side / 2, '--face': side } as CSSProperties
+  const [x, , side] = art.faceRect
+  const frame = { '--art-w': `${art.w}px`, '--art-h': `${art.h}px`, '--face-x': `${x + side / 2}px` } as CSSProperties
   return (
     <span className="hero-portrait" style={frame}>
       <img src={art.src} width={art.w} height={art.h} alt="" loading="eager" decoding="async" fetchPriority="high" />
@@ -327,15 +332,16 @@ function useHairColour(unitId: string | null, override?: string | null): string 
   return colour && colour.toLowerCase() !== defaultHairColour(unitId)?.toLowerCase() ? colour : null
 }
 
-export function ClassSprite({ unitId, classId, name, size = 32, hair }: {
+export function ClassSprite({ unitId, classId, name, size = 32, hair, run }: {
   unitId: string | null
   classId: number
   name: string
   size?: number
   /** Hair colour to show instead of the run's (draft runs); null = extracted default. */
   hair?: string | null
+  run?: RunPlan
 }) {
-  const resolved = spriteLayers(unitId, classId)
+  const resolved = spriteLayers(unitId, classId, useArtMods(run))
   const spriteRef = useRef<HTMLSpanElement | null>(null)
   const visible = useInViewport(spriteRef)
   const hairColour = useHairColour(unitId, hair)

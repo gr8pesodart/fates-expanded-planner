@@ -149,6 +149,15 @@ describe('stitched sprite manifest', () => {
     expect(manifest.bodies['103'].head).toBeNull()
     expect(manifest.bodies['103'].layers).toBeUndefined()
   })
+
+  it('ships both base game DLC genders and all six added mod class bodies', () => {
+    for (const id of [118, 119, 120, 121, 138, 139, 140, 141, 142, 143]) {
+      expect(manifest.bodies[String(id)]?.file).toBe(`assets/sprites/bodies/${id}.webp`)
+    }
+    for (const id of [138, 139, 140, 141, 142, 143]) {
+      expect(manifest.bodies[String(id)]?.source).toContain('installed mod overlay')
+    }
+  })
 })
 
 describe('recolourable hair', () => {

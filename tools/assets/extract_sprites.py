@@ -62,6 +62,9 @@ import fe_assets  # noqa: E402
 DEFAULT_ROMFS = os.path.join(
     REPO_ROOT, "..", "3ds-games", "fe-fates", "work", "cia-extract", "romfs"
 )
+DEFAULT_MOD_ROMFS = os.path.join(
+    REPO_ROOT, "..", "3ds-games", "fe-fates", "work", "overlay", "romfs"
+)
 DEFAULT_FE_TOOLS = os.path.join(REPO_ROOT, "..", "3ds-games", "fe-fates", "tools")
 DEFAULT_PACK = os.path.join(REPO_ROOT, "src", "data", "packs", "ugf-2.5.2")
 DEFAULT_OUT = os.path.join(REPO_ROOT, "public", "assets")
@@ -101,6 +104,16 @@ CONTACT_SHEET = [
     ("Sakura as Oni Savage", "Oni Savage (F)", "Sakura"),
     ("Xander as Wyvern Lord", "Wyvern Lord (M)", "Xander"),
     ("Azura as Sniper", "Sniper (F)", "Azura"),
+    ("Ryoma as Dread Fighter", "Dread Fighter (M)", "Ryoma"),
+    ("Sakura as Dread Fighter", "Dread Fighter (F)", "Sakura"),
+    ("Xander as Dark Falcon", "Dark Falcon (M)", "Xander"),
+    ("Camilla as Dark Falcon", "Dark Falcon (F)", "Camilla"),
+    ("Camilla as Ballistician", "Ballistician (F)", "Camilla"),
+    ("Ryoma as Witch", "Witch (M)", "Ryoma"),
+    ("Sakura as Lodestar", "Lodestar (F)", "Sakura"),
+    ("Camilla as Vanguard", "Vanguard (F)", "Camilla"),
+    ("Xander as Great Lord", "Great Lord (M)", "Xander"),
+    ("Sakura as Grandmaster", "Grandmaster (F)", "Sakura"),
 ]
 
 FONT_CANDIDATES = (
@@ -359,11 +372,14 @@ def head_entry(file_name: str, source: str, width: int, height: int) -> dict:
     return {"file": file_name, "w": width, "h": height, "layers": len(HEAD_BANDS), "frameCount": 4, "source": source}
 
 
-def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
+def extract_bodies(romfs: str, mod_romfs: str, out_dir: str, classes: list[dict], lz13, asset_prefix: str = "assets/sprites"):
     entries = {}
     missing = []
     for class_def in classes:
-        sheet, anime, source, is_unique = find_body(romfs, class_def["jid"])
+        modded = class_def["id"] in (138, 139, 140, 141, 142, 143)
+        sheet, anime, source, is_unique = find_body(mod_romfs if modded else romfs, class_def["jid"])
+        if modded and sheet:
+            source = "installed mod overlay/" + source
         if not sheet:
             missing.append((class_def["id"], class_def["name"], class_def["jid"]))
             continue
@@ -377,7 +393,7 @@ def extract_bodies(romfs: str, out_dir: str, classes: list[dict], lz13):
             cells[index] = body_sheet.crop((frame.body_src_x, frame.body_src_y, frame.body_src_x + frame.body_w, frame.body_src_y + frame.body_h))
         body = cells[0]
         animation_data = animation_contract(animation)
-        file_name = f"assets/sprites/bodies/{class_def['id']}.webp"
+        file_name = f"{asset_prefix}/bodies/{class_def['id']}.webp"
         path = os.path.join(os.path.dirname(out_dir), *file_name.split("/"))
         head = None
         if not is_unique and animation_data[0]["head"]:
@@ -545,7 +561,7 @@ def corrin_hair_swatches(romfs: str, lz13) -> list[str]:
     return ["#" + data[base + i * size : base + i * size + 3].hex() for i in range(count)]
 
 
-def extract_heads(romfs: str, out_dir: str, units: list[dict], lz13):
+def extract_heads(romfs: str, out_dir: str, units: list[dict], lz13, asset_prefix: str = "assets/sprites"):
     entries = {}
     missing = []
     colours = hair_colours(romfs, units, lz13)
@@ -557,7 +573,7 @@ def extract_heads(romfs: str, out_dir: str, units: list[dict], lz13):
             continue
         raw = load_display(sheet, lz13)
         image = tint_hair(raw, colours.get(unit["id"]))
-        prefix = f"assets/sprites/heads/{unit['slot']}"
+        prefix = f"{asset_prefix}/heads/{unit['slot']}"
         source = f"unit/Head/{folder}/{HEAD_FILE}"
         entry = export_head_variants(image, out_dir, prefix, source, hair=raw)
         if entry is None:
@@ -592,7 +608,7 @@ def extract_generic_heads(romfs: str, out_dir: str, classes: list[dict], lz13):
     return entries, missing
 
 
-def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[dict], lz13):
+def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[dict], lz13, asset_prefix: str = "assets/sprites"):
     entries = {}
     colours = hair_colours(romfs, units, lz13)
     for unit in units:
@@ -617,7 +633,7 @@ def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[di
                 hair.alpha_composite(flatten(hair_sheet.crop(box)), (index * 32, 0))
             label = f"unique {unit['slot']}-{class_def['id']}"
             assert_binary_alpha(image, label)
-            file_name = f"assets/sprites/unique/{unit['slot']}-{class_def['id']}.webp"
+            file_name = f"{asset_prefix}/unique/{unit['slot']}-{class_def['id']}.webp"
             write_webp(image, os.path.join(os.path.dirname(out_dir), *file_name.split("/")))
             source = f"unit/Unique/{folder}/{HEAD_FILE} + anime.bin"
             animation_data = animation_contract(animation)
@@ -631,7 +647,7 @@ def extract_unique(romfs: str, out_dir: str, units: list[dict], classes: list[di
             }
             if hair.getbbox() is not None:
                 assert_binary_alpha(hair, f"{label} hair")
-                hair_file = f"assets/sprites/unique/{unit['slot']}-{class_def['id']}-hair.webp"
+                hair_file = f"{asset_prefix}/unique/{unit['slot']}-{class_def['id']}-hair.webp"
                 write_webp(hair, os.path.join(os.path.dirname(out_dir), *hair_file.split("/")))
                 per_class[str(class_def["id"])]["hair"] = hair_file
         if per_class:
@@ -737,6 +753,7 @@ def build_contact_sheet(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--romfs", default=DEFAULT_ROMFS)
+    parser.add_argument("--mod-romfs", default=DEFAULT_MOD_ROMFS)
     parser.add_argument("--fe-tools", default=DEFAULT_FE_TOOLS)
     parser.add_argument("--pack", default=DEFAULT_PACK)
     parser.add_argument("--out", default=DEFAULT_OUT)
@@ -748,14 +765,14 @@ def main() -> None:
     units = read_json(os.path.join(args.pack, "units.json"))["units"]
     classes = read_json(os.path.join(args.pack, "classes.json"))["classes"]
 
-    bodies, body_missing = extract_bodies(args.romfs, args.out, classes, lz13)
+    bodies, body_missing = extract_bodies(args.romfs, args.mod_romfs, args.out, classes, lz13)
     heads, head_missing = extract_heads(args.romfs, args.out, units, lz13)
     generic_heads, generic_missing = extract_generic_heads(args.romfs, args.out, classes, lz13)
     unique = extract_unique(args.romfs, args.out, units, classes, lz13)
 
     manifest = {
         "generatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "source": "Owner's romfs dump (work/cia-extract/romfs) via tools/assets/extract_sprites.py",
+        "source": "Owner's romfs dump plus installed Unisex DLC Classes overlay via tools/assets/extract_sprites.py",
         "coverage": {
             "bodies": {"resolved": len(bodies), "total": len(classes)},
             "heads": {"resolved": len(heads), "total": len(units)},

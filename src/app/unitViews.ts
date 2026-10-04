@@ -1,5 +1,6 @@
 import type { SkillView } from '../components/SkillCard'
 import type { Dataset } from '../data/types'
+import { hasUnisexDlcClasses } from '../data/modProfiles'
 import type { UnitContext } from '../logic/army'
 import { displayName } from '../logic/army'
 import { classFamily } from '../logic/classes'
@@ -20,10 +21,10 @@ export function sealGain(ctx: UnitContext, dataset: Dataset, branch: 'seal' | 'a
   return def ? classFamily(def.name) : null
 }
 
-export function unitClassIds(dataset: Dataset, ctx: UnitContext, dlc: boolean): number[] {
+export function unitClassIds(dataset: Dataset, ctx: UnitContext, run: RunPlan): number[] {
   const ids = [...new Set(ctx.pool.map((entry) => entry.classId))]
   if (!ids.includes(ctx.start.classId)) ids.unshift(ctx.start.classId)
-  if (dlc) for (const def of dlcClassesFor(dataset, ctx.unit.gender)) if (!ids.includes(def.id)) ids.push(def.id)
+  if (run.dlc) for (const def of dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run))) if (!ids.includes(def.id)) ids.push(def.id)
   return ids
 }
 

@@ -215,6 +215,31 @@ describe('buildProgression', () => {
     expect(special.rows.at(-1)?.level).toBe(tierCap('special'))
   })
 
+  it('keeps Dread Fighter and Dark Falcon unisex in vanilla and gates the six added jobs by the mod', () => {
+    const names = (gender: 'male' | 'female', mods: string[]) => {
+      const unit = dataset.units.find((item) => item.isCorrin && item.gender === gender)!
+      const run: RunPlan = { ...emptyRun('test'), corrin: { ...emptyRun('test').corrin, gender }, mods }
+      const ctx = unitContext(dataset, run, unit.id)!
+      return findRow(buildProgression(dataset, run, ctx), 0, 10)!.options
+        .filter((option) => option.seal === 'dlc')
+        .map((option) => dataset.classesById.get(option.classId)!.name)
+    }
+    const vanillaFemale = names('female', ['ugf'])
+    const vanillaMale = names('male', ['ugf'])
+    expect(vanillaFemale).toHaveLength(4)
+    expect(vanillaMale).toHaveLength(6)
+    expect(vanillaFemale).toContain('Dread Fighter (F)')
+    expect(vanillaMale).toContain('Dark Falcon (M)')
+    expect(vanillaFemale).not.toContain('Ballistician (F)')
+    expect(vanillaMale).not.toContain('Witch (M)')
+    const moddedFemale = names('female', ['ugf', 'unisex-dlc-classes'])
+    const moddedMale = names('male', ['ugf', 'unisex-dlc-classes'])
+    expect(moddedFemale).toHaveLength(8)
+    expect(moddedMale).toHaveLength(8)
+    for (const name of ['Ballistician (F)', 'Lodestar (F)', 'Vanguard (F)', 'Grandmaster (F)']) expect(moddedFemale).toContain(name)
+    for (const name of ['Witch (M)', 'Great Lord (M)']) expect(moddedMale).toContain(name)
+  })
+
   it('keeps expected stats within the class caps and never decreasing without a class change', () => {
     const progression = progressionFor(corrinRun([]))
     const rows = progression.segments[0].rows

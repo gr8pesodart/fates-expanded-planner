@@ -147,10 +147,11 @@ areas may extend past the visible chip.
 
 ## Character page (`3:2859`)
 
-- **Header** (about 316px): the **splash art** (official promo art, focal-cropped per character)
-  with a bottom gradient to black. Top-left: a round white back button that returns to the
-  originating screen (Roster or Chart; use history). Bottom-left: the name (38/700, white) and the
-  favourite star (white variant). Below that are the **tab pills**. The active tab is white fill with
+- **Header** (233px on mobile): the unit's talk portrait at original 1x resolution, aligned to the
+  top of the inset rounded container and placed horizontally using FaceData's face rect, with a
+  bottom gradient to black. Top-left: a round white back button that returns to the originating
+  screen (Roster or Chart; use history). Bottom-left: the name and favourite heart in white. Below
+  that are the **tab pills**. The active tab is white fill with
   `--ink` text; inactive tabs are `rgb(0 0 0 / .45)` fill with white text. The tabs are
   **Avatar** (Corrin only), **Profile**, **Stats**, **Parents** (second-generation units only) and
   **Progression**, which is always last (owner, v3.4). The default is Profile.
@@ -160,9 +161,11 @@ areas may extend past the visible chip.
   from (Roster or Chart), which stays mounted and `inert` underneath. Closing it — including iOS's
   edge swipe-back, which previews a snapshot of that screen — reveals it unchanged, with no re-render
   or scroll jump.
-- **Sticky header**: a zero-height sticky rail at the very top of the page holds a white header —
-  back button, the name (21/700), then the tab pills — that slides in (340ms, ease-out) once the hero
-  tabs scroll away and slides out (240ms, ease-in) when they return, pinned to the top throughout.
+- **Sticky header**: a zero-height sticky rail at the very top of the page holds a white header with
+  a back button, the name (21/700), then the tab pills. On mobile it slides in (340ms, ease-out) when
+  the hero back arrow is halfway off-screen and slides out (240ms, ease-in) when it returns. The
+  hero arrow stays pinned until it is 10px above the name row, matching the name-to-tabs gap. The
+  sticky header stays pinned throughout.
   Spacious margins (12/16px, plus the top safe area). Switching tabs preserves scroll.
 - **Swipes**: the tabs sit side by side in one strip and stay mounted once shown (the opening tab
   renders first, the rest just after the page has slid in), so a drag reveals the neighbouring tab's
@@ -397,8 +400,10 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   menu (Duplicate, Export JSON, Share link, Delete with confirm). The active run shows an
   `--accent-strong` "ACTIVE" tag; tapping another run switches to it.
 - Footer actions: **New run** (primary, `--accent-strong`) and **Import** (outline).
-- Per-run **Mods** checklist: UGF is mandatory until a vanilla dataset is integrated; optional
-  installed mods can be toggled and saved with the run.
+- Per-run **Mods** checklist: two groups, **Game data** (UGF, mandatory until a vanilla dataset is
+  integrated; Unisex DLC Classes) and **Vanity** (Furry Fates; Dragon-Hare Corrin). Vanity switches
+  change the corresponding portraits and map sprites where the installed mod supplies them. Mods
+  without planner data or visible art effects are absent from the checklist.
 
 ### New-run setup (full-screen flow, three steps with a progress bar)
 

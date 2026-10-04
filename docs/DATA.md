@@ -10,7 +10,7 @@ and what is still open.
 |---|---|
 | Support graph (UGF: who supports whom, marriage vs platonic, speed, thresholds) | ✅ `supports.json` |
 | Units (71 playables: English names, bases, growths, cap mods, class sets, personal skills, route availability, DLC flag, fid) | ✅ `units.json` |
-| Classes (129: growths, caps, pair-up, class skills, learn levels, promotions, movement, DLC flag, jid) | ✅ `classes.json` |
+| Classes (135: 129 vanilla jobs plus six mod jobs; growths, caps, pair-up, class skills, learn levels, promotions, movement, DLC flag, jid) | ✅ `classes.json` |
 | Skills (229: names, in-game descriptions, icon index, DLC-only flag) | ✅ `skills.json` |
 | Child rules (fixed parents, growth averaging, cap-mod combination, class inheritance) | ✅ in `src/logic/` |
 | Pair-up bonuses (class bonuses + per-unit C/B/A/S support bonuses) | ✅ in the packs (rule sourced below) |
@@ -44,7 +44,7 @@ header pointers and fails if they move):
 | Table | Offset | Entry | Fields used |
 |---|---|---|---|
 | Characters | `0xDF0` | 255 × 152 | name ptr (+8), fid (+12), gender flag (byte 0), support route (+38), classes (+44/+46), level cap (+134), bases (+56), growths (+64), cap mods (+72), weapon ranks (+96), skills (~+104), personal skills (+116/118/120), reclass options (+124/126), fixed parent cid (+42), guard-stance bonus pointer (+32) |
-| Classes | `0xEA10` | 129 × 128 | jid (+8), name ptr (+16), bases (+28), growths (+36), caps (+52), pair-up (+60), weapon ranks (+68), class skills (+84…90), movement (+93), promotions (+100/+102), base classes (+104/+106), DLC index (+123) |
+| Classes | `0xEA10` in vanilla; installed build pointer in header | 129 vanilla + six appended mod jobs, each 128 bytes | jid (+8), name ptr (+16), bases (+28), growths (+36), caps (+52), pair-up (+60), weapon ranks (+68), class skills (+84…90), movement (+93), promotions (+100/+102), base classes (+104/+106), DLC index (+123) |
 | Skills | `0x12BBC` | 229 × 32 | seid (+0), name message key (+4), description message key (+8), id (+16), icon index (+20) |
 
 Notes:
@@ -370,8 +370,7 @@ The current planner therefore does not include inherited support rows in child p
     Advanced 2.
   - Unverified: tie order between two base classes feeding one advanced class (the planner uses
     class-pool order), and whether a pre-promoted recruit holds its base-class skills (assumed yes).
-- **DLC gender locks (vanilla)** — Dread Fighter, Ballistician, Lodestar, Vanguard, Grandmaster:
-  male; Dark Falcon, Witch, Great Lord: female. The class table carries both variants for some.
+  - **DLC class genders** - Dread Fighter and Dark Falcon are unisex in vanilla Fates (both job variants are in the vanilla table; [Dread Fighter](https://fireemblem.fandom.com/wiki/Dread_Fighter), [Dark Flier](https://fireemblem.fandom.com/wiki/Dark_Flier)). Ballistician, Lodestar, Vanguard and Grandmaster are male-only; Witch and Great Lord are female-only. The installed [Unisex DLC Classes mod](https://gamebanana.com/mods/324622) adds their six opposite-gender jobs at indices 138-143. The per-run mod switch gates those six jobs when DLC is enabled.
 - **Talent** — any base class except Nohr Prince(ss); Monk/Wolfskin male-only, Shrine
   Maiden/Kitsune female-only (vanilla avatar rules).
 - **Inherited skill** — chosen from the variable parent's learnable pool (*verify*: Fates passes

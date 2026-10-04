@@ -41,7 +41,7 @@ describe('lenses', () => {
     // DLC classes live on the special track in the data but are coloured with advanced classes.
     const tierOf = (item: string) => dataset.classes.find((def) => def.name === item)!
     expect(classWide.every((item) => tierOf(item).tier === 'promoted' || tierOf(item).dlc)).toBe(true)
-    expect(classWide).toContain('Great Lord')
+    expect(classWide).toContain('Great Lord (M)')
     expect(classWide).not.toContain('Faceless')
     const effective = colourReferenceClassIds(dataset, run, ctx, 'effectiveGrowths', swordmaster, own)
     expect(effective.every((id) => own.includes(id) && (dataset.classesById.get(id)!.tier === 'promoted' || dataset.classesById.get(id)!.dlc))).toBe(true)

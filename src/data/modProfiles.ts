@@ -10,8 +10,8 @@ export interface ModEntry {
   version?: string
   /** What it changes, in planner-relevant terms. */
   effect: string
-  /** True when it changes gameplay; false for purely cosmetic/audio mods. */
-  gameplay: boolean
+  /** Planner rules or alternate game art. */
+  category: 'data' | 'vanity'
   required?: boolean
   url?: string
 }
@@ -19,14 +19,8 @@ export interface ModEntry {
 export interface BuildFeatures {
   /** UGF's expanded support graph (same-sex S supports, extra conversations). */
   expandedSupports: boolean
-  /** Every renown reward obtainable with 0 BP/VP. */
-  freeRenown: boolean
-  /** Tru's shop: full accessory catalog, all prices set to 0. */
-  freeAccessories: boolean
-  /** Unit Select Voice: per-unit voice choice at recruitment/creation. */
-  voiceSelect: boolean
-  /** Texture/model replacements bundled in the build. */
-  cosmeticTextures: boolean
+  /** The installed class patch adds six opposite-gender DLC jobs. */
+  unisexDlcClasses: boolean
 }
 
 export interface BuildProfile {
@@ -47,10 +41,7 @@ const UGF_BUILD: BuildProfile = {
   packId: 'ugf-2.5.2',
   features: {
     expandedSupports: true,
-    freeRenown: true,
-    freeAccessories: true,
-    voiceSelect: true,
-    cosmeticTextures: true,
+    unisexDlcClasses: true,
   },
   mods: [
     {
@@ -59,80 +50,32 @@ const UGF_BUILD: BuildProfile = {
       version: '2.5.2',
       effect:
         'Expands the support graph: same-sex S supports, new conversation sets, extra Corrin / child / sibling supports, adjusted support routes.',
-      gameplay: true,
+      category: 'data',
       required: true,
       url: 'https://gamebanana.com/mods/51420',
     },
     {
-      id: 'free-renown',
-      name: 'Free Renown Rewards',
-      version: '1.0',
-      effect: 'All 160 minimum BP/VP requirements zeroed — every renown reward is obtainable immediately.',
-      gameplay: true,
-      url: 'https://gamebanana.com/mods/472394',
-    },
-    {
-      id: 'free-visit-rewards',
-      name: 'Free battle and visitation rewards',
-      version: '1.0',
-      effect: 'Same GameData edit as Free Renown Rewards (verified identical values) — no grind for battle/visit rewards.',
-      gameplay: true,
-      url: 'https://gamebanana.com/mods/485063',
-    },
-    {
-      id: 'accessory-shop',
-      name: "Tru's Accessory Shop",
-      version: 'v2',
-      effect: 'Full accessory catalog sold in the shop; models/textures from Texture Compilation.',
-      gameplay: true,
-      url: 'https://gamebanana.com/mods/480913',
-    },
-    {
-      id: 'free-accessory-prices',
-      name: "Tru's Free Accessory Prices",
-      version: 'addon',
-      effect: 'AcceShop data replaced so accessories cost no meaningful gold.',
-      gameplay: true,
-      url: 'https://gamebanana.com/mods/480913',
-    },
-    {
-      id: 'unit-select-voice',
-      name: 'Unit Select Voice',
-      version: '1.3.4',
-      effect: 'Choose any voiced unit’s voice lines for a character; adds the missing Corrin voice strings.',
-      gameplay: false,
-      url: 'https://gamebanana.com/mods/51423',
-    },
-    {
-      id: 'fates-icon-project',
-      name: 'Fates Icon Project (regular)',
-      version: '1.0',
-      effect: 'Menu / skill / item icon replacements.',
-      gameplay: false,
-      url: 'https://gamebanana.com/mods/34160',
-    },
-    {
-      id: 'texture-compilation',
-      name: 'Fire Emblem Fates Texture Compilation',
-      version: '6.7',
-      effect: 'Large class/outfit texture pack (bundles the Gold faceless fix).',
-      gameplay: false,
-      url: 'https://gamebanana.com/mods/388979',
+      id: 'unisex-dlc-classes',
+      name: 'Unisex DLC Classes',
+      version: '2024-07-24',
+      effect: 'Opens Ballistician, Witch, Lodestar, Vanguard, Great Lord and Grandmaster to both genders.',
+      category: 'data',
+      url: 'https://gamebanana.com/mods/324622',
     },
     {
       id: 'furry-fates',
       name: 'Furry Fates',
       version: '2.2',
-      effect: 'Model/texture swaps.',
-      gameplay: false,
+      effect: 'Alternate art for Kaden, Keaton, Selkie and Velouria, with map sprites for Kaden and Keaton.',
+      category: 'vanity',
       url: 'https://gamebanana.com/mods/663124',
     },
     {
       id: 'dragon-hare-corrin',
       name: 'Dragon-Hare Corrin',
       version: '5.0',
-      effect: 'Corrin model replacement (Male+Female variant installed).',
-      gameplay: false,
+      effect: 'Alternate portraits for male and female Corrin.',
+      category: 'vanity',
       url: 'https://gamebanana.com/mods/653924',
     },
   ],
@@ -150,10 +93,7 @@ const VANILLA: BuildProfile = {
   packId: 'vanilla',
   features: {
     expandedSupports: false,
-    freeRenown: false,
-    freeAccessories: false,
-    voiceSelect: false,
-    cosmeticTextures: false,
+    unisexDlcClasses: false,
   },
   mods: [],
   notes: [
@@ -172,4 +112,8 @@ export function selectedModIds(_profileId: string, saved?: readonly string[]): s
   const profile = UGF_BUILD
   const chosen = new Set(saved ?? profile.mods.map((mod) => mod.id))
   return profile.mods.filter((mod) => mod.required || chosen.has(mod.id)).map((mod) => mod.id)
+}
+
+export function hasUnisexDlcClasses(run: { dlc: boolean; modpackId: string; mods?: readonly string[] }): boolean {
+  return run.dlc && selectedModIds(run.modpackId, run.mods).includes('unisex-dlc-classes')
 }

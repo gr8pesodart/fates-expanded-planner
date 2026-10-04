@@ -11,6 +11,7 @@ import { buildProgression, dlcClassesFor } from './progression'
 import { inheritableSkillPool } from './skills'
 import { fixedParentIsCorrin } from './stats'
 import { SKILL_BOOKS } from '../data/itemIcons'
+import { hasUnisexDlcClasses } from '../data/modProfiles'
 
 /**
  * Where a skill stands for one unit, in the order the skill picker lists them:
@@ -170,7 +171,7 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
   }
 
   // 2. Classes open to the unit right now.
-  const current = [...new Set([ctx.start.classId, ...ctx.pool.map((item) => item.classId), ...(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender).map((def) => def.id) : [])])]
+  const current = [...new Set([ctx.start.classId, ...ctx.pool.map((item) => item.classId), ...(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run)).map((def) => def.id) : [])])]
   for (const classId of current) {
     cls(classId, 'available')
     for (const item of learnset(dataset, classId)) entry(item.id, 'available', classId, item.level)
@@ -317,10 +318,11 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
 
   // 5. Everything else no relationship in this run gives, by the class that would teach it. With DLC
   // off, DLC classes aren't part of the run at all, so they aren't listed.
+  const allowedDlc = new Set(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run)).map((def) => def.id) : [])
   for (const id of playableClassIds(dataset)) {
     const classId = sexedClassId(dataset, id, ctx.unit.gender)
     const def = dataset.classesById.get(classId)
-    if (!def || (def.dlc && !run.dlc)) continue
+    if (!def || (def.dlc && !allowedDlc.has(classId))) continue
     cls(classId, 'unavailable')
     for (const item of learnset(dataset, classId)) entry(item.id, 'unavailable', classId, item.level)
   }

@@ -47,8 +47,21 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
     document.querySelector('.main')?.scrollTo(0, 0)
     window.scrollTo(0, 0)
   }, [])
+  const heroRef = useRef<HTMLElement | null>(null)
+  const heroNameRef = useRef<HTMLDivElement | null>(null)
+  const heroBackRef = useRef<HTMLButtonElement | null>(null)
   const heroTabsRef = useRef<HTMLDivElement | null>(null)
-  const pinned = useScrolledPast(heroTabsRef)
+  const pinned = useScrolledPast(embedded ? heroTabsRef : heroBackRef, embedded ? 0 : 0.5)
+  useLayoutEffect(() => {
+    const hero = heroRef.current
+    const nameRow = heroNameRef.current
+    if (!hero || !nameRow) return
+    const measure = () => hero.style.setProperty('--hero-name-h', `${nameRow.getBoundingClientRect().height}px`)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(nameRow)
+    return () => observer.disconnect()
+  }, [])
   const headRef = useRef<HTMLDivElement | null>(null)
   useLayoutEffect(() => {
     // Sticky rails inside the tabs (Profile › Classes) sit just under the sticky head.
@@ -84,7 +97,7 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
 
   return (
     <article ref={articleRef} className="screen character" aria-label={name}>
-      {/* Zero-height rail at the top of the page: pinned from the start, so the head slides in and out in place once the hero tabs scroll away. */}
+      {/* Zero-height rail at the top of the page: the head slides in when the hero back arrow is halfway off-screen. */}
       <div className="char-sticky">
         <div ref={headRef} className="char-sticky-head" data-shown={pinned} inert={!pinned}>
           <div className="char-sticky-top">
@@ -98,19 +111,19 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
           <CharacterTabs unitId={unitId} name={name} tabs={tabs} active={active} />
         </div>
       </div>
-      <header className="char-hero">
+      <header ref={heroRef} className="char-hero">
         <div className="char-art" aria-hidden="true">
           <SplashSwap unitId={unitId} />
         </div>
         {embedded ? null : (
           <div className="back-rail">
-            <button type="button" className="back-btn" aria-label="Back" onClick={() => goBack()}>
+            <button ref={heroBackRef} type="button" className="back-btn" aria-label="Back" onClick={() => goBack()}>
               <Icon name="arrowLeft" size={24} />
             </button>
           </div>
         )}
         <div className="char-hero-foot">
-          <div className="char-name-row">
+          <div ref={heroNameRef} className="char-name-row">
             <h1 className="char-name">{name}</h1>
             <StarButton heart on={favourite} name={name} size={22} light disabled={readOnly} onToggle={() => mutate((next) => toggleFavourite(next, unitId))} />
           </div>
@@ -162,15 +175,18 @@ function CharacterTabs({ unitId, name, tabs, active }: { unitId: string; name: s
   )
 }
 
-function useScrolledPast(ref: { current: HTMLElement | null }): boolean {
+function useScrolledPast(ref: { current: HTMLElement | null }, visibleRatio = 0): boolean {
   const [past, setPast] = useState(false)
   useEffect(() => {
     const node = ref.current
     if (!node || !('IntersectionObserver' in window)) return
-    const observer = new IntersectionObserver(([entry]) => setPast(!entry.isIntersecting && entry.boundingClientRect.top < 0))
+    const observer = new IntersectionObserver(([entry]) => {
+      const passed = visibleRatio === 0 ? !entry.isIntersecting : entry.intersectionRatio <= visibleRatio
+      setPast(passed && entry.boundingClientRect.top < 0)
+    }, { threshold: visibleRatio })
     observer.observe(node)
     return () => observer.disconnect()
-  }, [ref])
+  }, [ref, visibleRatio])
   return past
 }
 
@@ -200,4 +216,3 @@ export function Splash({ unitId, fading = false, onFaded }: { unitId: string; fa
     </div>
   )
 }
-

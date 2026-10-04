@@ -3,8 +3,9 @@ import type { RunPlan } from '../state/model'
 import type { UnitContext } from './army'
 import { pairRank, supportBonusesOf } from './army'
 import { sexedClassId } from './classes'
+import { hasUnisexDlcClasses } from '../data/modProfiles'
 import { pairUpBonus } from './pairUp'
-import { expectedFinal } from './progression'
+import { dlcClassesFor, expectedFinal } from './progression'
 import { projectUnit } from './stats'
 
 export type LensId =
@@ -149,10 +150,13 @@ export function colourReferenceClassIds(dataset: Dataset, run: RunPlan, ctx: Uni
   const tier = level(classId)
   if (!CLASS_LENSES.has(lens)) return ownClassIds.filter((id) => level(id) === tier)
   const ids = new Set<number>()
+  const allowedDlc = new Set(dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run)).map((def) => def.id))
   for (const id of playableClassIds(dataset)) {
     const def = dataset.classesById.get(id)
     if (!def || level(id) !== tier || (def.dlc && !run.dlc)) continue
-    ids.add(sexedClassId(dataset, id, ctx.unit.gender))
+    const sexed = sexedClassId(dataset, id, ctx.unit.gender)
+    if (def.dlc && !allowedDlc.has(sexed)) continue
+    ids.add(sexed)
   }
   return [...ids]
 }

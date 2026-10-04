@@ -56,7 +56,7 @@ export function AvatarTab({ run: override, onChange }: { run?: RunPlan; onChange
                 onClick={() => switchTo(gender)}
               >
                 {/* The bust portrait, not the splash: it carries Corrin's tinted hair. */}
-                {unit ? <Portrait unitId={unit.id} name="Corrin" crop="bust" className="gender-art" /> : null}
+                {unit ? <Portrait unitId={unit.id} name="Corrin" crop="bust" className="gender-art" run={run} hair={hairColour} /> : null}
                 <span className="gender-label">{gender === 'female' ? 'Female' : 'Male'}</span>
               </button>
             )
@@ -66,7 +66,7 @@ export function AvatarTab({ run: override, onChange }: { run?: RunPlan; onChange
 
       <NameField key={corrin.name ?? ''} name={corrin.name ?? ''} disabled={readOnly} onCommit={(name) => apply((next) => ({ ...next, corrin: { ...next.corrin, name: name.trim() || undefined } }))} />
 
-      <HairColourRow colour={hairColour} unitId={unitId} classId={corrinUnit ? classStart(dataset, run, corrinUnit).classId : null} disabled={readOnly} onPick={(picked) => apply((next) => ({ ...next, corrin: { ...next.corrin, hairColour: picked } }))} />
+      <HairColourRow colour={hairColour} unitId={unitId} classId={corrinUnit ? classStart(dataset, run, corrinUnit).classId : null} run={run} disabled={readOnly} onPick={(picked) => apply((next) => ({ ...next, corrin: { ...next.corrin, hairColour: picked } }))} />
 
       <StatChoice title="Boon" tone="good" value={build.boon} blocked={build.bane} labels={(key) => BOONS[key].label} disabled={readOnly} onPick={pickBoon} />
       <StatChoice title="Bane" tone="bad" value={build.bane} blocked={build.boon} labels={(key) => BANES[key].label} disabled={readOnly} onPick={pickBane} />
@@ -90,7 +90,7 @@ export function AvatarTab({ run: override, onChange }: { run?: RunPlan; onChange
               >
                 <span className="talent-sprites">
                   {tree.map((id) => (
-                    <ClassSprite key={id} unitId={unitId} classId={id} name={dataset.classesById.get(id)?.name ?? ''} size={32} hair={hairColour} />
+                    <ClassSprite key={id} unitId={unitId} classId={id} name={dataset.classesById.get(id)?.name ?? ''} size={32} hair={hairColour} run={run} />
                   ))}
                 </span>
                 <span className="talent-name">{classFamily(def.name)}</span>
@@ -130,7 +130,7 @@ function NameField({ name, disabled, onCommit }: { name: string; disabled: boole
 }
 
 /** Corrin's hair: a row showing the current swatch; tapping opens the game's 30 swatches. */
-function HairColourRow({ colour, unitId, classId, disabled, onPick }: { colour: string; unitId: string | null; classId: number | null; disabled: boolean; onPick(colour: string): void }) {
+function HairColourRow({ colour, unitId, classId, run, disabled, onPick }: { colour: string; unitId: string | null; classId: number | null; run: RunPlan; disabled: boolean; onPick(colour: string): void }) {
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   // Stays open so the preview sprite can be compared across swatches.
@@ -147,7 +147,7 @@ function HairColourRow({ colour, unitId, classId, disabled, onPick }: { colour: 
       {open ? (
         <Sheet title="Hair colour" onClose={close}>
           {unitId && classId !== null ? (
-            <div className="hair-preview"><ClassSprite unitId={unitId} classId={classId} name="Corrin" size={64} hair={colour} /></div>
+            <div className="hair-preview"><ClassSprite unitId={unitId} classId={classId} name="Corrin" size={64} hair={colour} run={run} /></div>
           ) : null}
           <div className="hair-grid" role="radiogroup" aria-label="Hair colours">
             {CORRIN_HAIR_COLOURS.map((swatch, swatchIndex) => (

@@ -6,6 +6,7 @@ import { sexedClassId } from './classes'
 import { bookItemKey, classItemKey, itemLimit, SKILL_BOOKS } from '../data/itemIcons'
 import type { ReclassOption } from './progression'
 import { buildProgression, dlcClassesFor, learnedSkillIds, offspringOptions, reclassOptions, sealsUsed, skillCandidates, tierCap } from './progression'
+import { hasUnisexDlcClasses } from '../data/modProfiles'
 import { projectUnit } from './stats'
 
 /**
@@ -267,7 +268,7 @@ function reachableClasses(dataset: Dataset, run: RunPlan, ctx: UnitContext): Cla
       if (classOnRoute(dataset, sexed, run.route)) ids.add(sexed)
     }
   }
-  if (run.dlc) for (const def of dlcClassesFor(dataset, ctx.unit.gender)) ids.add(def.id)
+  if (run.dlc) for (const def of dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run))) ids.add(def.id)
   return [...ids].flatMap((id) => {
     const def = dataset.classesById.get(id)
     return def && (!def.dlc || run.dlc) ? [def] : []
@@ -504,4 +505,3 @@ export function verifyAutoPlan(dataset: Dataset, run: RunPlan, ctx: UnitContext,
   const finalClass = last ? last.reclass ?? last.classId : null
   return progression.dropped.length === 0 && finalClass === ctx.currentClassId && targets.every((id) => learned.has(id))
 }
-

@@ -47,10 +47,10 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
   the top** (owner: the card touches the top of the page; page content starts right under it), with `--hero-pad` = the page margin as padding on every side (back
   button, name, pills). Radius is concentric (owner): `min(pill height, back size) / 2 + padding` =
   16 + 12 = 28px (the pills win over the back button's 20 + 12); the pills' min-height reads
-  `--hero-tabs-h` so the maths holds. The art is the unit's **talk portrait** zoomed on the face (owner, 2026-10-04 - critical
-  cut-ins were tried and dropped, the 2:1 art didn't fit the box): `HeroPortrait` places the canvas
-  so FaceData's face rect spans 90% of `--hero-h`, centred at 66% across / 34% down
-  (`.splash.portrait-hero` vars), base + runtime-tinted hair on one frame, over a linear route-hue
+  `--hero-tabs-h` so the maths holds. The art is the unit's **talk portrait** at native 1x resolution
+  (owner, 2026-10-04; critical cut-ins were tried and dropped because the 2:1 art didn't fit).
+  `HeroPortrait` aligns the portrait's top edge with the hero container's top and uses FaceData's
+  face rect to centre the face at 66% across the art box, with base + runtime-tinted hair on one frame, over a linear route-hue
   gradient light on the right (`.splash.fallback` shares it); the black overlay is
   `to top, rgb(0 0 0 / 0.6) 20%, transparent 58%` (toned down from Figma 19:644's 0.94) over the
   316px art box. Avatar gender cards use the bust `Portrait` (carries
@@ -61,10 +61,14 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 - Roster stat strips: `--strip-gap: var(--s6)` (30px, owner: "a fair bit larger" than 12px).
 - Class sprites: tapping one on the Roster **or the Chart** opens the class picker (`sprite-btn`);
   picker rows show bare sprites (the `tile` chip background was removed, owner v3.4).
-- Back button (mobile): `.back-rail` (absolute, from the top to the hero's tab pills:
-  `--hero-h - --hero-pad - --hero-tabs-h`) holds a sticky `.back-btn` pinned at its starting
-  12px (the hero's padding; the hero is flush with the top), so it stays put over the art and the tab pills push it out (owner, v3.4);
-  the sticky head's own back button takes over.
+- Back button (mobile): `.back-rail` ends one `--hero-foot-gap` (10px) above `.char-name-row`; its
+  height subtracts the measured name row height, two foot gaps, tab height and bottom padding from
+  `--hero-h`. The sticky `.back-btn` starts at 12px and stops with the same 10px gap above the name
+  that separates the name from the tabs. `useScrolledPast` observes the hero back button at
+  intersection ratio 0.5 and reveals the
+  sticky header as the arrow becomes half hidden above the viewport. Embedded desktop pages keep the
+  tab observer because they have no hero back button. Chromium and WebKit mobile tests found the
+  midpoint at about 107-108px of scroll on the 233px hero; scrolling upward hides it again.
 - General swipe/slider knowledge (physics, hand-over, profiling) is also in the global
   `frontend-dev` skill (`~/.claude/skills/frontend-dev/slider-physics/GUIDE.md`).
 - Opening animation: `.character-layer` slides in from 100% over 460ms, no fade (owner).
@@ -169,6 +173,7 @@ the Figma MCP `get_screenshot` using fileKey + node id like `15:1542`). Colours 
 
 ## Components
 
+- The per-run Mods checklist has Game data and Vanity sections. Only UGF and Unisex DLC Classes affect planning rules. `art.tsx` reads selected mods from the active run for `Portrait`, `HeroPortrait` and `ClassSprite`; `Portrait` and `ClassSprite` also accept a draft `run` for the New Run Corrin preview. `data/art.ts` resolves the vanity manifest and falls back to base art when a switch is off. Furry Fates changes four portraits plus Kaden/Keaton map sprites; Dragon-Hare changes both Corrin portraits.
 - `StatTable` (`components/StatTable.tsx`): `row` (9 values: HP…Res, Mov; `null` renders muted `-`),
   `signed`, `inverse`, `referenceRows` (enables text colouring), `mov={false}` (8 columns — Parents
   tables), `slideIndex` (slide on change).

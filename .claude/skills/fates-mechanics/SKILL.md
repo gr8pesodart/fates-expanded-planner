@@ -52,6 +52,7 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 ## Class inheritance and seals — `classes.ts › classPool`, `army.ts`
 
+- **Unisex DLC Classes (2026-10-04)**: Dread Fighter and Dark Falcon are already usable by both genders in vanilla Fates. The installed mod adds female Ballistician, Lodestar, Vanguard and Grandmaster, plus male Witch and Great Lord (jobs 138-143). The per-run `unisex-dlc-classes` switch gates only those six; `dlcClassesFor` drives pickers, progression, automation, and skill access. The appended job records come from `work/merge/GameData.bin.lz`; tests in `progression.test.ts` and `dataset.test.ts` pin the behavior.
 - **Gendered class names (v3.4, `sexedClassId`)**: Monk ↔ Shrine Maiden, Great Master ↔ Priestess,
   Butler ↔ Maid, Nohr Prince ↔ Nohr Princess swap by gender like the (M)/(F) pairs (Fire Emblem Wiki ›
   Reclass). Before v3.4 women with S Azama got Monk. Pinned in `classes.test.ts`.

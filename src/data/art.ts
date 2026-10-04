@@ -64,8 +64,16 @@ interface SpriteManifest {
   /** FaceData default hair colour per unit (`#rrggbb`). */
   hairColours?: Record<string, string>
 }
+interface VanityManifest {
+  generatedAt: string
+  dragonHare: { portraits: Record<string, PortraitEntry> }
+  furryFates: {
+    portraits: Record<string, PortraitEntry>
+    sprites: Pick<SpriteManifest, 'bodies' | 'heads'> & { unitBodies: Record<string, Record<string, SpriteBody>> }
+  }
+}
 
-const manifests = import.meta.glob<{ default: unknown }>(['./portraits.json', './sprites.json'], { eager: true })
+const manifests = import.meta.glob<{ default: unknown }>(['./portraits.json', './sprites.json', './vanityArt.json'], { eager: true })
 
 function manifest<T>(name: string): T | null {
   return (manifests[`./${name}.json`]?.default as T | undefined) ?? null
@@ -73,6 +81,7 @@ function manifest<T>(name: string): T | null {
 
 const PORTRAITS = manifest<PortraitManifest>('portraits')
 const SPRITES = manifest<SpriteManifest>('sprites')
+const VANITY = manifest<VanityManifest>('vanityArt')
 
 export const ASSETS_ENABLED = import.meta.env.VITE_ASSETS !== 'off'
 
@@ -94,16 +103,25 @@ export interface PortraitArt {
 const hairArt = (hair: PortraitHair | undefined, version?: string): PortraitHair | null =>
   hair ? { ...hair, file: url(hair.file, version) } : null
 
-export function portraitArt(unitId: string, crop: 'face' | 'bust'): PortraitArt | null {
+function portraitEntry(unitId: string, mods: readonly string[]): { entry: PortraitEntry; version?: string } | null {
+  const variant = mods.includes('dragon-hare-corrin') ? VANITY?.dragonHare.portraits[unitId] : undefined
+  const furry = mods.includes('furry-fates') ? VANITY?.furryFates.portraits[unitId] : undefined
+  if (variant || furry) return { entry: (variant ?? furry)!, version: VANITY?.generatedAt }
+  const base = PORTRAITS?.units[unitId]
+  return base ? { entry: base, version: PORTRAITS?.generatedAt } : null
+}
+
+export function portraitArt(unitId: string, crop: 'face' | 'bust', mods: readonly string[] = []): PortraitArt | null {
   if (!ASSETS_ENABLED) return null
-  const entry = PORTRAITS?.units[unitId]
-  if (entry) {
+  const found = portraitEntry(unitId, mods)
+  if (found) {
+    const { entry, version } = found
     return {
-      src: url(entry.file, PORTRAITS?.generatedAt),
+      src: url(entry.file, version),
       box: entry[crop],
       w: entry.w,
       h: entry.h,
-      hair: hairArt(entry.hair, PORTRAITS?.generatedAt),
+      hair: hairArt(entry.hair, version),
     }
   }
   const legacy = assetUrl('unit', unitId)
@@ -119,16 +137,17 @@ export interface HeroArt {
 }
 
 /** The character page hero: the talk portrait, placed and zoomed by its face rect. */
-export function heroArt(unitId: string): HeroArt | null {
+export function heroArt(unitId: string, mods: readonly string[] = []): HeroArt | null {
   if (!ASSETS_ENABLED) return null
-  const entry = PORTRAITS?.units[unitId]
+  const found = portraitEntry(unitId, mods)
+  const entry = found?.entry
   if (!entry?.faceRect) return null
   return {
-    src: url(entry.file, PORTRAITS?.generatedAt),
+    src: url(entry.file, found?.version),
     w: entry.w,
     h: entry.h,
     faceRect: entry.faceRect,
-    hair: hairArt(entry.hair, PORTRAITS?.generatedAt),
+    hair: hairArt(entry.hair, found?.version),
   }
 }
 
@@ -136,19 +155,23 @@ export type SpriteLayers =
   | { kind: 'stitched'; body: SpriteBody; head: SpriteImage | null; smallHead: SpriteImage | null; offset: SpriteBody['head'] }
   | { kind: 'single'; image: SpriteImage }
 
-export function spriteLayers(unitId: string | null, classId: number): SpriteLayers | null {
+export function spriteLayers(unitId: string | null, classId: number, mods: readonly string[] = []): SpriteLayers | null {
   if (!ASSETS_ENABLED) return null
   if (SPRITES) {
-    const unique = unitId ? SPRITES.unique?.[unitId]?.[String(classId)] : undefined
-    if (unique) return { kind: 'single', image: withUrl(unique) }
-    const body = SPRITES.bodies[String(classId)]
+    const furry = mods.includes('furry-fates') ? VANITY?.furryFates.sprites : undefined
+    const unitBody = unitId ? furry?.unitBodies?.[unitId]?.[String(classId)] : undefined
+    const unique = !unitBody && unitId ? SPRITES.unique?.[unitId]?.[String(classId)] : undefined
+    if (unique) return { kind: 'single', image: withUrl(unique, SPRITES.generatedAt) }
+    const variantBody = unitBody ?? furry?.bodies[String(classId)]
+    const body = variantBody ?? SPRITES.bodies[String(classId)]
     if (body) {
-      const heads = (unitId ? SPRITES.heads[unitId] : undefined) ?? SPRITES.genericHeads?.[String(classId)]
+      const variantHead = unitId ? furry?.heads[unitId] : undefined
+      const heads = variantHead ?? (unitId ? SPRITES.heads[unitId] : undefined) ?? SPRITES.genericHeads?.[String(classId)]
       return {
         kind: 'stitched',
-        body: withUrl(body),
-        head: heads && body.head ? withUrl(heads) : null,
-        smallHead: heads?.small && body.head ? withUrl(heads.small) : null,
+        body: withUrl(body, variantBody ? VANITY?.generatedAt : SPRITES.generatedAt),
+        head: heads && body.head ? withUrl(heads, variantHead ? VANITY?.generatedAt : SPRITES.generatedAt) : null,
+        smallHead: heads?.small && body.head ? withUrl(heads.small, variantHead ? VANITY?.generatedAt : SPRITES.generatedAt) : null,
         offset: body.head,
       }
     }
@@ -157,9 +180,9 @@ export function spriteLayers(unitId: string | null, classId: number): SpriteLaye
   return legacy ? { kind: 'single', image: { file: legacy, w: 32, h: 32 } } : null
 }
 
-function withUrl<T extends SpriteImage>(image: T): T {
-  const resolved = { ...image, file: url(image.file, SPRITES?.generatedAt) }
-  if (image.hair) resolved.hair = url(image.hair, SPRITES?.generatedAt)
+function withUrl<T extends SpriteImage>(image: T, version?: string): T {
+  const resolved = { ...image, file: url(image.file, version) }
+  if (image.hair) resolved.hair = url(image.hair, version)
   return resolved
 }
 

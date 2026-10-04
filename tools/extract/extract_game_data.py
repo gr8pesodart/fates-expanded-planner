@@ -30,9 +30,9 @@ Additions on top of the base tables:
     Serenes Forest's published pair-up tables)
   - class pair-up bonuses (`pairUp`) are already in the class table
 
-The vanilla table is used because the installed build's UGF changes do not
-touch unit stats or classes (see docs/MODS.md); the support graph is
-extracted separately from the mod's own Paragon export.
+Vanilla supplies the base tables. The installed build's merged GameData supplies
+six appended Unisex DLC Classes jobs; its other gameplay edits do not replace
+vanilla unit stats here. The support graph is extracted separately.
 
 Usage (from the repo root):
 
@@ -65,6 +65,9 @@ DEFAULT_GAMEDATA = os.path.join(
     "GameData",
     "GameData.bin.lz",
 )
+DEFAULT_UNISEX_GAMEDATA = os.path.join(
+    REPO_ROOT, "..", "3ds-games", "fe-fates", "work", "merge", "GameData.bin.lz"
+)
 DEFAULT_FE_TOOLS = os.path.join(REPO_ROOT, "..", "3ds-games", "fe-fates", "tools")
 DEFAULT_SOURCES = os.path.join(REPO_ROOT, "tools", "extract", "sources")
 DEFAULT_MESSAGES = os.path.join(
@@ -88,6 +91,15 @@ SOURCE_URLS = {
 
 CHAR_OFF, CHAR_SIZE, CHAR_COUNT = 0xDF0, 152, 255
 CLASS_OFF, CLASS_SIZE, CLASS_COUNT = 0xEA10, 128, 129
+UNISEX_CLASS_NAMES = {
+    138: "Ballistician (F)",
+    139: "Great Lord (M)",
+    140: "Witch (M)",
+    141: "Lodestar (F)",
+    142: "Vanguard (F)",
+    143: "Grandmaster (F)",
+}
+UNISEX_COUNTERPARTS = {138: 122, 139: 126, 140: 123, 141: 124, 142: 125, 143: 127}
 SKILL_SIZE, SKILL_COUNT = 32, 229
 FIRST_PLAYABLE_SLOT, LAST_PLAYABLE_SLOT = 1, 71  # Corrin (M) .. Anna
 
@@ -253,6 +265,7 @@ def skill_learn_levels(tier: str, count: int) -> list[int]:
 
 def build(
     gamedata_path: str,
+    unisex_gamedata_path: str,
     fe_tools_path: str,
     sources_dir: str,
     messages_path: str,
@@ -261,6 +274,11 @@ def build(
     lz13 = load_fe_tools(fe_tools_path)
     raw_file = open(gamedata_path, "rb").read()
     data = lz13.decompress(raw_file)
+    unisex_raw = open(unisex_gamedata_path, "rb").read()
+    unisex_data = lz13.decompress(unisex_raw)
+    unisex_class_off = u32(unisex_data, 0x2C) + 0x28
+    if struct.unpack_from("<H", unisex_data, unisex_class_off - 2)[0] != 144:
+        fail("installed Unisex DLC class table is not the expected 144 jobs")
     sources = fetch_sources(sources_dir, skip_download)
     messages = read_message_archive(messages_path, lz13)
     tables = gamedata_tables(data)
@@ -276,12 +294,12 @@ def build(
     if tables["total_skill_count"] != SKILL_COUNT:
         fail(f"expected {SKILL_COUNT} skills, header says {tables['total_skill_count']}")
 
-    def string_at(ptr: int) -> str:
+    def string_at(ptr: int, source: bytes = data) -> str:
         if ptr == 0:
             return ""
         offset = ptr + 0x20
-        end = data.index(b"\x00", offset)
-        return data[offset:end].decode("shift_jis", errors="replace")
+        end = source.index(b"\x00", offset)
+        return source[offset:end].decode("shift_jis", errors="replace")
 
     def message_at(ptr: int) -> str | None:
         key = string_at(ptr)
@@ -377,9 +395,13 @@ def build(
                 promo_of.setdefault(target, []).append(index)
 
     classes: list[dict] = []
-    for index in range(CLASS_COUNT):
-        rec = data[CLASS_OFF + index * CLASS_SIZE : CLASS_OFF + (index + 1) * CLASS_SIZE]
-        ja = string_at(struct.unpack_from("<I", rec, 16)[0])
+    for index in [*range(CLASS_COUNT), *UNISEX_CLASS_NAMES]:
+        source = data if index < CLASS_COUNT else unisex_data
+        class_off = CLASS_OFF if index < CLASS_COUNT else unisex_class_off
+        rec = source[class_off + index * CLASS_SIZE : class_off + (index + 1) * CLASS_SIZE]
+        if index in UNISEX_CLASS_NAMES and rec[123] == 0xFF:
+            fail(f"appended job {index} is not a DLC class")
+        ja = string_at(struct.unpack_from("<I", rec, 16)[0], source)
         if ja.startswith("MJID_"):
             ja = ja[5:]
         promotes_to = [c for c in (u16(rec, 100), u16(rec, 102)) if c]
@@ -394,9 +416,9 @@ def build(
         classes.append(
             {
                 "id": index,
-                "name": class_names[index],
+                "name": class_names[index] if index < CLASS_COUNT else UNISEX_CLASS_NAMES[index],
                 "ja": ja,
-                "jid": string_at(struct.unpack_from("<I", rec, 8)[0]),
+                "jid": string_at(struct.unpack_from("<I", rec, 8)[0], source),
                 "tier": tier,
                 "dlc": rec[123] != 0xFF,
                 "baseStats": read_stats(rec, 28, signed=True),
@@ -411,6 +433,15 @@ def build(
                 "movement": rec[93],
             }
         )
+    by_class_id = {entry["id"]: entry for entry in classes}
+    for added_id, vanilla_id in UNISEX_COUNTERPARTS.items():
+        added, vanilla = by_class_id[added_id], by_class_id[vanilla_id]
+        opposite = "女" if vanilla["jid"].endswith("男") else "男"
+        if added["jid"] != vanilla["jid"][:-1] + opposite:
+            fail(f"appended job {added_id} is not the opposite gender of {vanilla_id}")
+        fields = ("tier", "dlc", "baseStats", "growths", "caps", "pairUp", "weaponRanks", "skills", "skillLearn", "promotesTo", "promotesFrom", "movement")
+        if any(added[field] != vanilla[field] for field in fields):
+            fail(f"appended job {added_id} differs in gameplay data from {vanilla_id}")
 
     # --- skill table -------------------------------------------------------
     # The GameData skill-table pointer already points at the first entry
@@ -475,6 +506,11 @@ def build(
             "sha256": sha256,
             "tool": "tools/extract/extract_game_data.py",
         },
+        "unisexClassSource": {
+            "file": os.path.basename(unisex_gamedata_path),
+            "sha256": hashlib.sha256(unisex_raw).hexdigest(),
+            "note": "Installed build's six appended DLC jobs (138-143).",
+        },
         "messageSource": {
             "file": os.path.basename(messages_path),
             "sha256": messages_sha,
@@ -497,7 +533,7 @@ def build(
             "nameMismatches": name_mismatches,
         },
         "notes": [
-            "Vanilla GameData: the installed build's stats/classes are unchanged by UGF (docs/MODS.md).",
+            "Vanilla unit stats and original jobs; six new DLC jobs from the installed Unisex DLC Classes merge (docs/MODS.md).",
             "English names from RainThunder's fefates-tools enum lists; descriptions from m/@E/GameData.bin.lz.",
             "DLC classes carry a DLC index byte (0-7) at class record +123; skills taught only by DLC classes are flagged dlc.",
             "Anna is the only DLC-only playable unit (curated: 'Anna on the Run' xenologue) — no unit table flag exists.",
@@ -516,6 +552,7 @@ def build(
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--gamedata", default=DEFAULT_GAMEDATA)
+    parser.add_argument("--unisex-gamedata", default=DEFAULT_UNISEX_GAMEDATA)
     parser.add_argument("--fe-tools", default=DEFAULT_FE_TOOLS)
     parser.add_argument("--sources", default=DEFAULT_SOURCES)
     parser.add_argument("--messages", default=DEFAULT_MESSAGES)
@@ -524,7 +561,7 @@ def main() -> None:
     args = parser.parse_args()
 
     result = build(
-        args.gamedata, args.fe_tools, args.sources, args.messages, args.skip_download
+        args.gamedata, args.unisex_gamedata, args.fe_tools, args.sources, args.messages, args.skip_download
     )
 
     os.makedirs(args.out, exist_ok=True)

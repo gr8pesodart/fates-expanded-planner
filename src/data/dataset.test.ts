@@ -31,7 +31,7 @@ describe('ugf-2.5.2 pack', () => {
       characters: 71,
       edges: 2463,
       units: 71,
-      classes: 129,
+      classes: 135,
       skills: 229,
     })
   })
@@ -79,7 +79,7 @@ describe('ugf-2.5.2 pack', () => {
 
   it('flags the eight DLC class families and Anna', () => {
     const dlc = dataset.classes.filter((c) => c.dlc).map((c) => c.name)
-    expect(dlc).toHaveLength(10)
+    expect(dlc).toHaveLength(16)
     for (const name of [
       'Dread Fighter (M)',
       'Dread Fighter (F)',
@@ -91,6 +91,12 @@ describe('ugf-2.5.2 pack', () => {
       'Vanguard',
       'Great Lord',
       'Grandmaster',
+      'Ballistician (F)',
+      'Great Lord (M)',
+      'Witch (M)',
+      'Lodestar (F)',
+      'Vanguard (F)',
+      'Grandmaster (F)',
     ]) {
       expect(dlc).toContain(name)
     }

@@ -161,11 +161,13 @@ unexpected alpha value.
   (Songstress, Faceless, monsters). `None`, `Silent Dragon` ×2, `Outrealm Class` have nothing.
 - Unique per unit×class = exact `unit/Unique/<class folder>_<fid name>/`; skip `_変_` transform
   folders. Expected pairs: 13.
-- Coverage baseline: bodies 125/129, heads 71/71 (large+small), generic heads 113/129, unique 13;
+- Coverage baseline after Unisex DLC Classes: bodies 131/135, heads 71/71 (large+small), generic heads 113/135, unique 13;
   hair strips: 24 large heads, 23 small, 9 Unique (pinned in `sprites.test.ts`).
-- The contact sheet (`docs/screenshots/v3/sprites.png`) is the visual gate: 16 combos including
+- The contact sheet (`docs/screenshots/v3/sprites.png`) is the visual gate: 26 combos including
   mounted small-head paths and Unique overrides, composed with the same `compose_contract` at 4×
   nearest-neighbour. It must be regenerated with the sprites.
+- The six Unisex DLC Classes bodies (jobs 138-143) are extracted from `work/overlay/romfs/unit/Body` using `--mod-romfs`; base game bodies and all heads still use `--romfs`. The contact sheet now includes the six added jobs and both vanilla genders of Dread Fighter and Dark Falcon. The six bodies have no class-generic head strips in the overlay; playable units use their own head strips.
+- `tools/assets/extract_vanity.py` reads the installed overlay and produces `src/data/vanityArt.json`, `public/assets/vanity/` and `docs/screenshots/v3/vanity.png`. It extracts Dragon-Hare Corrin portraits (both genders), Furry Fates portraits (Kaden, Keaton, Selkie, Velouria), and Furry map art (male Kitsune body, Kaden/Keaton heads and 20 unit-specific forms). Most Furry `unit/Unique` forms still draw a separate head, so store them as `unitBodies` with `SpriteBody.head` from `anime.bin`; do not pass them through the full-body Unique extractor. Three fan-made sheets use body alpha 0x85/0x86 where the map renderer expects 0x88; normalize those bytes before making layer strips. `src/data/vanityArt.test.ts` checks files and selection.
 - After regeneration, restart any running dev server — it can keep serving blank/old files.
 
 ## Verify before shipping
