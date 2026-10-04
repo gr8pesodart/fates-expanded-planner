@@ -96,7 +96,7 @@ runtime maths identical to `extract_sprites.tint_ramp` (`min(255, grey·c // 0xB
 repeat: overlay washed hair out (greys ≥ 0x80 → white); ×2 modulate clipped light colours to pure white
 (owner saw "heads missing" on iPhone). 0xBB is calibrated on hand-drawn first-gen sprite hair, which
 sits at ~0.5–1.1× its FaceData colour's lightness.
-Portraits and cut-ins use **overlay** (`logic/hair.ts › tintChannel('overlay')`, mirrored by
+Portraits use **overlay** (`logic/hair.ts › tintChannel('overlay')`, mirrored by
 `extract_portraits.py › tint_overlay`), verified 2026-10-04 against in-game references: the Fire
 Emblem Wiki child hair sheets (SereneSeas, imgur album `O40MN`) and Serenes Forest's Kamui customizer
 (same overlay formula; its swatches are ~3 darker than the ROM table, which stays). Method that
@@ -104,9 +104,10 @@ worked: register each sheet cell and an app screenshot into our texture canvas w
 (`cv2.estimateAffinePartial2D`), compare eroded hair-interior pixels, and compare untinted
 skin/clothes too - the sheets are ~10-20 brighter overall, so judge hair against that offset, not
 zero. Portrait tints keep the layer's 4-bit alpha: edge pixels are the dark ink outline and forcing
-them opaque (right for binary-alpha sprite strips) drew hard black rings. Every portrait hair layer
-registers to its base at (0, 0) and goes over it, except Nina's cut-in (curated `HAIR_OFFSETS` +
-`BACK_HAIR_SEEDS` braid behind the base, shipped as `ct.hairBack`; see docs/ASSETS.md). The Parents
+them opaque (right for binary-alpha sprite strips) drew hard black rings. Every talk-portrait hair layer
+registers to its base at (0, 0) and goes over it (cut-ins, dropped 2026-10-04, had one exception:
+Nina's; see docs/ASSETS.md). Face arcs: name entries by the label table
+(`fe_assets.BinArchive.label_at`), not the entry's string pointer (two entries off). The Parents
 tab draws the child with each candidate's colour (`hair` prop).
 Corrin's swatches: ROM `GameData/MyUnitEdit.bin.lz` › `カラーテーブル` (30 × RGBA) →
 `sprites.json › corrinHairColours` (`corrin_hair_swatches`). Animation timing: every `ClassSprite`

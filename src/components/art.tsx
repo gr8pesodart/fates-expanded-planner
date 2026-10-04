@@ -1,7 +1,7 @@
 import { Fragment, useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { PlannerContext } from '../app/plannerContext'
-import { ASSETS_ENABLED, cutinArt, defaultHairColour, portraitArt, spriteLayers } from '../data/art'
+import { ASSETS_ENABLED, defaultHairColour, heroArt, portraitArt, spriteLayers } from '../data/art'
 import type { SpriteAnimationFrame, SpriteImage } from '../data/art'
 import { assetUrl } from '../data/assets'
 import { hairColourOf, hairTintTables } from '../logic/hair'
@@ -52,21 +52,21 @@ export function Portrait({ unitId, name, crop = 'face', className = '' }: { unit
 }
 
 /**
- * Character page hero: the unit's critical / skill cut-in (phase 2), hair tinted per run. Back hair
- * isn't baked into the base, so it is tinted even in the default colour.
+ * Character page hero: the talk portrait, scaled and placed by FaceData's face rect (CSS
+ * `.hero-portrait`), hair tinted per run over the same frame.
  */
-export function CutinArt({ unitId }: { unitId: string }) {
-  const art = cutinArt(unitId)
+export function HeroPortrait({ unitId }: { unitId: string }) {
+  const art = heroArt(unitId)
   const hairColour = useHairColour(unitId)
   const tintedHairUrl = useTintedImage(art?.hair?.file ?? null, hairColour)
-  const tintedBackUrl = useTintedImage(art?.hairBack?.file ?? null, art?.hairBack ? hairColour ?? defaultHairColour(unitId) : null)
   if (!art) return null
+  const [x, y, side] = art.faceRect
+  const frame = { '--art-w': art.w, '--art-h': art.h, '--face-x': x + side / 2, '--face-y': y + side / 2, '--face': side } as CSSProperties
   return (
-    <>
-      {tintedBackUrl ? <img className="cutin-hair" src={tintedBackUrl} width={art.w} height={art.h} alt="" /> : null}
-      <img className="cutin-base" src={art.src} width={art.w} height={art.h} alt="" loading="eager" decoding="async" fetchPriority="high" />
-      {tintedHairUrl ? <img className="cutin-hair" src={tintedHairUrl} width={art.w} height={art.h} alt="" /> : null}
-    </>
+    <span className="hero-portrait" style={frame}>
+      <img src={art.src} width={art.w} height={art.h} alt="" loading="eager" decoding="async" fetchPriority="high" />
+      {tintedHairUrl ? <img src={tintedHairUrl} width={art.w} height={art.h} alt="" /> : null}
+    </span>
   )
 }
 

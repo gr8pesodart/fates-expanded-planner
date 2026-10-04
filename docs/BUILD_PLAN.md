@@ -98,6 +98,15 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   Release feel: a velocity-matched critically damped spring (`lib/spring.ts`) starting the moment the
   finger lifts, handed over to the new page by shared `startTime`; React's update deferred a frame so
   it can't hold the page still; Chart tabs memoised (the release stutter there).
+  Round 9 (2026-10-04, branch `opus`): talk-portrait **hair colour** on every portrait (runtime
+  overlay tint of the game's colour table over the extracted hair layer; soft outline alpha kept -
+  the first tint drew a hard black ring); default expressions fixed (entry names now come from the
+  archive's label table - the stored pointer read two entries off, so Jakob, Anna, Peri, Orochi,
+  Hana and others shipped 苦 / 笑); chips 128 → 108 px, cards 248 → 196 px; the character hero is
+  the talk portrait zoomed on FaceData's face rect (critical cut-ins were tried first and dropped -
+  the 2:1 art didn't fit the box), linear route gradient light on the right, black overlay 0.94 →
+  0.6; Corrin (F) portraits and fallback faces switched to build 2 (map sprite unchanged - the game
+  reuses one head for both builds); cut-in assets deleted (portraits 2.5 MB → 910 KB).
 
 ### Backlog
 
@@ -110,12 +119,6 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
 
 - **Directional map animations** (walk cycles): the ROM has eight-direction move clips alongside
   idle (docs/assets/overworld-animation-audit.md); v3.1 ships idle only to keep strips small.
-
-- **Variable hair colour on talk portraits / splash** (map sprites done in v3.3): portraits still
-  use the FaceData default. Ship the portrait hair layer (`face/hair/<hair>/髪0.bch.lz`) separately
-  and reuse `ClassSprite`'s canvas tint (art.tsx › tintStrip). The sprite tint is a ramp scaled at
-  grey 0xBB, calibrated on hand-drawn sprites (docs/ASSETS.md › Hair colours); compare with an
-  in-game capture when convenient.
 
 ### A — Assets (gated; do first, in parallel with B)
 

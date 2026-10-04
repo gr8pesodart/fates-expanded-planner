@@ -160,20 +160,25 @@ The script also renders `docs/screenshots/v3/portraits.png`: every unit's face c
 bust crop at 115px with names, so the crops can be eyeballed in one image. `src/data/portraits.test.ts`
 pins coverage ≥ 90%, file existence under `public/`, and square in-bounds boxes.
 
-### Portrait artwork (v3.4): hair layers, tighter crops, cut-in hero
+### Portrait artwork (v3.4): hair layers, zoomed crops, portrait hero
 
 Owner request (2026-10-03): hair colour on all portrait art, tighter chips, neutral expressions,
-and the character page hero from the game's critical / skill cut-ins (phase 2, facing left).
-Started by the DeepSeek lane, finished on `opus`.
+and a character page hero. Started by the DeepSeek lane, finished on `opus`. The hero first used
+the game's critical / skill cut-ins; the owner dropped them on 2026-10-04 (the layout didn't work)
+for the talk portrait zoomed on the face.
 
-- **Neutral expression:** every talk portrait is the `通常` (neutral) part of `_st.arc` (some
-  characters' neutral faces have closed eyes - Orochi, Hana - that is the game's own neutral).
-- **Crops:** face chips use FaceData's exact 128px face rect (no margin); relationship / picker
-  cards use a 248px square whose top sits 28px above the face rect (`BUST_BOX`,
-  `BUST_TOP_OFFSET`). The owner's card reference (Anna) turned out to be a crop of her *cut-in*
-  art, so talk-portrait cards can't match it exactly - pending owner review.
+- **Neutral expression:** every talk portrait is the `通常` (neutral) entry of `_st.arc`. Entry
+  names come from the archive's **label table** (`fe_assets.BinArchive.label_at`): the string
+  pointer stored in each Info entry reads two entries off, and until 2026-10-04 it made us ship 苦
+  (pained) or 笑 (smile) for Jakob, Anna, Peri, Orochi, Hana and others. The label order matches the
+  textures (the small sweat and blush overlays sit at 汗 / 照). `extract_assets.py`'s `_bu` faces
+  had the same bug and use the same fix.
+- **Crops (zoomed in 2026-10-04):** face chips are a 108px square inside FaceData's 128px face rect
+  (top of hair to chin), trimming 70% of the difference from the hair top (`FACE_CHIP_SIDE`,
+  `FACE_CHIP_TRIM_TOP`); relationship / picker cards a 196px square whose top sits 22px above the
+  face rect (`BUST_BOX`, `BUST_TOP_OFFSET`; were 248 / 28).
 - **Hair:** units with a recolourable layer (Corrin M/F + 21 children) ship the base without
-  hair plus a same-canvas `<slot>-hair.webp` (and `<slot>-ct-hair.webp` for the cut-in); the app
+  hair plus a same-canvas `<slot>-hair.webp`; the app
   tints them at run time (`art.tsx › useTintedImage`) with `logic/hair.ts › hairColourOf`.
 - **Tint model (2026-10-03/04):** an **overlay** blend with the grey layer as the base, alpha kept
   (`extract_portraits.py › tint_overlay`, `logic/hair.ts › tintChannel('overlay')`). Measured
@@ -189,18 +194,18 @@ Started by the DeepSeek lane, finished on `opus`.
 - **Soft edges:** portrait hair layers have 4-bit alpha and their edge pixels are the dark ink
   outline. The run-time tint keeps that alpha; forcing edge pixels opaque (as the sprite tint does
   for binary-alpha pixel art) drew a hard black ring round recoloured hair (fixed 2026-10-04).
-- **Alignment and layering:** every hair layer registers to its base at (0, 0) (SIFT, < 1 px) and
-  goes over it - the base has a placeholder (Soleil, Kiragi, Rhajat, Kana F) or a hole (Percy,
-  Ophelia) where the hair goes - except **Nina's cut-in**: its base was painted without the braid and
-  with older hair, and no translation or affine maps the layer onto it. `HAIR_OFFSETS` shifts the
-  layer (-14, 6) (picked by eye; the fringe tucks under the coin band) and `BACK_HAIR_SEEDS` moves
-  the braid piece behind the base, as in her talk portrait. Back pieces ship as
-  `<slot>-ct-hair-back.webp` (`ct.hairBack`), are left out of the base file and are always tinted
-  at run time (default colour included); `CutinArt` stacks back hair, base, front hair.
-- **Cut-ins:** `face/face/<name>_ct.arc` is 512x512 with two phases stacked; phase 2 = the bottom
-  512x256 (`<slot>-ct.webp`). The game draws them facing right; the hero mirrors them in CSS
-  (`.splash.cutin img { transform: scaleX(-1) }`) so characters look left. 4-bit alpha (16 levels)
-  and 512px source width: the hero shows them ~1.4x, so edges are soft-stepped - that is the source.
+- **Alignment:** every talk-portrait hair layer registers to its base at (0, 0) (SIFT, < 1 px) and
+  goes over it - the base has a placeholder (Kiragi, Rhajat, Midori) or a hole (Percy, Ophelia)
+  where the hair goes.
+- **Hero (2026-10-04):** the character page shows the talk portrait (`art.tsx › HeroPortrait`)
+  scaled so FaceData's face rect (`faceRect` in `portraits.json`, 128px) spans 90% of the visible
+  hero height, its centre at 66% across the art box and 34% down (`.splash.portrait-hero` /
+  `.hero-portrait` CSS variables), over the route-hue gradient; tinted hair rides on the same frame.
+- **Dropped: cut-ins.** `face/face/<name>_ct.arc` is 512x512 with two phases stacked (phase 2 = the
+  bottom 512x256), with `_ct` hair layers. They registered at (0, 0) too except Nina's, whose base
+  was painted without her braid and with older hair (no translation or affine maps the layer on;
+  a hand-picked (-14, 6) shift with the braid behind the base was the best fit). The 2:1 art never
+  sat well in the hero box, and they are no longer extracted.
 - **Splash art (below) is no longer used by the app** (only `splash.test.ts` reads its manifest);
   the files and `fetch_splash.py` remain until the owner decides to drop them.
 
@@ -339,7 +344,7 @@ modulate (light colours — Camilla, Jakob, Soleil, Corrin's white — clipped t
 32px on white cards read as missing heads; owner report 2026-10-01). The game's combiner itself is
 unverified. Colour source: Corrin's chosen swatch, or a child's variable
 parent's colour (Fire Emblem Wiki › Inheritance: mothers pass hair colour, male Kana his father's —
-always the variable parent in planner terms; Shigure's hair is fixed). Portraits and cut-ins are
+always the variable parent in planner terms; Shigure's hair is fixed). Portraits are
 recoloured too, with the overlay blend (Portrait artwork (v3.4) › Tint model). No in-game map sprite
 reference has been checked yet, so the sprite ramp remains calibrated on first-gen hand-drawn hair.
 

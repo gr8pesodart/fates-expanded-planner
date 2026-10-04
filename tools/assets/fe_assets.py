@@ -99,6 +99,17 @@ class BinArchive:
             return self.raw[start:end].decode("shift_jis", errors="replace")
         return None
 
+    def label_at(self, address: int) -> str | None:
+        """The entry name labelled at ``address`` (the table's own label, e.g. "Info", skipped).
+
+        Face arcs name their Info entries this way. The string pointer stored in each entry does not
+        match it (it reads two entries off): reading it picked 苦 (pained) or 笑 (smile) as "通常"
+        for Jakob, Peri, Anna and others; the label order matches the textures (the small sweat and
+        blush overlays sit at 汗 / 照).
+        """
+        names = [name for name in self.labels.get(address, []) if name != "Info"]
+        return names[0] if names else None
+
     def read_bytes(self, address: int, length: int) -> bytes:
         start = self.data_offset + address
         return self.raw[start : start + length]

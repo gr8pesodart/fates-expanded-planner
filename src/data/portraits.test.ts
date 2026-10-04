@@ -37,20 +37,24 @@ describe('portrait manifest', () => {
   })
 
   it("ships every recolourable hair layer on its base's canvas", () => {
-    const layers = Object.values(units).flatMap((entry) => [
-      ...(entry.hair ? [{ hair: entry.hair, w: entry.w, h: entry.h }] : []),
-      ...(entry.ct?.hair ? [{ hair: entry.ct.hair, w: entry.ct.w, h: entry.ct.h }] : []),
-      ...(entry.ct?.hairBack ? [{ hair: entry.ct.hairBack, w: entry.ct.w, h: entry.ct.h }] : []),
-    ])
-    expect(layers.length).toBe(23 * 2 + 1)
+    const layers = Object.values(units).flatMap((entry) => (entry.hair ? [{ hair: entry.hair, w: entry.w, h: entry.h }] : []))
+    expect(layers.length).toBe(23)
     for (const { hair, w, h } of layers) {
       expect(existsSync(`${publicDir}${hair.file}`)).toBe(true)
       expect([hair.w, hair.h]).toEqual([w, h])
     }
   })
 
-  it("draws only Nina's cut-in braid behind the base (extract_portraits.py › BACK_HAIR_SEEDS)", () => {
-    const withBack = Object.entries(units).filter(([, entry]) => entry.ct?.hairBack)
-    expect(withBack.map(([unitId]) => unitId)).toEqual(['PID_エポニーヌ'])
+  it('records the FaceData face rect the character hero is placed by', () => {
+    for (const entry of Object.values(units)) {
+      const [x, y, width, height] = entry.faceRect
+      expect(width).toBe(height)
+      expect(width).toBeGreaterThan(64)
+      // the face centre lies on the canvas
+      expect(x + width / 2).toBeGreaterThan(0)
+      expect(x + width / 2).toBeLessThan(entry.w)
+      expect(y + height / 2).toBeGreaterThan(0)
+      expect(y + height / 2).toBeLessThan(entry.h)
+    }
   })
 })

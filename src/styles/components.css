@@ -1172,23 +1172,40 @@
   object-fit: cover;
 }
 
-/* Cut-in phase 2 fits the hero width (2:1), head up; the hair layers share the exact frame and
-   stack in DOM order (back hair, base, front hair). Mirrored: the game draws cut-ins facing right,
-   the owner wants characters looking left. */
-.splash.cutin img {
+/* The talk portrait, zoomed so FaceData's face rect (top of hair to chin, --face texture px) spans
+   --hero-face-size of the visible hero, centred at --hero-face-x across the art box and
+   --hero-face-y down (owner, v3.4: the critical cut-ins were dropped - their layout didn't work).
+   --art-w/--art-h and --face-x/--face-y come from portraits.json (art.tsx › HeroPortrait). */
+.splash.portrait-hero {
+  /* Owner, 2026-10-04: 150% of the first 0.6, nudged up from 0.4. */
+  --hero-face-size: 0.9;
+  --hero-face-x: 66%;
+  --hero-face-y: calc(var(--hero-h) * 0.34);
+}
+
+.hero-portrait {
+  --scale: calc(var(--hero-h) * var(--hero-face-size) / var(--face));
+  position: absolute;
+  width: calc(var(--art-w) * var(--scale));
+  height: calc(var(--art-h) * var(--scale));
+  left: calc(var(--hero-face-x) - var(--face-x) * var(--scale));
+  top: calc(var(--hero-face-y) - var(--face-y) * var(--scale));
+}
+
+.hero-portrait img {
   position: absolute;
   inset: 0;
-  object-fit: contain;
-  object-position: top center;
-  transform: scaleX(-1);
+  width: 100%;
+  height: 100%;
 }
 
 .splash::after {
   content: "";
   position: absolute;
   inset: 0;
-  /* Figma 19:644, over the full 316px art (the container shows its top 233px). */
-  background: linear-gradient(to top, rgb(0 0 0 / 0.94) 24.148%, transparent 61.055%);
+  /* Over the full 316px art (the container shows its top 233px). Toned down from Figma 19:644's
+     0.94 black (owner, 2026-10-04); still enough under the white name and tab pills. */
+  background: linear-gradient(to top, rgb(0 0 0 / 0.6) 20%, transparent 58%);
 }
 
 .splash[data-fading] {
@@ -1197,19 +1214,10 @@
 
 @keyframes splash-fade { from { opacity: 0; } }
 
-.splash.fallback {
-  background:
-    radial-gradient(120% 90% at 80% 20%, color-mix(in oklab, var(--accent) 70%, white), transparent 60%),
-    linear-gradient(160deg, var(--accent), var(--accent-strong));
-}
-
-.splash-portrait {
-  position: absolute;
-  right: -6%;
-  top: 4%;
-  width: 72%;
-  max-width: 340px;
-  background-color: transparent;
+.splash.fallback,
+.splash.portrait-hero {
+  /* Linear, light on the right behind the portrait (owner, 2026-10-04). */
+  background: linear-gradient(to right, var(--accent-strong), color-mix(in oklab, var(--accent) 55%, white));
 }
 
 /* The back button stays pinned while the art is in view; the tab pills' top edge pushes it out, and

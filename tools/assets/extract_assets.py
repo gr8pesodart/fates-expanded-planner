@@ -250,7 +250,7 @@ def face_normal_texture(romfs: str, portrait: str, lz13):
     chosen = None
     for index in range(count):
         entry = archive.data_offset + info_label + index * 16
-        name = archive.read_string(entry)
+        name = archive.label_at(info_label + index * 16)
         offset = struct.unpack_from("<I", raw, entry + 12)[0]
         if name and name.startswith("通常"):
             chosen = archive.data_offset + data_label + offset

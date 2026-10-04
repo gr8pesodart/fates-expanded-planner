@@ -11,7 +11,6 @@ import { SealTally } from '../components/SealTally'
 import { StatTable } from '../components/StatTable'
 import { SwapButton } from '../components/SwapButton'
 import { PagerPage, TabPager } from '../components/TabPager'
-import { preloadCutinArt } from '../data/art'
 import { SortIcon } from '../components/SortIcon'
 import { chartCards } from '../logic/chart'
 import { classFamily } from '../logic/classes'
@@ -135,7 +134,7 @@ function ChartRow({ entry, parts }: { entry: RosterEntry; parts: RowParts }) {
     [parts.route, dataset, run, ctx],
   )
   return (
-    <div className="chart-row" onPointerEnter={() => preloadCutinArt(unitId)} onFocusCapture={() => preloadCutinArt(unitId)}>
+    <div className="chart-row">
       <div className="chart-row-top">
         <div className="roster-id">
           <Portrait unitId={unitId} name={name} className="chip-32" />

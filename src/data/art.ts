@@ -20,17 +20,8 @@ export interface PortraitEntry {
   bust: Box
   /** Same-canvas recolourable hair layer (children, Corrin); tinted per run in Portrait. */
   hair?: PortraitHair
-  /** Critical / skill cut-in, phase 2 (bottom half of the source texture). */
-  ct?: CutinEntry
-}
-
-export interface CutinEntry {
-  file: string
-  w: number
-  h: number
-  hair?: PortraitHair
-  /** Hair pieces drawn behind the base (Nina's braid); not baked into `file`, so always tinted. */
-  hairBack?: PortraitHair
+  /** FaceData's face rect (top of hair to chin) on this canvas; the character hero is placed by it. */
+  faceRect: Box
 }
 
 export interface SpriteImage {
@@ -119,25 +110,25 @@ export function portraitArt(unitId: string, crop: 'face' | 'bust'): PortraitArt 
   return legacy ? { src: legacy, box: null, w: 128, h: 128, hair: null } : null
 }
 
-export interface CutinArt {
+export interface HeroArt {
   src: string
   w: number
   h: number
+  faceRect: Box
   hair: PortraitHair | null
-  hairBack: PortraitHair | null
 }
 
-/** The unit's critical / skill cut-in (phase 2), the character page hero. */
-export function cutinArt(unitId: string): CutinArt | null {
+/** The character page hero: the talk portrait, placed and zoomed by its face rect. */
+export function heroArt(unitId: string): HeroArt | null {
   if (!ASSETS_ENABLED) return null
-  const entry = PORTRAITS?.units[unitId]?.ct
-  if (!entry) return null
+  const entry = PORTRAITS?.units[unitId]
+  if (!entry?.faceRect) return null
   return {
     src: url(entry.file, PORTRAITS?.generatedAt),
     w: entry.w,
     h: entry.h,
+    faceRect: entry.faceRect,
     hair: hairArt(entry.hair, PORTRAITS?.generatedAt),
-    hairBack: hairArt(entry.hairBack, PORTRAITS?.generatedAt),
   }
 }
 
@@ -175,17 +166,4 @@ function withUrl<T extends SpriteImage>(image: T): T {
 /** A unit's FaceData hair colour — what their sprite strips are baked with, and what they pass on. */
 export function defaultHairColour(unitId: string): string | null {
   return SPRITES?.hairColours?.[unitId] ?? null
-}
-
-let warmedCutin: { src: string; image: HTMLImageElement } | null = null
-
-export function preloadCutinArt(unitId: string): void {
-  const art = cutinArt(unitId)
-  if (!art || warmedCutin?.src === art.src) return
-  const image = new Image()
-  image.fetchPriority = 'high'
-  image.decoding = 'async'
-  image.src = art.src
-  warmedCutin = { src: art.src, image }
-  void image.decode().catch(() => {})
 }

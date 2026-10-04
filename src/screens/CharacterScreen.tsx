@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { usePlanner } from '../app/plannerContext'
-import { Portrait, CutinArt } from '../components/art'
+import { HeroPortrait } from '../components/art'
 import { StarButton } from '../components/controls'
 import { Icon } from '../components/icons'
 import { PagerPage, TabPager } from '../components/TabPager'
 import { useMountedTabs } from '../lib/useMountedTabs'
 import { useActiveInView } from '../lib/useActiveInView'
-import { cutinArt, portraitArt } from '../data/art'
+import { heroArt } from '../data/art'
 import { displayName, unitContext } from '../logic/army'
 import { toggleFavourite } from '../logic/relationships'
 import type { CharacterTab } from '../lib/router'
@@ -100,7 +100,7 @@ export function CharacterScreen({ unitId, tab, embedded = false }: { unitId: str
       </div>
       <header className="char-hero">
         <div className="char-art" aria-hidden="true">
-          <SplashSwap unitId={unitId} name={name} />
+          <SplashSwap unitId={unitId} />
         </div>
         {embedded ? null : (
           <div className="back-rail">
@@ -175,16 +175,15 @@ function useScrolledPast(ref: { current: HTMLElement | null }): boolean {
 }
 
 /** Cross-fades to a new splash when the page's unit changes in place (Corrin's gender switch). */
-function SplashSwap({ unitId, name }: { unitId: string; name: string }) {
+function SplashSwap({ unitId }: { unitId: string }) {
   const [shown, setShown] = useState<{ current: string; previous: string | null }>({ current: unitId, previous: null })
   if (shown.current !== unitId) setShown({ current: unitId, previous: shown.current })
   return (
     <>
-      {shown.previous ? <Splash key={shown.previous} unitId={shown.previous} name={name} /> : null}
+      {shown.previous ? <Splash key={shown.previous} unitId={shown.previous} /> : null}
       <Splash
         key={shown.current}
         unitId={shown.current}
-        name={name}
         fading={shown.previous !== null}
         onFaded={() => setShown({ current: shown.current, previous: null })}
       />
@@ -192,20 +191,13 @@ function SplashSwap({ unitId, name }: { unitId: string; name: string }) {
   )
 }
 
-/** The unit's cut-in, phase 2 (artwork with built-in hair colouring); falls back to the talk portrait. */
-export function Splash({ unitId, name, fading = false, onFaded }: { unitId: string; name: string; fading?: boolean; onFaded?: () => void }) {
-  const art = cutinArt(unitId)
+/** The unit's talk portrait, zoomed on the face; a route-hue gradient when there is no art. */
+export function Splash({ unitId, fading = false, onFaded }: { unitId: string; fading?: boolean; onFaded?: () => void }) {
   const fade = fading ? { 'data-fading': '', onAnimationEnd: onFaded } : {}
-  if (art) {
-    return (
-      <div className="splash cutin" {...fade}>
-        <CutinArt unitId={unitId} />
-      </div>
-    )
-  }
   return (
-    <div className="splash fallback" {...fade}>
-      {portraitArt(unitId, 'bust') ? <Portrait unitId={unitId} name={name} crop="bust" className="splash-portrait" /> : null}
+    <div className={`splash ${heroArt(unitId) ? 'portrait-hero' : 'fallback'}`} {...fade}>
+      <HeroPortrait unitId={unitId} />
     </div>
   )
 }
+
