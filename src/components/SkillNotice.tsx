@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { usePlanner } from '../app/plannerContext'
 import type { UnitDef } from '../data/types'
 import { displayName } from '../logic/army'
-import type { AccessNotice, RelationChange, SkillAccess } from '../logic/skillAccess'
+import type { AccessNotice, SkillAccess } from '../logic/skillAccess'
 import { Portrait } from './art'
 import { Icon } from './icons'
 import { ItemIcon } from './ItemIcon'
@@ -34,19 +34,17 @@ export function SkillNotice({ access, grey = false, corrin = false, perClass = f
       </span>
     )
   }
-  const roleLabel = (change: RelationChange) => change.role === 's' ? 'S' : change.role === 'parent' ? 'Parent' : corrin ? 'A' : 'A+'
   const faces: { label: string; units: UnitDef[] }[] = access.group === 'locked' ? [
     { label: 'Via S Rank', units: access.viaS },
     { label: corrin ? 'Via A Rank' : 'Via A+ Rank', units: access.viaA },
     { label: 'Via Parent', units: access.viaParent },
   ].filter((item) => item.units.length) : []
   // A parent already listed as a way in passes the class's skills on as a matter of course.
-  const alsoFrom = access.inheritFrom.filter((parent) => !access.viaParent.includes(parent)
-    && !access.viaCombo.some((combo) => combo.some((change) => change.role === 'parent' && change.unit === parent)))
+  const alsoFrom = access.inheritFrom.filter((parent) => !access.viaParent.includes(parent))
   const bookKey = access.book && 'skillId' in access ? bookItemKey((access as SkillAccess).skillId) : undefined
   // Grouped › Requires support: the heading says it, so the ways in move up.
   const lead = perClass ? null : access.group === 'available' ? (whose ? `Not in ${whose}'s progression` : 'Not in progression') : access.group === 'locked' ? 'Requires support' : 'Not accessible'
-  if (!lead && !faces.length && !access.viaCombo.length && !alsoFrom.length) return null
+  if (!lead && !faces.length && !alsoFrom.length) return null
   return (
     <span className="skill-notice" data-tone={tone}>
       {lead ? (
@@ -65,21 +63,6 @@ export function SkillNotice({ access, grey = false, corrin = false, perClass = f
               </span>
             </span>
           ))}
-        </span>
-      ) : null}
-      {access.viaCombo.length ? (
-        <span className="skill-notice-combos">
-          <em>Only together:</em>
-          {access.viaCombo.slice(0, 6).map((combo) => (
-            <span key={combo.map((change) => `${change.role}:${change.unit.id}`).join('+')} className="skill-notice-combo">
-              {combo.map((change, index) => (
-                <span key={`${change.role}:${change.unit.id}`}>
-                  {index ? ' & ' : ''}{roleLabel(change)} <strong>{displayName(change.unit, run)}</strong>
-                </span>
-              ))}
-            </span>
-          ))}
-          {access.viaCombo.length > 6 ? <span>+{access.viaCombo.length - 6} more</span> : null}
         </span>
       ) : null}
       {access.book && !perClass ? (

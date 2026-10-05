@@ -9,12 +9,34 @@ export interface ClassPoolEntry {
   sourceLabel: string
 }
 
-const NON_INHERITABLE_VIA_SEAL = new Set([
+const UNSHAREABLE_CLASS_A = new Set([
   'Nohr Prince',
   'Nohr Princess',
-  'Wolfskin',
-  'Kitsune',
+  'Songstress',
   'Villager',
+  'Kitsune',
+  'Wolfskin',
+])
+
+const ALTERNATE_CLASS = new Map<string, string>([
+  ['Songstress', 'Troubadour'],
+  ['Samurai', 'Mercenary'],
+  ['Villager', 'Apothecary'],
+  ['Ninja', 'Cavalier'],
+  ['Oni Savage', 'Fighter'],
+  ['Spear Fighter', 'Knight'],
+  ['Diviner', 'Dark Mage'],
+  ['Sky Knight', 'Wyvern Rider'],
+  ['Archer', 'Thief'],
+  ['Kitsune', 'Apothecary'],
+  ['Cavalier', 'Ninja'],
+  ['Knight', 'Spear Fighter'],
+  ['Fighter', 'Oni Savage'],
+  ['Mercenary', 'Samurai'],
+  ['Outlaw', 'Archer'],
+  ['Wyvern Rider', 'Sky Knight'],
+  ['Dark Mage', 'Diviner'],
+  ['Wolfskin', 'Thief'],
 ])
 
 export function classFamily(name: string): string {
@@ -69,14 +91,15 @@ export function primaryBaseClass(dataset: Dataset, unit: UnitDef): number | null
   return null
 }
 
-/** All base classes the unit comes with on their own (primary + reclass options). */
+/** All own base-class branches: primary class plus reclass fields, not its promoted companion. */
 export function ownBaseClasses(dataset: Dataset, unit: UnitDef): number[] {
   const bases: number[] = []
   const push = (id: number) => {
     const base = baseOfClass(dataset, id)
     if (!bases.includes(base)) bases.push(base)
   }
-  for (const id of unit.classes) push(id)
+  const primary = primaryBaseClass(dataset, unit)
+  if (primary !== null) push(primary)
   for (const id of unit.reclasses) push(id)
   return bases
 }
@@ -90,6 +113,49 @@ function secondaryBases(dataset: Dataset, unit: UnitDef): number[] {
     if (base !== primary) secondary.push(base)
   }
   return secondary
+}
+
+function alternateBase(dataset: Dataset, classId: number | null): number | null {
+  if (classId === null) return null
+  const def = dataset.classesById.get(classId)
+  const alternate = def ? ALTERNATE_CLASS.get(classFamily(def.name)) : undefined
+  if (!alternate) return null
+  return dataset.classes.find((candidate) => candidate.tier === 'base' && classFamily(candidate.name) === alternate)?.id ?? null
+}
+
+function classSlots(dataset: Dataset, unit: UnitDef, corrinTalentClassId?: number | null): [number | null, number | null, number | null, number | null] {
+  const classA = primaryBaseClass(dataset, unit)
+  const fixedParentIsCorrin = unit.fixedParent ? dataset.unitsById.get(unit.fixedParent)?.isCorrin === true : false
+  const classB = (unit.isCorrin || fixedParentIsCorrin) && corrinTalentClassId
+    ? baseOfClass(dataset, corrinTalentClassId)
+    : secondaryBases(dataset, unit)[0] ?? null
+  return [classA, classB, alternateBase(dataset, classA), alternateBase(dataset, classB)]
+}
+
+function sharedClass(
+  dataset: Dataset,
+  recipient: UnitDef,
+  donor: UnitDef,
+  corrinTalentClassId: number | null | undefined,
+): number | null {
+  const [classA, classB, alternateA, alternateB] = classSlots(dataset, donor, corrinTalentClassId)
+  const fixedParentIsCorrin = donor.fixedParent ? dataset.unitsById.get(donor.fixedParent)?.isCorrin === true : false
+  const slots = [classA, classB, donor.isCorrin || fixedParentIsCorrin ? alternateB : alternateA]
+  let index = UNSHAREABLE_CLASS_A.has(classFamily(dataset.classesById.get(classA ?? -1)?.name ?? '')) ? 1 : 0
+  const recipientA = primaryBaseClass(dataset, recipient)
+  while (index < slots.length) {
+    const classId = slots[index]
+    if (classId === null || classId === undefined) {
+      index += 1
+      continue
+    }
+    if (recipientA !== null && sexedClassId(dataset, classId, recipient.gender) === sexedClassId(dataset, recipientA, recipient.gender)) {
+      index += 1
+      continue
+    }
+    return classId
+  }
+  return null
 }
 
 /** Expand a base class into its full class chain (base + promotions), sexed. */
@@ -116,18 +182,12 @@ interface PoolOptions {
   friendshipDonors?: UnitDef[]
   /** Corrin's chosen talent branch (applies to Corrin and their child). */
   corrinTalentClassId?: number | null
-  /** Is the fixed parent Corrin? (Kana) */
-  fixedParentIsCorrin?: boolean
 }
 
 /**
- * Every class a unit can legitimately be, following Fates class-set rules:
- *  - first-gen: own primary branch + secondary branch
- *  - second-gen: own branch + fixed parent's primary branch + variable parent's
- *    primary branch, then Partner/Friendship Seal branches
- *  - Songstress is never inherited; Nohr Prince(ss)/Wolfskin/Kitsune/Villager
- *    cannot come from seals (only from a parent or on the unit's own set)
- * Duplicate branches fall back to the contributor's next branch.
+ * Every class a unit can legitimately use. Parent inheritance walks Class A, B,
+ * Alternate A and Alternate B, while seals use their shorter sharing priority.
+ * Songstress is never inherited.
  */
 export function classPool(dataset: Dataset, unit: UnitDef, options: PoolOptions = {}): ClassPoolEntry[] {
   const entries: ClassPoolEntry[] = []
@@ -156,50 +216,31 @@ export function classPool(dataset: Dataset, unit: UnitDef, options: PoolOptions 
     addBranch(baseOfClass(dataset, options.corrinTalentClassId), 'own', 'Talent')
   }
 
-  // Fixed parent's primary branch (second-gen only).
+  // Inheritance checks the father before the mother, even for Shigure, whose
+  // fixed parent is Azura. Keep fixed-before-variable order for UGF same-sex pairs.
   const fixedParent = unit.fixedParent ? dataset.unitsById.get(unit.fixedParent) : undefined
-  if (fixedParent) {
-    if (options.fixedParentIsCorrin && options.corrinTalentClassId) {
-      addBranch(baseOfClass(dataset, options.corrinTalentClassId), 'parent', 'Parent: Corrin')
-    } else {
-      const primary = primaryBaseClass(dataset, fixedParent)
-      if (!addBranch(primary, 'parent', `Parent: ${fixedParent.name}`)) {
-        for (const fallback of secondaryBases(dataset, fixedParent)) {
-          if (addBranch(fallback, 'parent', `Parent: ${fixedParent.name}`)) break
-        }
-      }
+  const parents = [fixedParent, options.variableParent].filter((parent, index, all): parent is UnitDef => Boolean(parent) && all.findIndex((entry) => entry?.id === parent?.id) === index)
+  const orderedParents = parents.length === 2 && parents[0].gender !== parents[1].gender
+    ? [...parents].sort((a, b) => a.gender === 'male' ? -1 : b.gender === 'male' ? 1 : 0)
+    : parents
+  for (const parent of orderedParents) {
+    const label = `Parent: ${parent.name}`
+    for (const classId of classSlots(dataset, parent, options.corrinTalentClassId)) {
+      if (classId !== null && addBranch(classId, 'parent', label)) break
     }
   }
 
-  const addContributor = (
-    donor: UnitDef | null | undefined,
-    branch: ClassBranch,
-    prefix: string,
-  ) => {
+  const addSealContributor = (donor: UnitDef | null | undefined, branch: ClassBranch, prefix: string) => {
     if (!donor) return
-    const label = `${prefix}: ${donor.name}`
-    const viaSeal = branch !== 'parent'
-    // A seal can't grant Nohr Prince(ss), so Corrin's seal partners get the talent instead. As a
-    // variable parent (Shigure), Corrin passes the Nohr Prince(ss) tree, never the talent
-    // (Fire Emblem Wiki › Shigure); only Kana, with Corrin as fixed parent, gets the talent.
-    if (viaSeal && donor.isCorrin && options.corrinTalentClassId) {
-      if (addBranch(baseOfClass(dataset, options.corrinTalentClassId), branch, label)) return
-    }
-    const primary = primaryBaseClass(dataset, donor)
-    const primaryDef = primary !== null ? dataset.classesById.get(primary) : undefined
-    const sealBlocked = viaSeal && primaryDef ? NON_INHERITABLE_VIA_SEAL.has(classFamily(primaryDef.name)) : false
-    if (!sealBlocked && addBranch(primary, branch, label)) return
-    for (const fallback of secondaryBases(dataset, donor)) {
-      if (addBranch(fallback, branch, label)) return
-    }
+    const classId = sharedClass(dataset, unit, donor, options.corrinTalentClassId)
+    if (classId !== null) addBranch(classId, branch, `${prefix}: ${donor.name}`)
   }
 
-  addContributor(options.variableParent, 'parent', 'Parent')
-  addContributor(options.sPartner, 'seal', 'S Seal')
+  addSealContributor(options.sPartner, 'seal', 'S Seal')
   if (unit.isCorrin) {
-    for (const donor of options.friendshipDonors ?? []) addContributor(donor, 'aplus', 'Friendship Seal')
+    for (const donor of options.friendshipDonors ?? []) addSealContributor(donor, 'aplus', 'Friendship Seal')
   } else {
-    addContributor(options.aPlusPartner, 'aplus', 'A+ Seal')
+    addSealContributor(options.aPlusPartner, 'aplus', 'A+ Seal')
   }
 
   return entries

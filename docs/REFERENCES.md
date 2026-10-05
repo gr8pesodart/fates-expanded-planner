@@ -17,7 +17,7 @@ and architecture reference. Game data is extracted from the owner's own game/mod
 - **soapy4159 — Fates Calculator (ferevpairings)** — <https://soapy4159.github.io/ferevpairings/>
   (source: <https://github.com/soapy4159/ferevpairings>, **no license**). Pairing/child calculator:
   bases, growths, cap mods, pair-up, class inheritance. Used as a mechanics cross-check (child
-  growth averaging, cap-mod combination, class-set duplicate fallbacks) — values were verified
+  growth averaging and cap-mod combination) — values were verified
   against it, nothing was copied.
 - **hiushi — FE14 Stuff** — <https://hiushi.github.io/FE14Stuff/> (repo has no content). “Build
   planner + charts” UX inspiration for the unit/class/skill surfaces.

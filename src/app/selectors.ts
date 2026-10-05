@@ -12,7 +12,6 @@ import { reconcileRosterSort, sortRoster } from '../logic/rosterSort'
 import type { SlotKind } from '../components/slots'
 import type { RunPlan } from '../state/model'
 import { corrinBuild } from '../state/model'
-import { fixedParentIsCorrin } from '../logic/stats'
 import { usePlanner } from './plannerContext'
 
 export interface RosterEntry extends RosterSortEntry {
@@ -83,7 +82,6 @@ function sealBranchName(dataset: Dataset, run: RunPlan, owner: UnitDef, donor: U
     aPlusPartner: kind === 'aplus' ? donor : null,
     friendshipDonors: owner.isCorrin && kind === 'aplus' ? [donor] : undefined,
     corrinTalentClassId: corrinBuild(run).talentClassId,
-    fixedParentIsCorrin: fixedParentIsCorrin(dataset, owner),
   })
   const entry = pool.find((item) => item.branch === kind)
   const def = entry ? dataset.classesById.get(entry.classId) : undefined

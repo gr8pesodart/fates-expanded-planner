@@ -160,16 +160,38 @@ The current planner therefore does not include inherited support rows in child p
 ## Mechanics implemented (src/logic)
 
 - `classes.ts` — class families, gendered variants, branch chains, and the class-pool rules:
-  - first gen: own primary branch + secondary branch
-  - second gen: own branch + fixed parent's primary branch + variable parent's primary branch
-  - everyone: Partner Seal (S) and Friendship Seal (A+) branches
-  - duplicates fall back to the contributor's next branch; Songstress never inherits (it stays in
-    Azura's own set); Nohr
-    Prince(ss)/Wolfskin/Kitsune/Villager can only come from parents (not seals)
-  - Corrin's chosen talent joins Corrin's pool. **Kana** (Corrin as fixed parent) inherits the
-    talent's branch; a child with Corrin as the **variable** parent (e.g. Shigure) inherits the Nohr
-    Prince(ss) tree and never the talent (Fire Emblem Wiki › Shigure). Seal partners of Corrin get
-    the talent, since seals can't grant Nohr Prince(ss)
+  - first gen: own class A and class B branches; children start with their own branch
+  - the promoted class paired with a character's class A is part of that line, not another branch.
+    Fates promotions can have multiple source classes (Merchant promotes from Villager and
+    Apothecary), so derive A from the unit's primary class line and B/C from `reclasses`. Serenes
+    Forest's [class-set tables](https://serenesforest.net/fire-emblem-fates/nohrian-characters/class-sets/)
+    list Laslow as Mercenary/Ninja and Selena as Mercenary/Sky Knight. Their raw promoted companions
+    (Hero and Bow Knight) also promote from Fighter and Outlaw respectively; treating those records
+    as independent branches incorrectly gave Laslow Fighter and Selena Outlaw. Mozu's Apothecary is
+    hidden alternate A; her actual reclass is Archer. All three cases are pinned in `classes.test.ts`.
+  - child inheritance checks the father first and mother second, independent of the app's fixed /
+    variable parent fields. Each parent passes the first eligible class in A → B → alternate A →
+    alternate B order. A class already in the child's pool is skipped; Songstress is never passed.
+    The alternate-class mapping is the one documented for Fates class sharing and inheritance.
+  - **Shigure + Jakob**: Jakob passes Troubadour as Shigure's class B. Azura then passes Wyvern Rider:
+    her Songstress is locked, Sky Knight is Shigure's own class, Troubadour is already inherited,
+    and Wyvern Rider is her alternate B. The reference explicitly lists “Wyvern Rider, inherited
+    from Azura” ([GameFAQs child inheritance guide](https://gamefaqs.gamespot.com/3ds/114533-fire-emblem-fates-conquest/faqs/72752)).
+  - **Nina + Nyx**: Niles passes Dark Mage after Nina's own Outlaw conflicts. Nyx's Dark Mage and
+    Outlaw also conflict, so her alternate A, Diviner, is the first available class. Fire Emblem
+    Wiki says Nyx “grants her tertiary class, Diviner” ([Nina class inheritance](https://fireemblem.fandom.com/wiki/Nina)).
+  - class sharing for Partner and Friendship Seals checks the donor's A → B → alternate A sequence;
+    unique class A values (Nohr Prince(ss), Songstress, Villager, Kitsune, Wolfskin) advance to B,
+    and a candidate matching the recipient's own class A advances once more. Corrin and Kana use
+    the donor's alternate B as the final candidate. This means Jakob's A+ with Silas resolves to Cavalier,
+    even though Jakob already has Cavalier as class B; it must not fall through to Mercenary.
+    The guide's exact example is “Jakob gets Cavalier from Silas” ([class sharing examples](https://gamefaqs.gamespot.com/3ds/114533-fire-emblem-fates-conquest/faqs/72752)).
+  - Corrin's chosen talent is class B. Kana's Nohr Prince(ss) class A conflicts with Corrin's, so
+    Kana inherits the talent when it is available; a child with Corrin as the variable parent gets
+    Corrin's Nohr Prince(ss) class A instead. Seal partners of Corrin receive the first eligible
+    class from Corrin's class slots, skipping the unshareable Nohr Prince(ss).
+  - UGF same-sex parent pairs have no vanilla inheritance order. The planner keeps fixed-parent
+    before variable-parent order for those pairs as a deterministic fallback.
   - A+ supports are one-way and Corrin can neither give nor take one (Fire Emblem Wiki › Support:
     "unlike other supports, they are not mutual"; "Units cannot unlock A+ supports with Corrin")
   - Corrin's Friendship Seal works with any same-gender A-rank partner, not one A+ partner (Fire
@@ -228,14 +250,11 @@ The current planner therefore does not include inherited support rows in child p
   version doesn't teach the skill) → needs a relationship not in the plan (each roster S
   partner, A+ partner — Corrin: same-gender A-rank partner — and, for children, each other possible
   second parent tried one at a time on top of the current plan, plus what those parents could pass
-  on), then **combinations**: a duplicate branch falls back to the contributor's next class, so e.g.
-  Sakura with S Jakob + A+ Elise gets Wyvern Rider (both first branches are Troubadour). Only pairs
-  (and, from an overlapping pair, triples) whose single gains share a base class can fall back, so
-  only those are evaluated; `npm run audit:skills` (`tools/audit/skillCombos.audit.ts`) brute-forces
-  every second parent × S × A+ combination (Corrin: S × up to two A-rank partners) on every route
-  and both Corrins and must report 0 unlisted skills (it reports 128 with combinations disabled).
-  Only minimal combinations are kept (Corrin's Archer: A Midori & A Mozu — Mozu's Villager can't be
-  sealed so she gives Apothecary, which Midori already gives — not also S Kaze & A Midori & A Mozu).
+  on). Each candidate relationship resolves its own class-sharing slot; another relationship does
+  not make that slot fall through to a different class. `npm run audit:skills`
+  (`tools/audit/skillCombos.audit.ts`) brute-forces every second parent × S × A+ combination
+  (Corrin: S × up to two A-rank partners) on every route and both Corrins and must report 0
+  unlisted skills.
   Everything else is **unavailable**, by class (no reason given; DLC classes are omitted while DLC is
   off). Classes are also tracked on their own (`ClassAccess`: a class's first status and
   ways in), which the picker's Grouped view lists whole. Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere

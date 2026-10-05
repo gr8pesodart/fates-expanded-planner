@@ -1781,16 +1781,6 @@
   margin-left: 0;
 }
 
-.skill-notice-combos {
-  display: grid;
-  gap: 2px;
-}
-
-.skill-notice-combos em {
-  font-style: italic;
-  opacity: 0.8;
-}
-
 .notice-face {
   width: 28px;
   height: 28px;

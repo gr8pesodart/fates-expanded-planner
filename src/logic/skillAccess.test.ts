@@ -51,33 +51,24 @@ describe('skillAccess', () => {
       const personal = unit.personalSkills[run.route] ?? unit.personalSkills.revelation
       if (personal) expect(access.byId.has(personal)).toBe(false)
       for (const item of access.list) {
-        if (item.group === 'locked') expect(item.viaS.length + item.viaA.length + item.viaParent.length + item.viaCombo.length + item.inheritFrom.length).toBeGreaterThan(0)
+        if (item.group === 'locked') expect(item.viaS.length + item.viaA.length + item.viaParent.length + item.inheritFrom.length).toBeGreaterThan(0)
         if (item.group === 'inheritable') expect(item.inheritFrom.length).toBeGreaterThan(0)
       }
     }
   })
 
-  it('finds classes only a combination opens: a duplicate branch falls back to the next one', () => {
-    // Jakob's and Elise's first branches are both Troubadour, so with both, Elise gives Wyvern Rider.
+  it('does not invent a combined fallback when two seals share the same class', () => {
     const run: RunPlan = { ...emptyRun('t'), route: 'revelation' }
     const sakura = dataset.units.find((unit) => unit.name === 'Sakura')!
     const lunge = skillAccess(dataset, run, unitContext(dataset, run, sakura.id)!).byId.get(skillId('Lunge'))
-    expect(lunge?.group).toBe('locked')
-    expect(lunge?.viaCombo.some((combo) => combo.some((change) => change.role === 's' && change.unit.id === JAKOB)
-      && combo.some((change) => change.role === 'a' && change.unit.name === 'Elise'))).toBe(true)
+    expect(lunge?.group).toBe('unavailable')
   })
 
-  it('keeps only minimal combinations: Corrin gets Archer from A Midori & A Mozu, not also with Kaze', () => {
-    const run: RunPlan = { ...emptyRun('t'), route: 'conquest' }
-    const archerSkill = skillAccess(dataset, run, unitContext(dataset, run, CORRIN_F)!).list
-      .find((item) => item.classId !== null && dataset.classesById.get(item.classId)?.name.startsWith('Archer'))
-    expect(archerSkill?.viaCombo.length).toBeGreaterThan(0)
-    for (const combo of archerSkill!.viaCombo) {
-      for (const other of archerSkill!.viaCombo) {
-        if (combo === other) continue
-        expect(combo.every((change) => other.some((item) => item.role === change.role && item.unit === change.unit))).toBe(false)
-      }
-    }
+  it('lists Corrin’s seal classes from each donor independently', () => {
+    const run: RunPlan = { ...corrinRun(), route: 'conquest' }
+    const archer = skillAccess(dataset, run, unitContext(dataset, run, CORRIN_F)!).classes
+      .find((item) => item.classId !== null && classFamily(dataset.classesById.get(item.classId)!.name) === 'Archer')
+    expect(archer?.viaA.map((unit) => unit.name)).toContain('Mozu')
   })
 
   it('lists a skill under every class that teaches it (Locktouch: Outlaw and Ninja)', () => {

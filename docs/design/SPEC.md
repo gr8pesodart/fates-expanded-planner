@@ -443,9 +443,9 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
   each scrolls on its own and keeps its position, and the neighbour is visible while dragging.
   - Every skill in the game appears: groups in order **In progression**, **Not in progression**,
     **Inheritable only** (children), **Requires support** (an S / A+ / A partner or another second
-    parent; combinations shown "Only together: S *Jakob* & A+ *Elise*", minimal ones only) and **Not
-    accessible** (nothing in this run gives it — no reason shown; DLC classes are left out entirely
-    while DLC is off).
+    parent; each candidate relationship is listed when it independently grants a class) and **Not
+    accessible** (nothing in this run gives it, with no reason shown; DLC classes are left out
+    entirely while DLC is off).
   - *Grouped*: a sticky **pill rail** at the top is the table of contents (v3.4; group headings no
     longer stick): the active pill follows the scroll, tapping one scrolls its group under the rail.
     Then medium group headings and each **class** whole in its own status, with sprite and an

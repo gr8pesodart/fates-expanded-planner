@@ -12,7 +12,6 @@ import { displayName, recruitmentOf } from '../../logic/army'
 import { classPool } from '../../logic/classes'
 import { compareParents, parentRows, parentSortIcon } from '../../logic/parents'
 import { setVariableParent, toggleFavouriteParent } from '../../logic/relationships'
-import { fixedParentIsCorrin } from '../../logic/stats'
 import { corrinBuild } from '../../state/model'
 import { defaultHairColour } from '../../data/art'
 import { hairColourOf } from '../../logic/hair'
@@ -43,7 +42,6 @@ export function ParentsTab({ ctx }: { ctx: UnitContext }) {
         const pool = classPool(dataset, ctx.unit, {
           variableParent: choice.unit,
           corrinTalentClassId: corrinBuild(run).talentClassId,
-          fixedParentIsCorrin: fixedParentIsCorrin(dataset, ctx.unit),
         })
         // Only this candidate's contribution; the fixed parent's branch is the same on every card.
         const inherited = [...new Set(pool.filter((entry) => entry.branch === 'parent' && entry.sourceLabel === `Parent: ${choice.unit.name}`).map((entry) => entry.classId))]

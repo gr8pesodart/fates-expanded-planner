@@ -4,8 +4,9 @@
  * For every route, both Corrins and every unit on the roster, starting from an empty plan, this tries
  * every combination of relationships — second parent × S partner × A+ partner (Corrin: S partner ×
  * up to two A-rank Friendship Seal partners) — through `classPool`, and collects every skill the
- * resulting classes teach. Anything reachable that `skillAccess` doesn't list is a gap: the app only
- * evaluates combinations whose single gains share a base class, and this proves that's enough.
+ * resulting classes teach. Anything reachable that `skillAccess` marks unavailable is a gap. Each
+ * relationship resolves its own class-sharing slot, so combinations should add no class beyond the
+ * union of their individual relationship gains.
  * Inheritance from parents is out of scope (it depends on the parents' own plans).
  */
 import { expect, it } from 'vitest'
@@ -17,7 +18,6 @@ import { classPool } from '../../src/logic/classes'
 import { corrinPair } from '../../src/logic/corrin'
 import { dlcClassesFor } from '../../src/logic/progression'
 import { skillAccess } from '../../src/logic/skillAccess'
-import { fixedParentIsCorrin } from '../../src/logic/stats'
 import type { Gender, RunPlan } from '../../src/state/model'
 import { emptyRun } from '../../src/state/model'
 
@@ -55,7 +55,6 @@ function reachableSkills(dataset: Dataset, run: RunPlan, unit: UnitDef, roster: 
           aPlusPartner: unit.isCorrin ? undefined : donors[0],
           friendshipDonors: unit.isCorrin ? donors : [],
           corrinTalentClassId: talent,
-          fixedParentIsCorrin: fixedParentIsCorrin(dataset, unit),
         })
         const how = [parent && `parent ${parent.name}`, spouse && `S ${spouse.name}`, ...donors.map((donor) => `A ${donor.name}`)].filter(Boolean).join(' + ')
         for (const item of pool) if (classOnRoute(dataset, item.classId, run.route)) learn(item.classId, how || 'own')

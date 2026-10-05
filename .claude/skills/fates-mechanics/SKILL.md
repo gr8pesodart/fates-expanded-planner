@@ -56,6 +56,22 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 - **Gendered class names (v3.4, `sexedClassId`)**: Monk ↔ Shrine Maiden, Great Master ↔ Priestess,
   Butler ↔ Maid, Nohr Prince ↔ Nohr Princess swap by gender like the (M)/(F) pairs (Fire Emblem Wiki ›
   Reclass). Before v3.4 women with S Azama got Monk. Pinned in `classes.test.ts`.
+- **Class inheritance and seal sharing (2026-10-05, `classes.ts › classPool`)**: inheritance walks
+  Class A → B → alternate A → alternate B for each parent, father before mother, skipping classes
+  the child already has and Songstress. Seal sharing instead follows donor A → B → alternate A;
+  unique Class A slots advance to B and only the recipient's own Class A causes another advance.
+  Corrin and Kana use the donor's alternate B as the seal chain's last slot. Alternate classes come from the
+  Fates class-pair table in the [GameFAQs inheritance guide](https://gamefaqs.gamespot.com/3ds/114533-fire-emblem-fates-conquest/faqs/72752).
+  Evidence examples: “Jakob gets Cavalier from Silas”; for Jakob!Shigure, “Wyvern Rider, inherited
+  from Azura”; Nyx gives Nina “her tertiary class, Diviner” ([Nina](https://fireemblem.fandom.com/wiki/Nina)).
+  `classes.test.ts` pins all three cases plus alternate-A seal sharing. Fixed-parent order remains a
+  deterministic fallback for UGF same-sex parent pairs, whose vanilla inheritance order is undefined.
+- **Own class-set decoding (2026-10-05)**: `units.json › classes[1]` can be a promoted companion, not
+  another base-class branch. Promotions with multiple `promotesFrom` entries make `baseOfClass`'s
+  first entry unsafe for identifying a unit's own class B: Laslow's Hero record would falsely add
+  Fighter, and Selena's Bow Knight record would falsely add Outlaw. Serenes Forest's class-set table
+  lists Laslow as Mercenary/Ninja and Selena as Mercenary/Sky Knight. `ownBaseClasses` uses the
+  primary class line and `reclasses`; `classes.test.ts` pins the false branches away.
 - **Special classes from base/advanced (v3.4)**: Heart Seal into an own special class (Azura's
   Songstress) keeps the level from base, +20 from advanced (`reclassOptions`). Pinned in
   `progression.test.ts`.
@@ -72,14 +88,14 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   items (Hero's / Exalt's Brand, Paragon book) are capped run-wide; dominance compares their use too.
 - **Items / skill books (v3.4)**: item table layout and the 17 books in DATA.md › Items; books make
   their skill `available` with DLC on.
-- Duplicate branches fall back to the contributor's next (secondary) branch. Seals can't grant Nohr
-  Prince(ss)/Wolfskin/Kitsune/Villager → secondary instead — **this applies to Corrin's A ranks too**:
-  Kaden/Selkie → Diviner, Keaton/Velouria → Fighter (Serenes › Class Changing: "the character will
-  borrow their partner's second class set instead"). Pinned in `corrinPlanning.test.ts`.
+- Seals can't grant Nohr Prince(ss)/Wolfskin/Kitsune/Villager as donor Class A → advance to Class B.
+  This applies to Corrin's A ranks too: Kaden/Selkie → Diviner, Keaton/Velouria → Fighter. Do not
+  advance just because the recipient already has the donor's class somewhere in their pool: Jakob's
+  A+ with Silas resolves to Cavalier (already Jakob's Class B), never Mercenary.
 - Songstress is never inherited, but stays in **Azura's own** set (bug fixed v3.1).
-- Corrin's talent: joins Corrin's pool; **Kana** (Corrin = fixed parent) inherits the talent; a child
-  with Corrin as **variable** parent (e.g. Shigure) gets the Nohr Prince tree, never the talent
-  (Fire Emblem Wiki › Shigure). Seal partners of Corrin get the talent.
+- Corrin's talent is class B: Kana skips the matching Nohr Prince(ss) class A and inherits the talent;
+  a child with Corrin as **variable** parent (e.g. Shigure) inherits Nohr Prince(ss) as class A.
+  Seal sharing with Corrin likewise starts at the first eligible class slot.
 - **Route-locked Nobles**: Hoshido Noble unavailable on Conquest, Nohr Noble on Birthright, for
   everyone (children, seals included) — `army.ts › classOnRoute` filters every pool and promotions.
 
@@ -124,11 +140,11 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   the child's gender unless that version doesn't teach the skill) → locked (each
   roster S partner / A+ partner / Corrin A-rank partner / other second parent tried one at a time on
   top of the current plan, plus those parents' inheritable pools). Never lists the unit's personal
-  skill; skills nothing in the run gives are omitted. Combinations are evaluated where the single
-  gains share a base class (duplicate-branch fallback; `viaCombo`, shown "Only together: S X & A+ Y").
-  **Run `npm run audit:skills` after touching `classPool` or `skillAccess`** — it brute-forces every
-  combination and must find 0 gaps. Results are cached per run object + filters (plans are immutable).
-  Combinations are kept minimal (no superset of a working combination). `unavailable` covers the rest
+  skill; skills nothing in the run gives are omitted. Each candidate relationship resolves its own
+  class-sharing slot; a second relationship does not make either slot fall through. **Run
+  `npm run audit:skills` after touching `classPool` or `skillAccess`** — it brute-forces every
+  relationship combination and must find 0 gaps. Results are cached per run object + filters (plans
+  are immutable). `unavailable` covers the rest
   (owner: no reasons; DLC classes left out while DLC is off). `classes` (per-class status + ways) drives the picker's Grouped view so a skill shows
   under every class teaching it (owner: Locktouch under Outlaw and Ninja). `SkillFilters` (picker
   toggles, per unit) drop new S or A+ candidates (`s`, `a`) or, once a child's second parent is

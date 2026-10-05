@@ -103,12 +103,6 @@ export function projectUnit(
   return { stats, growths, caps, childAveraged }
 }
 
-/** Is this unit a child of Corrin (Kana)? */
-export function fixedParentIsCorrin(dataset: Dataset, unit: UnitDef): boolean {
-  if (!unit.fixedParent) return false
-  return dataset.unitsById.get(unit.fixedParent)?.isCorrin === true
-}
-
 export function isSongstress(dataset: Dataset, unit: UnitDef): boolean {
   const primary = primaryBaseClass(dataset, unit)
   if (primary === null) return false

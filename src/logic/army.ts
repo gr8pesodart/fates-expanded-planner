@@ -6,7 +6,6 @@ import type { ClassPoolEntry } from './classes'
 import { classFamily, classPool, primaryBaseClass, sexedClassId } from './classes'
 import type { PairUpRank } from './pairUp'
 import { bondPartner, variableParentOf } from './relationships'
-import { fixedParentIsCorrin } from './stats'
 
 // Route-locked promotions (Fire Emblem Fandom › Nohr Prince: "Nohr Noble (Conquest/Revelation)",
 // "Hoshido Noble (Birthright/Revelation)"). The lock is on the class, so no seal or inheritance
@@ -141,7 +140,6 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
     aPlusPartner,
     friendshipDonors,
     corrinTalentClassId: build.talentClassId,
-    fixedParentIsCorrin: fixedParentIsCorrin(dataset, unit),
   })
   const start = unit.fixedParent === null ? classStart(dataset, run, unit) : childStart(dataset, run, unit, variableParent ?? null, classStart(dataset, run, unit))
   const routePool = pool.filter((entry) => classOnRoute(dataset, entry.classId, run.route))
