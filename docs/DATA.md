@@ -390,8 +390,16 @@ The current planner therefore does not include inherited support rows in child p
   - Unverified: tie order between two base classes feeding one advanced class (the planner uses
     class-pool order), and whether a pre-promoted recruit holds its base-class skills (assumed yes).
   - **DLC class genders** - Dread Fighter and Dark Falcon are unisex in vanilla Fates (both job variants are in the vanilla table; [Dread Fighter](https://fireemblem.fandom.com/wiki/Dread_Fighter), [Dark Flier](https://fireemblem.fandom.com/wiki/Dark_Flier)). Ballistician, Lodestar, Vanguard and Grandmaster are male-only; Witch and Great Lord are female-only. The installed [Unisex DLC Classes mod](https://gamebanana.com/mods/324622) adds their six opposite-gender jobs at indices 138-143. The per-run mod switch gates those six jobs when DLC is enabled.
-- **Talent** — any base class except Nohr Prince(ss); Monk/Wolfskin male-only, Shrine
-  Maiden/Kitsune female-only (vanilla avatar rules).
+- **Talent** - 17 options, not "any base class" ([Serenes Forest › Avatar Creation › Class
+  Options](https://serenesforest.net/fire-emblem-fates/avatar-creation/): Cavalier, Knight, Fighter,
+  Mercenary, Outlaw, Samurai, Oni Savage, Lancer (Spear Fighter), Diviner, Monk (male), Priestess
+  (female; Shrine Maiden), Sky Knight, Archer, Dragon (Wyvern Rider), Ninja, Mage (Dark Mage),
+  Troubadour, Apothecary). [Serenes › Class Sets](https://serenesforest.net/fire-emblem-fates/nohrian-characters/class-sets/):
+  "includes every regular class (excludes Songstress, Kitsune, Wolfskin and Villager)".
+  Monk/Shrine Maiden is the *only* gendered pair ([Fire Emblem Wiki › Avatar](https://fireemblemwiki.org/wiki/Avatar):
+  "the only exceptions are the Monk and Shrine Maiden classes"); Wolfskin/Kitsune are never talents,
+  so no gender swap applies to them. Nohr Prince(ss) is Corrin's own class. Fixed 2026-10-08: the
+  planner offered Villager and Wolfskin/Kitsune. Pinned in `army.test.ts`.
 - **Inherited skill** — chosen from the variable parent's learnable pool (*verify*: Fates passes
   the variable parent's last-equipped skill).
 - **Children's bases** use their table offsets from the join point; paralogue scaling by chapter is
