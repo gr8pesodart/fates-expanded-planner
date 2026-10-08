@@ -208,9 +208,12 @@ export function personalSkill(unit: UnitDef, run: RunPlan): number | null {
   return unit.personalSkills[run.route] ?? unit.personalSkills.revelation ?? unit.personalSkills.birthright ?? unit.personalSkills.conquest
 }
 
-// Avatar talent rules (vanilla): no royal line; Monk/Wolfskin for the male avatar, Shrine Maiden/Kitsune for the female.
-const TALENT_EXCLUDED = new Set(['Nohr Prince', 'Nohr Princess'])
-const TALENT_GENDER: Record<string, 'male' | 'female'> = { Monk: 'male', 'Shrine Maiden': 'female', Wolfskin: 'male', Kitsune: 'female' }
+// Avatar talent rules (Serenes Forest › Class Sets: "includes every regular class (excludes
+// Songstress, Kitsune, Wolfskin and Villager)"; Serenes › Avatar Creation lists the 17 options).
+// Nohr Prince(ss) is Corrin's own class, not a talent. Monk/Shrine Maiden are the only gendered
+// pair (Fire Emblem Wiki › Avatar: "the only exceptions are the Monk and Shrine Maiden classes").
+const TALENT_EXCLUDED = new Set(['Nohr Prince', 'Nohr Princess', 'Songstress', 'Villager', 'Wolfskin', 'Kitsune'])
+const TALENT_GENDER: Record<string, 'male' | 'female'> = { Monk: 'male', 'Shrine Maiden': 'female' }
 
 export function talentOptions(dataset: Dataset, gender: 'male' | 'female'): number[] {
   const ids: number[] = []

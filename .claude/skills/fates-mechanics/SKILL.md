@@ -97,6 +97,16 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 - Corrin's talent is class B: Kana skips the matching Nohr Prince(ss) class A and inherits the talent;
   a child with Corrin as **variable** parent (e.g. Shigure) inherits Nohr Prince(ss) as class A.
   Seal sharing with Corrin likewise starts at the first eligible class slot.
+- **Talent options (2026-10-08, `army.ts › talentOptions`, test `army.test.ts`)**: exactly **17**, not
+  "any base class". Serenes Forest › Avatar Creation › Class Options lists them - Cavalier, Knight,
+  Fighter, Mercenary, Outlaw, Samurai, Oni Savage, Lancer (Spear Fighter), Diviner, Monk (male),
+  Priestess (female; Shrine Maiden), Sky Knight, Archer, Dragon (Wyvern Rider), Ninja, Mage (Dark
+  Mage), Troubadour, Apothecary - and Serenes › Class Sets notes it "excludes Songstress, Kitsune,
+  Wolfskin and Villager". Monk/Shrine Maiden is the **only** gendered pair (Fire Emblem Wiki ›
+  Avatar: "the only exceptions are the Monk and Shrine Maiden classes"); Wolfskin/Kitsune are never
+  talents at all, so the old Monk/Wolfskin male, Shrine Maiden/Kitsune female mapping was wrong.
+  Nohr Prince(ss) is Corrin's own class. The game's *labels* differ from class names (Lancer,
+  Dragon, Mage, Priestess). Bug fixed 2026-10-08: Villager and Wolfskin/Kitsune were offered.
 - **Route-locked Nobles**: Hoshido Noble unavailable on Conquest, Nohr Noble on Birthright, for
   everyone (children, seals included) — `army.ts › classOnRoute` filters every pool and promotions.
 
