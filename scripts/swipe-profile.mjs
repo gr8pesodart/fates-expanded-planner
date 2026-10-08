@@ -20,7 +20,7 @@ const CAMILLA = 'PID_カミラ'
 const plan = (extra = {}) => ({ skills: [null, null, null, null, null], reclasses: [], ...extra })
 const now = '2026-09-30T00:00:00.000Z'
 const run = {
-  id: 'demo', name: 'Perf', modpackId: 'ugf-2.5.2', dlc: true, route: 'revelation',
+  id: 'demo', name: 'Perf', modpackId: 'ugf-2.5.2', dlcs: ['before-awakening', 'royal-royale', 'hidden-truths', 'vanguard-dawn', 'anna-on-the-run', 'ballistician-blitz', 'annas-gift', 'witches-trial', 'another-gift-from-anna', 'heirs-1', 'heirs-2', 'heirs-3', 'heirs-4', 'heirs-5', 'lost-in-the-waves'], route: 'revelation',
   corrin: { gender: 'female', builds: { female: { boon: 'spd', bane: 'lck', talentClassId: 34 }, male: { boon: 'spd', bane: 'lck', talentClassId: 33 } } },
   favourites: [],
   units: {
@@ -31,7 +31,7 @@ const run = {
   },
   createdAt: now, updatedAt: now,
 }
-const seeded = JSON.stringify({ state: { schema: 5, runs: [run], activeRunId: 'demo', onboarded: true }, version: 5 })
+const seeded = JSON.stringify({ state: { schema: 6, runs: [run], activeRunId: 'demo', onboarded: true }, version: 6 })
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const browser = await chromium.launch()

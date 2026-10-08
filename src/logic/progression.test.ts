@@ -191,7 +191,7 @@ describe('buildProgression', () => {
 
   it('lets Azura go back to Songstress from her other classes with a Heart Seal', () => {
     const azura = dataset.units.find((unit) => unit.name === 'Azura')!
-    const base: RunPlan = { ...emptyRun('test'), dlc: false }
+    const base: RunPlan = { ...emptyRun('test'), dlcs: [] }
     const run: RunPlan = { ...base, units: { [azura.id]: { ...emptyUnitPlan(), reclasses: [
       { segment: 0, level: 5, classId: classId('Sky Knight (F)') },
       { segment: 1, level: 12, classId: classId('Songstress') },

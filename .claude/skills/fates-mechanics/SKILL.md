@@ -52,7 +52,7 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 ## Class inheritance and seals — `classes.ts › classPool`, `army.ts`
 
-- **Unisex DLC Classes (2026-10-04)**: Dread Fighter and Dark Falcon are already usable by both genders in vanilla Fates. The installed mod adds female Ballistician, Lodestar, Vanguard and Grandmaster, plus male Witch and Great Lord (jobs 138-143). The per-run `unisex-dlc-classes` switch gates only those six; `dlcClassesFor` drives pickers, progression, automation, and skill access. The appended job records come from `work/merge/GameData.bin.lz`; tests in `progression.test.ts` and `dataset.test.ts` pin the behavior.
+- **Unisex DLC Classes (2026-10-04)**: Dread Fighter and Dark Falcon are already usable by both genders in vanilla Fates. The installed mod adds female Ballistician, Lodestar, Vanguard and Grandmaster, plus male Witch and Great Lord (jobs 138-143). The per-run `unisex-dlc-classes` switch gates only those six; each class family also needs its own DLC map toggled on (`RunPlan.dlcs`; catalog `data/dlcs.ts`, owner 2026-10-08: one toggle per content map - Anna's map for the unit, Before Awakening for the two brands, the class maps for their class items and books). `dlcClassesFor(dataset, gender, run)` filters on both and drives pickers, progression, automation, and skill access. The appended job records come from `work/merge/GameData.bin.lz`; tests in `progression.test.ts` and `dataset.test.ts` pin the behavior.
 - **Gendered class names (v3.4, `sexedClassId`)**: Monk ↔ Shrine Maiden, Great Master ↔ Priestess,
   Butler ↔ Maid, Nohr Prince ↔ Nohr Princess swap by gender like the (M)/(F) pairs (Fire Emblem Wiki ›
   Reclass). Before v3.4 women with S Azama got Monk. Pinned in `classes.test.ts`.
@@ -87,7 +87,8 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   growth, then Spd/Def/Res growth (stats chosen by effective growth in the selected class). Limited
   items (Hero's / Exalt's Brand, Paragon book) are capped run-wide; dominance compares their use too.
 - **Items / skill books (v3.4)**: item table layout and the 17 books in DATA.md › Items; books make
-  their skill `available` with DLC on.
+  their skill `available` while the map that drops them is toggled on (per-run `RunPlan.dlcs`,
+  catalog `data/dlcs.ts`); per-save counts come from `itemLimit(key, run)` over the same grants.
 - Seals can't grant Nohr Prince(ss)/Wolfskin/Kitsune/Villager as donor Class A → advance to Class B.
   This applies to Corrin's A ranks too: Kaden/Selkie → Diviner, Keaton/Velouria → Fighter. Do not
   advance just because the recipient already has the donor's class somewhere in their pool: Jakob's
@@ -145,7 +146,7 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   `npm run audit:skills` after touching `classPool` or `skillAccess`** — it brute-forces every
   relationship combination and must find 0 gaps. Results are cached per run object + filters (plans
   are immutable). `unavailable` covers the rest
-  (owner: no reasons; DLC classes left out while DLC is off). `classes` (per-class status + ways) drives the picker's Grouped view so a skill shows
+  (owner: no reasons; DLC classes left out while their map's toggle is off). `classes` (per-class status + ways) drives the picker's Grouped view so a skill shows
   under every class teaching it (owner: Locktouch under Outlaw and Ninja). `SkillFilters` (picker
   toggles, per unit) drop new S or A+ candidates (`s`, `a`) or, once a child's second parent is
   chosen, the other possible second parents (`p`) from the analysis.

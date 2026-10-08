@@ -336,7 +336,7 @@ Lens definitions (the single source for the Roster rail too; implement in `src/l
   limit (Hero's Brand, Exalt's Brand, Paragon's book: 1) is red, with "(1 per save)" in the tooltip. Below it, side by side in two
   equal columns: **Use Eternal Seal** (`btn primary`, accent; disabled until the last segment
   reaches its cap) and **Remove an Eternal Seal** (outline, muted while none are used).
-- **Skill books** (DLC on): an equipped skill the path never teaches but a book does is assumed to
+- **Skill books** (when the book's map is toggled on): an equipped skill the path never teaches but a book does is assumed to
   come from the book - its "Not in Progression" card shows a grey "From its skill book" notice and
   the book joins the pill.
 - **Not in Progression** (just above the first segment): equipped skills the planned path doesn't
@@ -405,7 +405,7 @@ These controls and Chart field choices persist locally; note text is part of run
 
 - The "Runs" title, then a list of run cards. Each card uses a standard 1px border tinted with the
   route accent (never a left border stripe), the run name (21/400), a subline "Revelation · 5 mods ·
-  DLC on · 34 units", and a "More"
+  15 DLC · 2 couples", and a "More"
   menu (Duplicate, Export JSON, Share link, Delete with confirm). The active run shows an
   `--accent-strong` "ACTIVE" tag; tapping another run switches to it.
 - Footer actions: **New run** (primary, `--accent-strong`) and **Import** (outline).
@@ -413,13 +413,18 @@ These controls and Chart field choices persist locally; note text is part of run
   integrated; Unisex DLC Classes) and **Vanity** (Furry Fates; Dragon-Hare Corrin). Vanity switches
   change the corresponding portraits and map sprites where the installed mod supplies them. Mods
   without planner data or visible art effects are absent from the checklist.
+- Per-run **DLC** checklist (its own category, v3.5): one Switch per content-providing DLC map, in
+  Dragon's Gate order, grouped **Map Pack 1** / **Map Pack 2** / **Japan-only** (the row's muted line
+  says what it adds: "Witch's Mark, repeatable (Witch); Warp skill book"). Each toggle gates what its
+  map hands out - units (Anna), class-change items (and so the class) and skill books. Experience,
+  gold, illustration and weapon maps add nothing to plan with and are absent (data/dlcs.ts).
 
 ### New-run setup (full-screen flow, three steps with a progress bar)
 
 1. **Name + mods**: a text field and the Mods checklist (UGF required).
 2. **Route**: three large cards (Birthright / Conquest / Revelation) with a standard border tinted
-   with the route hue; selected state uses the route accent. Conquest is the default. Includes a
-   **DLC** switch. Selecting a route immediately previews the accent
+   with the route hue; selected state uses the route accent. Conquest is the default. Includes the
+   **DLC** checklist (one toggle per content map). Selecting a route immediately previews the accent
    across the flow.
 3. **Your Corrin**: the Avatar tab component reused as-is (gender, boon, bane, talent).
 
@@ -445,7 +450,7 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
     **Inheritable only** (children), **Requires support** (an S / A+ / A partner or another second
     parent; each candidate relationship is listed when it independently grants a class) and **Not
     accessible** (nothing in this run gives it, with no reason shown; DLC classes are left out
-    entirely while DLC is off).
+    entirely while their map's toggle is off).
   - *Grouped*: a sticky **pill rail** at the top is the table of contents (v3.4; group headings no
     longer stick): the active pill follows the scroll, tapping one scrolls its group under the rail.
     Then medium group headings and each **class** whole in its own status, with sprite and an
@@ -470,7 +475,7 @@ Then "Start planning" lands on Roster. First launch with no runs goes straight i
   - Filter menu, saved per character: "S rank flexible", "A+ rank flexible" ("A rank flexible" for
     Corrin) and, for a child whose second parent is chosen, "Parent flexible"; switching one off
     treats new relationships of that kind (other second parents) as unavailable.
-  Skill books (DLC on) are their own Grouped class, "Skill books", with the book icon.
+  Skill books (from maps the run has on) are their own Grouped class, "Skill books", with the book icon.
   The inherit-slot pickers ("Inherited from *Parent*") have no tab rail and no stars (owner): one
   list of that parent's inheritable skills under the same sticky pill rail, with the groups **In
   *Parent*'s progression** / **Not in *Parent*'s progression** (the parent's own plan) and no class

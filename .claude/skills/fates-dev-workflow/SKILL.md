@@ -46,8 +46,8 @@ npm test          # vitest; only src/**/*.test.ts is collected (vitest.config.ts
   compact (see `fates-sprites` › compact animation). v3.3 moved `app/pickers.tsx` and `RunsScreen`
   into lazy chunks (`App.tsx`) to get back under it (486 kB); split more screens the same way if it
   creeps up again.
-- `scripts/shots.mjs` seeds a **schema 5** run (`corrin.builds`); seeding a schema 4 doc is a quick
-  way to exercise the migration in the browser.
+- `scripts/shots.mjs` seeds a **schema 6** run (`corrin.builds`, `dlcs` id list); dropping the seed to
+  schema 5 (`dlc`/`festivalDlc`) or schema 4 is a quick way to exercise the migration in the browser.
 
 ## The Vite stale-module trap (cost several debugging rounds)
 

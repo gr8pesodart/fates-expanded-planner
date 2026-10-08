@@ -3,10 +3,9 @@ import type { Reclass, RunPlan } from '../state/model'
 import type { UnitContext } from './army'
 import { armyUnits, classOnRoute, personalSkill, skillsChildrenInherit, unitContext } from './army'
 import { sexedClassId } from './classes'
-import { bookItemKey, classItemKey, itemLimit, SKILL_BOOKS } from '../data/itemIcons'
+import { bookAvailable, bookItemKey, classItemAvailable, classItemKey, itemLimit, SKILL_BOOKS } from '../data/itemIcons'
 import type { ReclassOption } from './progression'
 import { buildProgression, dlcClassesFor, learnedSkillIds, offspringOptions, reclassOptions, sealsUsed, skillCandidates, tierCap } from './progression'
-import { hasUnisexDlcClasses } from '../data/modProfiles'
 import { projectUnit } from './stats'
 
 /**
@@ -132,24 +131,22 @@ export function autoTargets(dataset: Dataset, run: RunPlan, ctx: UnitContext): {
  * is on the path anyway (Speedtaker with Dual Guardsman: learn both in Lodestar).
  */
 export function bookOrClassChoices(dataset: Dataset, run: RunPlan, ctx: UnitContext): number[] {
-  if (!run.dlc) return []
   const { wanted } = autoTargets(dataset, run, ctx)
   const teachers = new Map(reachableClasses(dataset, run, ctx).map((def) => [def.id, skillCandidates(dataset, ctx, def).map((item) => item.skillId)]))
   const taughtBy = (skillId: number) => [...teachers.entries()].filter(([, skills]) => skills.includes(skillId)).map(([id]) => id)
-  return wanted.filter((skillId) => SKILL_BOOKS.has(skillId) && taughtBy(skillId).length > 0 && !wanted.some((other) => (
-    other !== skillId && !SKILL_BOOKS.has(other) && taughtBy(other).some((classId) => taughtBy(skillId).includes(classId))
+  return wanted.filter((skillId) => bookAvailable(run, skillId) && taughtBy(skillId).length > 0 && !wanted.some((other) => (
+    other !== skillId && !bookAvailable(run, other) && taughtBy(other).some((classId) => taughtBy(skillId).includes(classId))
   )))
 }
 
 /**
- * Equipped skills the planned path doesn't teach but a skill book does (DLC on): the Progression page
- * assumes the book (owner, v3.4) and counts it with the seals.
+ * Equipped skills the planned path doesn't teach but a skill book does (its map's toggle is on): the
+ * Progression page assumes the book (owner, v3.4) and counts it with the seals.
  */
 export function skillBooksUsed(run: RunPlan, ctx: UnitContext, learned: ReadonlySet<number>): number[] {
-  if (!run.dlc) return []
   const own = [ctx.plan.inheritFixedSkill, ctx.plan.inheritSkill]
   const personal = personalSkill(ctx.unit, run)
-  return [...new Set(ctx.plan.skills)].filter((id): id is number => id !== null && id !== personal && !own.includes(id) && !learned.has(id) && SKILL_BOOKS.has(id))
+  return [...new Set(ctx.plan.skills)].filter((id): id is number => id !== null && id !== personal && !own.includes(id) && !learned.has(id) && bookAvailable(run, id))
 }
 
 /** Weapon columns of the selected class, when the player should pick which to favour (no -faire skill). */
@@ -235,7 +232,7 @@ export function autoProgression(dataset: Dataset, run: RunPlan, ctx: UnitContext
   const focus: SolveFocus = { ...weaponFocus(dataset, ctx, options.weapons), stats: statFocus(dataset, ctx), caps: caps.classItems }
   const learnable = new Set(classes.flatMap((def) => skillCandidates(dataset, ctx, def).map((item) => item.skillId)))
   const bookLeft = (id: number) => (caps.books.get(id) ?? 1) > 0
-  const byBook = (id: number) => run.dlc && SKILL_BOOKS.has(id) && bookLeft(id) && (!learnable.has(id) || bookSkills.includes(id))
+  const byBook = (id: number) => SKILL_BOOKS.has(id) && bookLeft(id) && (!learnable.has(id) || bookSkills.includes(id))
   const targets = wanted.filter((id) => learnable.has(id) && !byBook(id))
   const books = wanted.filter(byBook)
   const unreachable = wanted.filter((id) => !learnable.has(id) && !byBook(id))
@@ -268,10 +265,10 @@ function reachableClasses(dataset: Dataset, run: RunPlan, ctx: UnitContext): Cla
       if (classOnRoute(dataset, sexed, run.route)) ids.add(sexed)
     }
   }
-  if (run.dlc) for (const def of dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run))) ids.add(def.id)
+  for (const def of dlcClassesFor(dataset, ctx.unit.gender, run)) ids.add(def.id)
   return [...ids].flatMap((id) => {
     const def = dataset.classesById.get(id)
-    return def && (!def.dlc || run.dlc) ? [def] : []
+    return def && (!def.dlc || classItemAvailable(dataset, def.id, run)) ? [def] : []
   })
 }
 

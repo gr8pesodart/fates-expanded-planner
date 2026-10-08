@@ -216,7 +216,7 @@ The current planner therefore does not include inherited support rows in child p
 
 ### v3 planner rules (`army.ts`, `lenses.ts`, `progression.ts`, `relationships.ts`)
 
-- **Roster** — units on the run's route (plus DLC Anna when DLC is on), only the Corrin matching the
+- **Roster** — units on the run's route (plus DLC Anna when her map is on), only the Corrin matching the
   chosen gender and that Corrin's Kana. Children are always listed.
 - **Relationships** — S and pair-up are exclusive and mutual. A+ is a one-way choice: picking
   Jakob as Ryoma's A+ does not set Jakob's, and several units may pick the same partner. A child's second parent is never
@@ -255,8 +255,8 @@ The current planner therefore does not include inherited support rows in child p
   (`tools/audit/skillCombos.audit.ts`) brute-forces every second parent × S × A+ combination
   (Corrin: S × up to two A-rank partners) on every route and both Corrins and must report 0
   unlisted skills.
-  Everything else is **unavailable**, by class (no reason given; DLC classes are omitted while DLC is
-  off). Classes are also tracked on their own (`ClassAccess`: a class's first status and
+  Everything else is **unavailable**, by class (no reason given; DLC classes are omitted while their
+  map's toggle is off). Classes are also tracked on their own (`ClassAccess`: a class's first status and
   ways in), which the picker's Grouped view lists whole. Route-locked and gender-locked classes come out of `classPool`/`classOnRoute` as everywhere
   else; skills nothing in the run gives are not listed. Picker filters (`SkillFilters`, per unit):
   `s` / `a` drop new S / A+ candidates, `p` drops other second parents once one is chosen.
@@ -289,9 +289,9 @@ The current planner therefore does not include inherited support rows in child p
   Grandmaster (no English MIID_; named after the class). 17 skill books: Paragon, Armor Shield, Beast
   Shield, Winged Shield, Point Blank, Bold Stance, the seven Takers, Heavy Blade, Veteran Intuition,
   Aether, Warp (+57 is 10 / 25 / 35 for the last three, meaning unknown).
-- **Skill books in skill access (v3.4)** - with DLC on, a skill only a book teaches is `available`
-  (`book: true`, picker group "Skill books", notice "From its skill book (DLC)"). Book counts per
-  run are not modelled.
+- **Skill books in skill access (v3.4)** - when the map that drops the book is toggled on for the run, a
+  skill only a book teaches is `available` (`book: true`, picker group "Skill books", notice "From its
+  skill book (DLC)"). Book counts per run are only modelled through the per-save item limits.
 - **Into a special class from the 20-level tracks (v3.4, `progression.ts › reclassOptions`)** - an own
   special class (Azura's Songstress) is offered by Heart Seal from base (same level) and advanced
   (level + 20), like the DLC classes; before v3.4 Azura could never return to Songstress.
@@ -321,21 +321,24 @@ The current planner therefore does not include inherited support rows in child p
   pins the same class. `npm run audit:skills` replays every roster unit's plan and the hard cases
   through buildProgression.
 - **Per-save item limits (research 2026-10-02, curated in `extract_item_icons.py › LIMIT_BY_IID`,
-  manifest `limits`)** - Hero's Brand (Lodestar) and Exalt's Brand (Great Lord): 1 per save (Before
-  Awakening's one-time reward; the repeatable Festival of Bonds maps are Japan-only); Paragon's book:
-  1 (Another Gift from Anna); Armor Shield, Beast Shield, Winged Shield and Bold Stance books: 0 (item
-  records with no released source), so they aren't ways in. Everything else is unlimited: Level 3
-  Rod/Staff shop stock (Master/Heart/Partner/Friendship/Eternal) or repeatable DLC rewards (Dread
-  Scroll, Ebon Wing, Sighting Lens, Witch's Mark, Fell Brand, Vanguard Brand, the other books).
-  Automation caps a limited item at the limit minus the other units' current plans; the seals pill
-  turns a count over the limit red. A run with the **Festival of Bonds DLC** switch on (Japan's
-  repeatable festival maps; `RunPlan.festivalDlc`, manifest `festivalUnlimited`) has no limit on the
-  two brands. Names: the four crests are Hero's / Exalt's / Fell / Vanguard
+  manifest `limits`; since v3.5 computed per run from the DLC catalog)** - each content DLC map lists
+  the items it hands out and how many copies one save gets (`src/data/dlcs.ts`); `itemLimit` adds up
+  the enabled maps, and any repeatable map makes its item unlimited. So Hero's Brand (Lodestar) and
+  Exalt's Brand (Great Lord) are 1 per save from **Before Awakening's** one-time reward - unless the
+  Japan-only Hoshidan / Nohrian Festival of Bonds maps are on, which repeat them (the pre-v3.5
+  "Festival of Bonds DLC" switch = both); Paragon's book is 1 (Another Gift From Anna); Anna's Gift
+  adds one Sighting Lens or Witch's Mark (the planner conservatively counts one of each). Armor
+  Shield, Beast Shield, Winged Shield and Bold Stance books: 0 (item records with no released
+  source), so they aren't ways in. Everything else is unlimited: Level 3 Rod/Staff shop stock
+  (Master/Heart/Partner/Friendship/Eternal) or repeatable DLC rewards (Dread Scroll, Ebon Wing,
+  Sighting Lens, Witch's Mark, Fell Brand, Vanguard Brand, the other books). Automation caps a
+  limited item at the limit minus the other units' current plans; the seals pill turns a count over
+  the limit red. Names: the four crests are Hero's / Exalt's / Fell / Vanguard
   Brand (no English MIID_ text in the dump). Not modelled (yet): shop stock before Level 3 (after
   Chapter 20: Master Seals 2 then 7, Heart/Partner/Friendship 1 then 3, no Eternal Seals) - Serenes
   Forest › Rod Store / Staff Store.
-- **Skill books on the Progression page (v3.4, `skillBooksUsed`)** - with DLC on, an equipped skill
-  the path doesn't teach but a book does is assumed learned from the book and counted with the
+- **Skill books on the Progression page (v3.4, `skillBooksUsed`)** - when its map is on, an equipped
+  skill the path doesn't teach but a book does is assumed learned from the book and counted with the
   seals.
 - **Gender-locked class counterparts (v3.4, `classes.ts › sexedClassId`)** - besides the (M)/(F)
   pairs, four pairs have their own names: Monk ↔ Shrine Maiden, Great Master ↔ Priestess, Butler ↔
@@ -389,7 +392,7 @@ The current planner therefore does not include inherited support rows in child p
     Advanced 2.
   - Unverified: tie order between two base classes feeding one advanced class (the planner uses
     class-pool order), and whether a pre-promoted recruit holds its base-class skills (assumed yes).
-  - **DLC class genders** - Dread Fighter and Dark Falcon are unisex in vanilla Fates (both job variants are in the vanilla table; [Dread Fighter](https://fireemblem.fandom.com/wiki/Dread_Fighter), [Dark Flier](https://fireemblem.fandom.com/wiki/Dark_Flier)). Ballistician, Lodestar, Vanguard and Grandmaster are male-only; Witch and Great Lord are female-only. The installed [Unisex DLC Classes mod](https://gamebanana.com/mods/324622) adds their six opposite-gender jobs at indices 138-143. The per-run mod switch gates those six jobs when DLC is enabled.
+  - **DLC class genders** - Dread Fighter and Dark Falcon are unisex in vanilla Fates (both job variants are in the vanilla table; [Dread Fighter](https://fireemblem.fandom.com/wiki/Dread_Fighter), [Dark Flier](https://fireemblem.fandom.com/wiki/Dark_Flier)). Ballistician, Lodestar, Vanguard and Grandmaster are male-only; Witch and Great Lord are female-only. The installed [Unisex DLC Classes mod](https://gamebanana.com/mods/324622) adds their six opposite-gender jobs at indices 138-143. The per-run mod switch gates those six jobs; each class family still needs its own DLC map toggled on (see the DLC catalog below).
 - **Talent** — any base class except Nohr Prince(ss); Monk/Wolfskin male-only, Shrine
   Maiden/Kitsune female-only (vanilla avatar rules).
 - **Inherited skill** — chosen from the variable parent's learnable pool (*verify*: Fates passes
@@ -397,8 +400,67 @@ The current planner therefore does not include inherited support rows in child p
 - **Children's bases** use their table offsets from the join point; paralogue scaling by chapter is
   not modelled.
 
-## Verification & open questions
+## DLC catalog (v3.5) - `src/data/dlcs.ts`
 
+One entry per purchasable Dragon's Gate DLC; a run enables the ones it can use (`RunPlan.dlcs`,
+toggled in the Runs page's **DLC** category). Owner rule (2026-10-08): a DLC is **content** - and gets
+a toggle - when it provides a unit, a class or a skill to plan with; experience/gold grinding and
+vanity maps get no toggle and no planning effect. Item keys are the installed build's item table
+(`data/itemIcons.json`); `null` copies = repeatable reward.
+
+| DLC (NA name) | Grants |
+|---|---|
+| Before Awakening | Hero's Brand x1 (Lodestar), Exalt's Brand x1 (Great Lord) |
+| Royal Royale | Dread Scroll, Ebon Wing (Dread Fighter, Dark Falcon), repeatable |
+| Hidden Truths 1 & 2 | Fell Brand (Grandmaster), repeatable |
+| Vanguard Dawn | Vanguard Brand (Vanguard), repeatable; Heavy Blade, Veteran Intuition, Aether skill books |
+| Anna on the Run | Anna |
+| Ballistician Blitz | Sighting Lens (Ballistician), repeatable |
+| A Gift from Anna | Sighting Lens or Witch's Mark, one (planner counts one of each) |
+| Witches' Trial | Witch's Mark (Witch), repeatable; Warp skill book |
+| Another Gift From Anna | Paragon skill book x1 |
+| I: In Endless Dreams | Skilltaker, Lucktaker skill books |
+| II: Realms Collide | Magictaker skill book |
+| III: The Changing Tide | Strengthtaker skill book |
+| IV: Light's Sacrifice | Defensetaker skill book |
+| V: Endless Dawn | Speedtaker, Resistancetaker skill books |
+| End: Lost in the Waves | Point Blank skill book |
+| Hoshidan Festival of Bonds (Japan) | Exalt's Brand repeatable |
+| Nohrian Festival of Bonds (Japan) | Hero's Brand repeatable |
+
+No toggle (not content): Boo Camp (Experience), Ghostly Gold (Funds), Beach Brawl (illustrations),
+Museum Melee (weapons).
+
+Sources (research 2026-10-08): [Serenes Forest › Fates › Downloadable Content (NA)](https://serenesforest.net/fire-emblem-fates/miscellaneous/downloadable-content/)
+for the map list and first/repeatable rewards, [› Maps](https://serenesforest.net/fire-emblem-fates/miscellaneous/downloadable-content/maps/)
+for per-map detail, [› Japan](https://serenesforest.net/fire-emblem-fates/miscellaneous/downloadable-content/japan/)
+for the two festival maps. Quotes: Before Awakening awards "Exalt's Brand, Hero's Brand (first
+time), Pebble (unlimited)"; Hidden Truths "Fell Brand, First Blood (unlimited)"; Royal Royale
+"Dread Scroll, Ebon Wing (unlimited)" ("Normally these items are gotten from the Link Bonus and are
+limited to two per playthrough"); Vanguard Dawn has "enemies holding onto skill scrolls for Steel
+Sword, Veteran's Intuition and Aether (all Vanguard skills)"; Witches' Trial has "Witch
+reinforcements holding onto ... Warp scroll"; Anna on the Run gives "Anna (first time)"; A Gift from
+Anna is "not a map" but a one-time choice of "the Sighting Lens OR the Witch's Mark"; Another Gift
+From Anna gives "Boots and Paragon (first time)"; Heirs of Fate I-V and End: Lost in the Waves give
+their Taker / Point Blank scrolls; the Japan festivals give "Exalt's Brand" / "Hero's Brand".
+
+Attribution inferences: **Heavy Blade, Veteran Intuition and Aether** are the three Vanguard Dawn
+scrolls - the game's item names are 剛剣の書 ("heavy/steel sword book"), 歴戦の勘の書 and 天空の書
+(items 363-365, consecutive in the item table), matching Serenes' "Steel Sword, Veteran's Intuition
+and Aether". **Warp's** book is item 393, the one Witches' Trial's reinforcements drop.
+
+Not modelled: **First Blood** (Hidden Truths; grants Dragon Vein use, no unit/class/skill), **Boots**
+and **Pebble**, the multi-campaign Crystal Ball bonuses (Serenes: "two Dread Scrolls ... when you own
+two or more campaigns and two Ebon Wings when you own three"), and **Recollection of Bubbles**
+(Japan's Heirs-of-Fate equivalent, "Point Blank scroll and more" - exact rewards unverified; its NA
+maps cover the same books). Campaign purchases (Birthright/Conquest/Revelation) are the run's route,
+not DLC.
+
+Saved plans: schema 5's `dlc` boolean and `festivalDlc` switch migrate to the id list
+(`serialization.ts › migrateRun`): `dlc: true` becomes every NA content map, `festivalDlc: true` adds
+both festival maps. New runs start with the NA content maps on (`DEFAULT_DLC_IDS`).
+
+## Verification & open questions
 Cross-checks already performed:
 
 - Shiro/Asugi/Selkie/Ryoma/Gunter growths and cap mods match community data exactly.

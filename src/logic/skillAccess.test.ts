@@ -85,11 +85,30 @@ describe('skillAccess', () => {
     const ctx = unitContext(dataset, run, CORRIN_F)!
     const all = skillAccess(dataset, run, ctx)
     expect(all.classes.some((record) => record.group === 'unavailable' && dataset.classesById.get(record.classId!)?.name.startsWith('Hoshido Noble'))).toBe(true)
-    const noDlc: RunPlan = { ...run, dlc: false }
+    const noDlc: RunPlan = { ...run, dlcs: [] }
     expect(skillAccess(dataset, noDlc, unitContext(dataset, noDlc, CORRIN_F)!).classes.some((record) => record.classId !== null && dataset.classesById.get(record.classId)?.dlc)).toBe(false)
     const noS = skillAccess(dataset, run, ctx, { s: false, a: true, p: true })
     expect(noS.list.some((item) => item.group === 'locked' && item.viaS.length)).toBe(false)
     expect(noS.list.filter((item) => item.group === 'unavailable').length).toBeGreaterThan(all.list.filter((item) => item.group === 'unavailable').length)
+  })
+
+  it("follows each DLC map's toggle: its class and its skill books, and nothing else", () => {
+    const witch: RunPlan = { ...emptyRun('t'), route: 'conquest', dlcs: ['witches-trial'] }
+    const witchAccess = skillAccess(dataset, witch, unitContext(dataset, witch, CORRIN_F)!)
+    expect(witchAccess.byId.get(skillId('Warp'))?.group).toBe('available')
+    expect(witchAccess.list.some((item) => item.skillId === skillId('Skilltaker'))).toBe(false)
+    const opened = witchAccess.classes
+      .filter((record) => record.classId !== null && dataset.classesById.get(record.classId)?.dlc)
+      .map((record) => dataset.classesById.get(record.classId!)!.name)
+    expect(opened).toEqual(['Witch'])
+
+    const heirs: RunPlan = { ...emptyRun('t'), route: 'conquest', dlcs: ['heirs-1'] }
+    const heirsAccess = skillAccess(dataset, heirs, unitContext(dataset, heirs, CORRIN_F)!)
+    const taker = heirsAccess.byId.get(skillId('Skilltaker'))
+    expect(taker?.group).toBe('available')
+    expect(taker?.book).toBe(true)
+    expect(heirsAccess.list.some((item) => item.skillId === skillId('Warp'))).toBe(false)
+    expect(heirsAccess.classes.some((record) => record.classId !== null && dataset.classesById.get(record.classId)?.dlc)).toBe(false)
   })
 
   it("lists a child's inheritance-only skills as inheritable, from a current or another possible parent", () => {

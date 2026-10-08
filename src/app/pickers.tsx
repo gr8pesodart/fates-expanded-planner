@@ -12,7 +12,6 @@ import { ConflictNotice, SkillNotice } from '../components/SkillNotice'
 import { PagerPage, TabPager } from '../components/TabPager'
 import { ItemIcon } from '../components/ItemIcon'
 import { bookItemKey } from '../data/itemIcons'
-import { hasUnisexDlcClasses } from '../data/modProfiles'
 import { useMountedTabs } from '../lib/useMountedTabs'
 import { STAT_TABLE_KEYS, STAT_TABLE_LABELS } from '../data/types'
 import { displayName, unitContext } from '../logic/army'
@@ -126,7 +125,8 @@ function ClassPicker({ unitId, onClose }: { unitId: string; onClose(): void }) {
       groups.set(label, list)
     }
   }
-  if (run.dlc) groups.set('DLC', dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run)).map((def) => def.id))
+  const dlcClasses = dlcClassesFor(dataset, ctx.unit.gender, run).map((def) => def.id)
+  if (dlcClasses.length) groups.set('DLC', dlcClasses)
   const name = displayName(ctx.unit, run)
   const choose = (classId: number) => {
     mutate((next) => ({ ...next, units: { ...next.units, [unitId]: { ...(next.units[unitId] ?? emptyUnitPlan()), classId } } }))

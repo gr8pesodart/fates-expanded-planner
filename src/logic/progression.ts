@@ -7,6 +7,7 @@ import type { StatRow } from './lenses'
 import { classFamily, sexedClassId } from './classes'
 import { pairUpBonus } from './pairUp'
 import { projectUnit } from './stats'
+import { classItemAvailable } from '../data/itemIcons'
 import { hasUnisexDlcClasses } from '../data/modProfiles'
 
 export type ReclassSeal = 'offspring' | 'master' | 'heart' | 'partner' | 'friendship' | 'dlc'
@@ -89,11 +90,13 @@ export function tierCap(tier: ClassTier, eternalSeals = 0, unitLevelCap: number 
   return cap + eternalSeals * ETERNAL_SEAL_LEVEL_INCREASE
 }
 
-export function dlcClassesFor(dataset: Dataset, gender: 'male' | 'female', unisex = false): ClassDef[] {
+export function dlcClassesFor(dataset: Dataset, gender: 'male' | 'female', run: RunPlan): ClassDef[] {
+  const unisex = hasUnisexDlcClasses(run)
   const seen = new Set<number>()
   const result: ClassDef[] = []
   for (const def of dataset.classes) {
     if (!def.dlc) continue
+    if (!classItemAvailable(dataset, def.id, run)) continue
     if (!unisex && UNISEX_MOD_CLASS_IDS.has(def.id)) continue
     const family = classFamily(def.name)
     if (!unisex && DLC_GENDER[family] && DLC_GENDER[family] !== gender) continue
@@ -155,7 +158,7 @@ export function reclassOptions(
 
   for (const entry of ctx.pool) {
     const target = dataset.classesById.get(entry.classId)
-    if (!target || (target.dlc && !run.dlc)) continue
+    if (!target || (target.dlc && !classItemAvailable(dataset, target.id, run))) continue
     const seal = sealFor(entry.branch)
     if (current.tier === 'base' && target.tier === 'base') offer({ classId: target.id, seal, level, newSegment: false })
     if (current.tier === 'promoted' && target.tier === 'promoted') offer({ classId: target.id, seal, level, newSegment: false })
@@ -172,12 +175,10 @@ export function reclassOptions(
     if (target.tier === 'special' && current.tier === 'special') offer({ classId: target.id, seal, level, newSegment: false })
   }
 
-  if (run.dlc) {
-    for (const target of dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run))) {
-      if (current.tier === 'base' && level >= DLC_SEAL_MIN_LEVEL) offer({ classId: target.id, seal: 'dlc', level, newSegment: true })
-      if (current.tier === 'promoted') offer({ classId: target.id, seal: 'dlc', level: level + BASE_LEVEL_CAP, newSegment: true })
-      if (current.tier === 'special') offer({ classId: target.id, seal: 'dlc', level, newSegment: false })
-    }
+  for (const target of dlcClassesFor(dataset, ctx.unit.gender, run)) {
+    if (current.tier === 'base' && level >= DLC_SEAL_MIN_LEVEL) offer({ classId: target.id, seal: 'dlc', level, newSegment: true })
+    if (current.tier === 'promoted') offer({ classId: target.id, seal: 'dlc', level: level + BASE_LEVEL_CAP, newSegment: true })
+    if (current.tier === 'special') offer({ classId: target.id, seal: 'dlc', level, newSegment: false })
   }
 
   return [...options.values()]

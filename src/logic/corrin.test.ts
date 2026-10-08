@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
+import { DEFAULT_DLC_IDS } from '../data/dlcs'
 import { loadDataset } from '../data/loader'
 import type { Dataset } from '../data/types'
 import { corrinBuild, emptyRun, PLAN_SCHEMA, withCorrinBuild } from '../state/model'
@@ -76,14 +77,19 @@ describe('per-gender Corrin', () => {
 })
 
 describe('schema 4 migration', () => {
-  const legacyRun = () => ({
-    ...emptyRun('old'),
-    corrin: { gender: 'female', boon: 'mag', bane: 'def', talentClassId: classId('Samurai (F)') },
-    units: {
-      [CORRIN_F]: { skills: [null, null, null, null, null], reclasses: [{ segment: 0, level: 10, classId: classId('Samurai (F)') }], sPartner: RYOMA },
-      [RYOMA]: { skills: [null, null, null, null, null], reclasses: [], sPartner: CORRIN_F },
-    },
-  })
+  // A real schema 4 run: one Corrin build and the old single DLC switch, no `dlcs` list yet.
+  const legacyRun = () => {
+    const base = { ...emptyRun('old'), dlc: true, festivalDlc: true } as Record<string, unknown>
+    delete base.dlcs
+    return {
+      ...base,
+      corrin: { gender: 'female', boon: 'mag', bane: 'def', talentClassId: classId('Samurai (F)') },
+      units: {
+        [CORRIN_F]: { skills: [null, null, null, null, null], reclasses: [{ segment: 0, level: 10, classId: classId('Samurai (F)') }], sPartner: RYOMA },
+        [RYOMA]: { skills: [null, null, null, null, null], reclasses: [], sPartner: CORRIN_F },
+      },
+    }
+  }
 
   it('reads an old export as both genders\' data', () => {
     const json = JSON.stringify({ schema: 4, runs: [legacyRun()], activeRunId: 'old' })
@@ -102,5 +108,7 @@ describe('schema 4 migration', () => {
     const migrated = migratePlanDocument({ schema: 4, run: legacyRun() }) as { schema: number; run: RunPlan }
     expect(migrated.schema).toBe(PLAN_SCHEMA)
     expect(migrated.run.corrin.builds.male.boon).toBe('mag')
+    expect(migrated.run.dlcs).toEqual([...DEFAULT_DLC_IDS, 'hoshidan-festival', 'nohrian-festival'])
+    expect(migrated.run).not.toHaveProperty('festivalDlc')
   })
 })

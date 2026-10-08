@@ -1,4 +1,5 @@
 import type { Dataset, RecruitmentEntry, Route, StatKey, UnitDef } from '../data/types'
+import { unitDlcOn } from '../data/dlcs'
 import type { RunPlan, UnitPlan } from '../state/model'
 import { childStart } from './childRecruit'
 import { corrinBuild, unitPlanFor } from '../state/model'
@@ -22,7 +23,7 @@ export function armyUnits(dataset: Dataset, run: RunPlan): UnitDef[] {
   const corrin = dataset.units.find((unit) => unit.isCorrin && unit.gender === run.corrin.gender)
   return dataset.units.filter((unit) => {
     if (unit.isCorrin) return unit.id === corrin?.id
-    if (unit.dlc && !run.dlc) return false
+    if (unit.dlc && !unitDlcOn(run, unit.id)) return false
     const fixed = unit.fixedParent ? dataset.unitsById.get(unit.fixedParent) : undefined
     if (fixed?.isCorrin && fixed.id !== corrin?.id) return false
     return unit.routes.includes(run.route)

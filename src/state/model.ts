@@ -1,6 +1,7 @@
+import { DEFAULT_DLC_IDS } from '../data/dlcs'
 import type { Route, StatKey } from '../data/types'
 
-export const PLAN_SCHEMA = 5 as const
+export const PLAN_SCHEMA = 6 as const
 
 // Kept from schema 4 so saved plans migrate in place (store.ts › migrate).
 export const PLAN_STORAGE_KEY = 'fates-expanded-planner:plans:v4'
@@ -87,9 +88,8 @@ export interface RunPlan {
   name: string
   modpackId: string
   mods?: string[]
-  dlc: boolean
-  /** Japan's Festival of Bonds DLC maps: Hero's and Exalt's Brand become repeatable (no per-save limit). */
-  festivalDlc?: boolean
+  /** Enabled content DLC ids (data/dlcs.ts); everything else is off for this run. */
+  dlcs: string[]
   route: Route
   corrin: CorrinPlan
   favourites: string[]
@@ -108,8 +108,7 @@ export interface RunPatch {
   name?: string
   modpackId?: string
   mods?: string[]
-  dlc?: boolean
-  festivalDlc?: boolean
+  dlcs?: string[]
   route?: Route
   corrin?: CorrinPlan
 }
@@ -128,7 +127,7 @@ export function emptyRun(id = createId()): RunPlan {
     id,
     name: 'New run',
     modpackId: 'ugf-2.5.2',
-    dlc: true,
+    dlcs: [...DEFAULT_DLC_IDS],
     route: 'conquest',
     corrin: { gender: 'female', builds: { male: defaultCorrinBuild(), female: defaultCorrinBuild() } },
     favourites: [],

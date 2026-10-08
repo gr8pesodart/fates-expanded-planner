@@ -111,6 +111,14 @@ hooks and never import stores or fixtures). Replace: tokens, `base.css`/`compone
   Profile and stored in runs; Roster notes visibility toggle; Chart tabs replaced with a persisted
   information sheet grouped into Favourites and Stats; Chart Sort gained Favourites only. Screenshot
   journey checks note expansion, reload persistence and the Chart filter.
+  Round 11 (2026-10-08): the DLC toggles are their own category on the Runs page and New Run - one
+  Switch per content-providing DLC map (Anna on the Run, Before Awakening, Royal Royale, Hidden
+  Truths, Vanguard Dawn, Ballistician Blitz, A Gift from Anna, Witches' Trial, Another Gift From
+  Anna, Heirs of Fate I-V, End: Lost in the Waves, plus the two Japan-only Festival of Bonds maps),
+  grouped Map Pack 1 / Map Pack 2 / Japan-only. Each toggle gates what its map hands out (units,
+  class-change items and so their classes, skill books) through a sourced catalog
+  (`src/data/dlcs.ts`, DATA.md › DLC catalog); the experience/gold/illustration/weapon maps get no
+  toggle. Schema 6: `RunPlan.dlc` + `festivalDlc` became the `RunPlan.dlcs` id list (migrated).
 
 ### Backlog
 

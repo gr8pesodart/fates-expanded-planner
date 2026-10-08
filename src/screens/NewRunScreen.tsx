@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Switch } from '../components/controls'
+import { DlcChecklist } from '../components/DlcChecklist'
 import { Icon } from '../components/icons'
 import { ModChecklist } from '../components/ModChecklist'
 import { ROUTES } from '../data/types'
@@ -17,7 +17,7 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
   const [step, setStep] = useState(0)
   const update = setDraft
   const finish = () => {
-    createRun({ name: draft.name.trim() || 'New run', modpackId: draft.modpackId, mods: draft.mods, dlc: draft.dlc, festivalDlc: draft.festivalDlc, route: draft.route, corrin: draft.corrin })
+    createRun({ name: draft.name.trim() || 'New run', modpackId: draft.modpackId, mods: draft.mods, dlcs: draft.dlcs, route: draft.route, corrin: draft.corrin })
     navigate({ name: 'roster' }, { replace: true })
   }
   return (
@@ -61,20 +61,7 @@ export function NewRunScreen({ first = false }: { first?: boolean }) {
                 </button>
               ))}
             </div>
-            <label className="switch-row">
-              <span>
-                <span className="sub-title">DLC</span>
-                <span className="muted block">DLC classes, skills and Anna</span>
-              </span>
-              <Switch checked={draft.dlc} onChange={(dlc) => update({ ...draft, dlc })} />
-            </label>
-            <label className="switch-row">
-              <span>
-                <span className="sub-title">Festival of Bonds DLC</span>
-                <span className="muted block">Japan's festival maps: unlimited Hero's and Exalt's Brands</span>
-              </span>
-              <Switch checked={Boolean(draft.dlc && draft.festivalDlc)} disabled={!draft.dlc} onChange={(festivalDlc) => update({ ...draft, festivalDlc })} />
-            </label>
+            <DlcChecklist value={draft.dlcs} onChange={(dlcs) => update({ ...draft, dlcs })} />
           </>
         ) : null}
 

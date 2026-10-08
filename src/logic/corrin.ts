@@ -38,9 +38,10 @@ function validBonds(dataset: Dataset, unit: UnitDef, plan: UnitPlan): UnitPlan {
 }
 
 /**
- * Finishes the schema 4 → 5 migration: the single old Corrin becomes both Corrins. The other
- * gender's Corrin and Kana get copies of the active plans (classes re-sexed, bonds they can't hold
- * dropped); their remaining bonds are restored by switchCorrinGender when that gender is chosen.
+ * Finishes the legacy-Corrin part of the schema 4 migration: the single old Corrin becomes both
+ * Corrins. The other gender's Corrin and Kana get copies of the active plans (classes re-sexed, bonds
+ * they can't hold dropped); their remaining bonds are restored by switchCorrinGender when that gender
+ * is chosen.
  */
 export function expandLegacyCorrin(dataset: Dataset, run: RunPlan): RunPlan {
   if (!run.corrin.legacy) return run
