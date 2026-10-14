@@ -65,8 +65,8 @@
 
 .badge.warn {
   max-width: 100%;
-  padding: 1px 2px;
-  font-size: 10px;
+  padding: 1px 4px;
+  font-size: 9px;
   white-space: nowrap;
   background: var(--warn-tint);
   color: var(--warn-ink);
