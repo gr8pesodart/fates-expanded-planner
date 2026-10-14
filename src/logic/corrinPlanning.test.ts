@@ -215,7 +215,7 @@ describe('Corrin support and child classes', () => {
     expect(unitContext(dataset, run, odin.id)!.aPlusPartner).toBeUndefined()
   })
 
-  it('flags A+ options as needing an S rank first unless the unit or the donor is married', () => {
+  it('flags S-capable A+ options as needing an S rank first unless the unit or the donor is married', () => {
     const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
     const odin = byName('Odin')
     const niles = byName('Niles')
@@ -227,6 +227,10 @@ describe('Corrin support and child classes', () => {
     run = marry(run, odin.id)
     expect(flag(run, niles.id)).toBe(false)
     expect(candidatesFor(dataset, run, odin.id, 's').every((choice) => !choice.needsS)).toBe(true)
+    const unflagged = (name: string, donor: string) => candidatesFor(dataset, makeRun(), byName(name).id, 'a').find((choice) => choice.unit.name === donor)!.needsS
+    expect(unflagged('Elise', 'Azura')).toBe(false)
+    expect(unflagged('Odin', 'Dwyer')).toBe(false)
+    expect(unflagged('Elise', 'Effie')).toBe(true)
   })
 
   it('puts current S and A+ partners first in the pair-up picker', () => {

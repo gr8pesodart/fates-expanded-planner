@@ -249,7 +249,7 @@ The current planner therefore does not include inherited support rows in child p
   Sakura at 14 A+ options against 30-32 for everyone else. In game a unit can't reach any A+ until
   it has an S rank, unless the A+ donor is already married; the planner flags it instead
   (`Candidate.needsS`): the A+ picker mutes candidates when neither unit has an S partner and shows a
-  "Needs S first" badge, but they stay selectable and grant their class. A stale pick that fails any
+  "Needs S first" badge, but they stay selectable and grant their class. Only S-capable pairs are flagged: S-locked pairs (age-locked, kin-adjacent, cross-generation) get A+ outright. A stale pick that fails any
   of these grants no class. Pair-up: anyone on the roster (rank only changes the bonus).
 - **Support table verified against the game (2026-10-14)** — `tools/extract/verify_supports.py`
   reads the support table out of the installed `GameData.bin.lz` and diffs it with the pack's

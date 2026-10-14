@@ -75,7 +75,7 @@ export interface Candidate {
   /** Class the Partner/Friendship Seal grants the chooser (S / A+ only). */
   gains: string | null
   rankBadge: 'S' | 'A+' | 'A' | null
-  /** A+ only: in game neither unit has an S rank yet, so the A+ stays closed (still pickable for planning). */
+  /** A+ only: an S-capable pair where neither unit has an S rank yet, so the A+ stays closed (still pickable for planning). */
   needsS: boolean
 }
 
@@ -129,8 +129,10 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
         : kind === 'pair' && run.units[subjectId]?.aPlusPartner === id ? 'A+'
           : kind === 'pair' && run.units[subjectId]?.friendshipPartners?.includes(id) ? 'A'
             : null
-      // A+ opens once the unit has an S rank, or when the donor is already married.
-      const needsS = kind === 'a' && !subject.isCorrin && !bondPartner(run, subjectId, 'sPartner') && !bondPartner(run, id, 'sPartner')
+      // An S-capable pair opens A+ only once the unit has an S rank, or when the donor is already
+      // married. Pairs that can't S (age-locked, cross-generation) get A+ outright.
+      const sCapable = (dataset.edgesByCharacter.get(subjectId) ?? []).some((edge) => edgePartner(edge, subjectId) === id && edge.info.ranks.s !== null)
+      const needsS = kind === 'a' && !subject.isCorrin && sCapable && !bondPartner(run, subjectId, 'sPartner') && !bondPartner(run, id, 'sPartner')
       return [{ unit, name: displayName(unit, run), takenBy: kind === 'a' ? null : takenBy, fast, gains, rankBadge, needsS }]
     })
     .sort((a, b) => {

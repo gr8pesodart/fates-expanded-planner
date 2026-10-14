@@ -128,7 +128,7 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   In game (owner) a unit can't A+ anyone until it has an S rank, unless the donor is already married
   (a UGF code patch); the planner lists every eligible partner but flags unmarried pairs
   (`selectors.ts › Candidate.needsS`: no S partner on either side): muted card + "Needs S first"
-  badge in the A+ picker, still selectable and still granting the class (owner, 2026-10-14). Does
+  badge in the A+ picker, still selectable and still granting the class (owner, 2026-10-14). Only S-capable pairs are flagged; S-locked pairs (age-locked, cross-generation) get A+ without marriage. Does
   not apply to Corrin's A-rank Friendship Seal set (that isn't A+). Pinned in
   `corrinPlanning.test.ts`.
 - **Parent and child are never S partners or Parent B.** UGF leaves the S slot open on Silas x

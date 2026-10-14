@@ -848,6 +848,7 @@
 
 .pick-card {
   display: grid;
+  align-content: start;
   justify-items: center;
   gap: 3px;
   padding: 4px;
@@ -884,6 +885,7 @@
 .pick-badges {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   justify-content: center;
   gap: 3px;
 }
