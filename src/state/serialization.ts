@@ -1,4 +1,5 @@
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
+import { DEFAULT_DLC_IDS, FESTIVAL_DLC_IDS } from '../data/dlcs'
 import { ROUTES, STAT_KEYS } from '../data/types'
 import type { CorrinBuild, PlanDocument, RunPlan } from './model'
 import { PLAN_SCHEMA, SKILL_SLOTS } from './model'
@@ -26,8 +27,8 @@ function isCorrinBuild(value: unknown): value is CorrinBuild {
 
 function isRunPlan(value: unknown): value is RunPlan {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') return false
-  if (typeof value.modpackId !== 'string' || typeof value.dlc !== 'boolean') return false
-  if (value.festivalDlc !== undefined && typeof value.festivalDlc !== 'boolean') return false
+  if (typeof value.modpackId !== 'string') return false
+  if (!Array.isArray(value.dlcs) || !value.dlcs.every((id) => typeof id === 'string')) return false
   if (value.mods !== undefined && (!Array.isArray(value.mods) || !value.mods.every((id) => typeof id === 'string'))) return false
   if (typeof value.route !== 'string' || !ROUTE_IDS.has(value.route)) return false
   if (typeof value.createdAt !== 'string' || typeof value.updatedAt !== 'string') return false
@@ -72,17 +73,29 @@ function isRunPlan(value: unknown): value is RunPlan {
 /**
  * Schema 4 kept one set of Corrin choices. Both genders start from it; the plans themselves are
  * copied across once the dataset is loaded (corrin.ts › expandLegacyCorrin, flagged by `legacy`).
+ * Schema 4 and 5 kept a `dlc` boolean plus `festivalDlc`; those become per-DLC ids (data/dlcs.ts).
  */
 function migrateRun(value: unknown): unknown {
-  if (!isRecord(value) || !isRecord(value.corrin) || 'builds' in value.corrin) return value
-  const { gender, boon, bane, talentClassId, ...rest } = value.corrin
-  const build = { boon, bane, talentClassId }
-  return { ...value, corrin: { ...rest, gender, builds: { male: build, female: { ...build } }, legacy: true } }
+  let run = value
+  if (isRecord(run) && isRecord(run.corrin) && !('builds' in run.corrin)) {
+    const { gender, boon, bane, talentClassId, ...rest } = run.corrin
+    const build = { boon, bane, talentClassId }
+    run = { ...run, corrin: { ...rest, gender, builds: { male: build, female: { ...build } }, legacy: true } }
+  }
+  if (isRecord(run) && !('dlcs' in run)) {
+    const dlcs = run.dlc === false ? [] : [...DEFAULT_DLC_IDS]
+    if (run.festivalDlc === true) dlcs.push(...FESTIVAL_DLC_IDS)
+    const rest = { ...run }
+    delete rest.dlc
+    delete rest.festivalDlc
+    run = { ...rest, dlcs }
+  }
+  return run
 }
 
-/** Upgrades a schema 4 document (or share payload) to the current schema; anything else is returned unchanged. */
+/** Upgrades a schema 4 or 5 document (or share payload) to the current schema; anything else is returned unchanged. */
 export function migratePlanDocument(value: unknown): unknown {
-  if (!isRecord(value) || value.schema !== 4) return value
+  if (!isRecord(value) || (value.schema !== 4 && value.schema !== 5)) return value
   return {
     ...value,
     schema: PLAN_SCHEMA,

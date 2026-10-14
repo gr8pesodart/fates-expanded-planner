@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { decodeSharedRun, encodeSharedRun, parsePlanDocument, serializePlanDocument } from './serialization'
+import { decodeSharedRun, encodeSharedRun, migratePlanDocument, parsePlanDocument, serializePlanDocument } from './serialization'
+import { DEFAULT_DLC_IDS } from '../data/dlcs'
 import { emptyRun, emptyUnitPlan, PLAN_SCHEMA } from './model'
-import type { PlanDocument } from './model'
+import type { PlanDocument, RunPlan } from './model'
 import { parseHash } from '../lib/router'
 import { shareUrlForRun } from './serialization'
 
@@ -42,6 +43,39 @@ describe('plan serialization', () => {
   it('rejects unsupported and malformed exports', () => {
     expect(() => parsePlanDocument('{')).toThrow('valid JSON')
     expect(() => parsePlanDocument('{"schema":1,"runs":[],"activeRunId":""}')).toThrow(`schema ${PLAN_SCHEMA}`)
+  })
+})
+
+describe('schema 5 migration', () => {
+  // The old run shape: a `dlc` boolean plus the optional Festival of Bonds switch.
+  const schema5Run = (dlc: boolean, festivalDlc?: boolean) => {
+    const run = { ...emptyRun('old'), dlc, ...(festivalDlc === undefined ? {} : { festivalDlc }) } as Record<string, unknown>
+    delete run.dlcs
+    return run
+  }
+
+  it('replaces the DLC switch with per-DLC ids', () => {
+    const on = parsePlanDocument(JSON.stringify({ schema: 5, runs: [schema5Run(true)], activeRunId: 'old' }))
+    expect(on.schema).toBe(PLAN_SCHEMA)
+    expect(on.runs[0].dlcs).toEqual([...DEFAULT_DLC_IDS])
+    expect(on.runs[0]).not.toHaveProperty('dlc')
+
+    const off = parsePlanDocument(JSON.stringify({ schema: 5, runs: [schema5Run(false)], activeRunId: 'old' }))
+    expect(off.runs[0].dlcs).toEqual([])
+  })
+
+  it('turns the Festival of Bonds switch into both festival maps', () => {
+    const festival = parsePlanDocument(JSON.stringify({ schema: 5, runs: [schema5Run(true, true)], activeRunId: 'old' }))
+    expect(festival.runs[0].dlcs).toEqual([...DEFAULT_DLC_IDS, 'hoshidan-festival', 'nohrian-festival'])
+
+    const muted = parsePlanDocument(JSON.stringify({ schema: 5, runs: [schema5Run(true, false)], activeRunId: 'old' }))
+    expect(muted.runs[0].dlcs).toEqual([...DEFAULT_DLC_IDS])
+  })
+
+  it('migrates share payloads too', () => {
+    const migrated = migratePlanDocument({ schema: 5, run: schema5Run(false) }) as { schema: number; run: RunPlan }
+    expect(migrated.schema).toBe(PLAN_SCHEMA)
+    expect(migrated.run.dlcs).toEqual([])
   })
 })
 

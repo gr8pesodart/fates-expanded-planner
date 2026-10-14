@@ -61,10 +61,13 @@ A short, friendly first-run flow (also reachable later from the header).
 - **Modpack** — select the build (e.g. *Vanilla*, *Unofficial Gay Fates 2.5.2*). Determines the
   support graph (who can S/A+, marriage vs platonic, support speed) and any stat/class changes.
   Switching a modpack on an existing run warns about pairings that become invalid and lists them.
-- **DLC** — toggle on/off. Affects: DLC classes (Dread Fighter, Dark Falcon, Ballistician, Witch,
-  Lodestar, Vanguard, Great Lord, Grandmaster — verify against the class table), DLC-only units
-  (Anna; verify others), DLC seals/items that gate those classes, and DLC skills. Off = hide them from
-  every pool; plans that use them show a warning chip instead of silently breaking.
+- **DLC** — one toggle per content-providing DLC map (v3.5): Anna on the Run (Anna), the class-item
+  maps (Dread Fighter, Dark Falcon, Ballistician, Witch, Lodestar, Vanguard, Great Lord, Grandmaster),
+  the skill-book maps (Heirs of Fate, End: Lost in the Waves, the Gift maps) and the Japan-only
+  festival maps. Each gates what its map hands out: units, class-change items and so their classes,
+  and skill books. Off = hide them from every pool; plans that use them show a warning chip instead of
+  silently breaking. Experience/gold/illustration/weapon maps add nothing to plan with and have no
+  toggle.
 - **Route** — Birthright / Conquest / Revelation. Filters unit availability (route availability must be
   extracted or curated with sources) and personal-skill-per-route where it differs.
 - **Run** — name it; multiple runs with a quick switcher; duplicate / delete / export / import / share.

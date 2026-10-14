@@ -28,7 +28,7 @@ const demoRun = {
   id: 'demo',
   name: 'Revelation — first pass',
   modpackId: 'ugf-2.5.2',
-  dlc: true,
+  dlcs: ['before-awakening', 'royal-royale', 'hidden-truths', 'vanguard-dawn', 'anna-on-the-run', 'ballistician-blitz', 'annas-gift', 'witches-trial', 'another-gift-from-anna', 'heirs-1', 'heirs-2', 'heirs-3', 'heirs-4', 'heirs-5', 'lost-in-the-waves'],
   route: 'revelation',
   corrin: { gender: 'female', builds: { female: { boon: 'spd', bane: 'lck', talentClassId: 34 }, male: { boon: 'spd', bane: 'lck', talentClassId: 33 } } },
   favourites: [CORRIN, ANNA],
@@ -47,7 +47,7 @@ const demoRun = {
   createdAt: now,
   updatedAt: now,
 }
-const seeded = JSON.stringify({ state: { schema: 5, runs: [demoRun], activeRunId: 'demo', onboarded: true }, version: 5 })
+const seeded = JSON.stringify({ state: { schema: 6, runs: [demoRun], activeRunId: 'demo', onboarded: true }, version: 6 })
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const hardStop = setTimeout(() => {

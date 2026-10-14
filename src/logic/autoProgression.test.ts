@@ -41,7 +41,7 @@ describe('autoProgression', () => {
 
   it('reports skills no class within reach teaches', () => {
     // Aether is a Great Lord (DLC) skill, so with DLC off nothing in reach teaches it.
-    const run = { ...corrinRun(['Dragon Fang', 'Aether'], 'Nohr Noble (F)'), dlc: false }
+    const run = { ...corrinRun(['Dragon Fang', 'Aether'], 'Nohr Noble (F)'), dlcs: [] }
     const result = autoProgression(dataset, run, unitContext(dataset, run, CORRIN_F)!)
     expect(result.unreachable).toEqual([skillId('Aether')])
     expect(result.plan?.sealCount).toBe(1)
@@ -58,7 +58,7 @@ describe('autoProgression', () => {
 
   it('brings Azura back to Songstress after picking up a Sky Knight skill', () => {
     const azura = dataset.units.find((unit) => unit.name === 'Azura')!
-    const run: RunPlan = { ...emptyRun('t'), dlc: false, units: { [azura.id]: { ...emptyUnitPlan(), skills: slots('Camaraderie'), classId: classId('Songstress') } } }
+    const run: RunPlan = { ...emptyRun('t'), dlcs: [], units: { [azura.id]: { ...emptyUnitPlan(), skills: slots('Camaraderie'), classId: classId('Songstress') } } }
     const ctx = unitContext(dataset, run, azura.id)!
     const result = autoProgression(dataset, run, ctx)
     expect(result.plan?.seals).toEqual({ heart: 2 })
@@ -67,7 +67,7 @@ describe('autoProgression', () => {
 
   it('offers an Eternal Seal when a late recruit has too few levels left (Fuga joining at Lv 18)', () => {
     const fuga = dataset.units.find((unit) => unit.name === 'Fuga')!
-    const base: RunPlan = { ...emptyRun('t'), route: 'revelation', dlc: false }
+    const base: RunPlan = { ...emptyRun('t'), route: 'revelation', dlcs: [] }
     const start = unitContext(dataset, base, fuga.id)!
     const promoted = [...new Set([start.start.classId, ...start.pool.flatMap((entry) => {
       const def = dataset.classesById.get(entry.classId)!
@@ -104,7 +104,7 @@ describe('autoProgression', () => {
     const ctx = unitContext(dataset, run, CORRIN_F)!
     // Dragon Fang is on the path; Vantage has no book; Warp's book stands in.
     expect(skillBooksUsed(run, ctx, new Set([skillId('Dragon Fang')]))).toEqual([skillId('Warp')])
-    expect(skillBooksUsed({ ...run, dlc: false }, ctx, new Set())).toEqual([])
+    expect(skillBooksUsed({ ...run, dlcs: [] }, ctx, new Set())).toEqual([])
   })
 
   it("uses a late-recruited child's Offspring Seal for free, and finds when skipping it fits more", () => {
@@ -182,7 +182,7 @@ describe('autoProgression', () => {
       },
     }
     expect(autoProgression(dataset, run, unitContext(dataset, run, ryoma.id)!).plan).toBeNull()
-    const festival = { ...run, festivalDlc: true }
+    const festival = { ...run, dlcs: [...run.dlcs, 'hoshidan-festival', 'nohrian-festival'] }
     expect(autoProgression(dataset, festival, unitContext(dataset, festival, ryoma.id)!).plan).not.toBeNull()
   })
 })

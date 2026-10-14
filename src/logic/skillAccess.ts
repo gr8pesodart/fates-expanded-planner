@@ -9,19 +9,18 @@ import { classPool, sexedClassId } from './classes'
 import { playableClassIds } from './lenses'
 import { buildProgression, dlcClassesFor } from './progression'
 import { inheritableSkillPool } from './skills'
-import { SKILL_BOOKS } from '../data/itemIcons'
-import { hasUnisexDlcClasses } from '../data/modProfiles'
+import { bookAvailable, SKILL_BOOKS } from '../data/itemIcons'
 
 /**
  * Where a skill stands for one unit, in the order the skill picker lists them:
  *  - progression: learned on the planned class path (or already chosen as an inherited skill)
- *  - available:   a class the unit can take now teaches it, but the plan doesn't reach it - or, with DLC
- *                 on, a skill book teaches it (v3.4; `book`)
+ *  - available:   a class the unit can take now teaches it, but the plan doesn't reach it - or a skill
+ *                 book from an enabled DLC map teaches it (v3.4; `book`)
  *  - inheritable: only inheritance can give it: from a current parent, or from another possible second
  *                 parent when no relationship would teach it (second generation)
  *  - locked:      needs a relationship the plan doesn't have (S, A+ / A, another parent)
  *  - unavailable: nothing in this run gives it (another route, no partner provides it); DLC classes are
- *                 left out entirely while DLC is off
+ *                 left out entirely while their map's toggle is off
  */
 export type SkillGroup = 'progression' | 'available' | 'inheritable' | 'locked' | 'unavailable'
 
@@ -168,25 +167,23 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
   }
 
   // 2. Classes open to the unit right now.
-  const current = [...new Set([ctx.start.classId, ...ctx.pool.map((item) => item.classId), ...(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run)).map((def) => def.id) : [])])]
+  const current = [...new Set([ctx.start.classId, ...ctx.pool.map((item) => item.classId), ...dlcClassesFor(dataset, ctx.unit.gender, run).map((def) => def.id)])]
   for (const classId of current) {
     cls(classId, 'available')
     for (const item of learnset(dataset, classId)) entry(item.id, 'available', classId, item.level)
   }
 
   // 2b. Skill books (DLC items; the installed build's item table, data/itemIcons.json) teach their
-  // skill to anyone, no relationship needed.
-  if (run.dlc) {
-    const books = cls(null, 'available', [])
-    for (const skillId of SKILL_BOOKS) {
-      if (byId.has(skillId)) continue
-      const access = entry(skillId, 'available', null, null)
-      if (!access) continue
-      access.book = true
-      if (books) {
-        books.book = true
-        books.skills.push({ skillId, level: null })
-      }
+  // skill to anyone, no relationship needed - only books whose map is on this run.
+  const books = cls(null, 'available', [])
+  for (const skillId of SKILL_BOOKS) {
+    if (!bookAvailable(run, skillId) || byId.has(skillId)) continue
+    const access = entry(skillId, 'available', null, null)
+    if (!access) continue
+    access.book = true
+    if (books) {
+      books.book = true
+      books.skills.push({ skillId, level: null })
     }
   }
 
@@ -264,9 +261,9 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
     for (const item of inheritableSkillPool(dataset, parent, parentCtx.pool, run.route)) inherited(parent, item.skillId, item.classId, item.level)
   }
 
-  // 5. Everything else no relationship in this run gives, by the class that would teach it. With DLC
-  // off, DLC classes aren't part of the run at all, so they aren't listed.
-  const allowedDlc = new Set(run.dlc ? dlcClassesFor(dataset, ctx.unit.gender, hasUnisexDlcClasses(run)).map((def) => def.id) : [])
+  // 5. Everything else no relationship in this run gives, by the class that would teach it. Classes
+  // whose map's toggle is off aren't part of the run at all, so they aren't listed.
+  const allowedDlc = new Set(dlcClassesFor(dataset, ctx.unit.gender, run).map((def) => def.id))
   for (const id of playableClassIds(dataset)) {
     const classId = sexedClassId(dataset, id, ctx.unit.gender)
     const def = dataset.classesById.get(classId)

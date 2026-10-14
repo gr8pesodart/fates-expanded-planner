@@ -114,6 +114,7 @@ export function selectedModIds(_profileId: string, saved?: readonly string[]): s
   return profile.mods.filter((mod) => mod.required || chosen.has(mod.id)).map((mod) => mod.id)
 }
 
-export function hasUnisexDlcClasses(run: { dlc: boolean; modpackId: string; mods?: readonly string[] }): boolean {
-  return run.dlc && selectedModIds(run.modpackId, run.mods).includes('unisex-dlc-classes')
+/** The run's mod list opens the six opposite-gender DLC jobs (the class's own map still has to be on). */
+export function hasUnisexDlcClasses(run: { modpackId: string; mods?: readonly string[] }): boolean {
+  return selectedModIds(run.modpackId, run.mods).includes('unisex-dlc-classes')
 }

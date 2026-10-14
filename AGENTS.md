@@ -103,9 +103,10 @@ format notes live in docs/ASSETS.md.
   CSS framework. Route accent: set `data-route` on `.app`; use `var(--accent)` tokens.
 - Routing: tiny hash router in `src/lib/router.ts` (v3: `#/roster`, `#/unit/:id/<tab>`, `#/chart`,
   `#/runs`, `#/runs/new`). No router library.
-- Store: `schema: 5` (localStorage key still `fates-expanded-planner:plans:v4`; schema 4 saves, exports and
+- Store: `schema: 6` (localStorage key still `fates-expanded-planner:plans:v4`; schema 4/5 saves, exports and
   share links migrate via `serialization.ts › migratePlanDocument` + `corrin.ts › expandLegacyCorrin`).
-  Corrin's boon/bane/talent are per gender (`run.corrin.builds`). S and pair-up writes are
+  Corrin's boon/bane/talent are per gender (`run.corrin.builds`). A run's DLC maps are per-map toggles
+  (`run.dlcs`, catalog in `src/data/dlcs.ts` - one per content-providing DLC; exp/gold/vanity maps get none). S and pair-up writes are
   symmetric; A+ is one-way; Corrin's A ranks are a set (`friendshipPartners`). Owned by
   `src/logic/relationships.ts`.
 - Assets: `Sprite`/`AssetImage` resolves `kind` + game id through `src/data/assets.json`; missing
