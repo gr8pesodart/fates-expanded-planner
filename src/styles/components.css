@@ -64,6 +64,9 @@
 }
 
 .badge.warn {
+  max-width: 100%;
+  padding: 1px 2px;
+  font-size: 10px;
   white-space: nowrap;
   background: var(--warn-tint);
   color: var(--warn-ink);
@@ -848,6 +851,8 @@
 
 .pick-card {
   display: grid;
+  width: 100%;
+  min-width: 0;
   align-content: start;
   justify-items: center;
   gap: 3px;
