@@ -1,4 +1,4 @@
-import type { Dataset, RecruitmentEntry, Route, StatKey, UnitDef } from '../data/types'
+import type { Dataset, DatasetEdge, RecruitmentEntry, Route, StatKey, UnitDef } from '../data/types'
 import { unitDlcOn } from '../data/dlcs'
 import type { RunPlan, UnitPlan } from '../state/model'
 import { childStart } from './childRecruit'
@@ -35,22 +35,36 @@ function isParentOf(dataset: Dataset, run: RunPlan, parent: UnitDef, child: Unit
   return child.fixedParent === parent.id || variableParentOf(dataset, run, child.id) === parent.id
 }
 
+/** UGF stores family (siblings and the like) as the fast support type with the 4th rank locked. */
+function isKinEdge(edge: DatasetEdge): boolean {
+  return edge.info.fast && edge.info.ranks.s === null
+}
+
+function edgeBetween(dataset: Dataset, a: string, b: string): DatasetEdge | undefined {
+  return (dataset.edgesByCharacter.get(a) ?? []).find((edge) => edge.a === b || edge.b === b)
+}
+
+/** Children of siblings: UGF locks their pair like family (Shiro x Kiragi, Siegbert x Forrest). */
+function areCousins(dataset: Dataset, a: UnitDef, b: UnitDef): boolean {
+  if (!a.fixedParent || !b.fixedParent) return false
+  const link = edgeBetween(dataset, a.fixedParent, b.fixedParent)
+  return link !== undefined && isKinEdge(link)
+}
+
 /**
- * Whether `unit` can take `donor` as its A+ partner. Within a generation the game stores one
- * 4th-rank threshold per pair and reads it as A+ for same-gender pairs (S otherwise); a locked 4th
- * rank caps the pair at A, which is why siblings never reach A+. Across generations UGF locks that
- * rank on every edge yet still offers A+ ("WAY more A+ options ... thanks to the addition of
- * cross-gen supports", UGF FAQ; confirmed in game), so there only the A rank is required. A child
- * may A+ a first-gen unit its parent could have married, just not an actual parent. Owner rules on
+ * Whether `unit` can take `donor` as its A+ partner: any same-gender pair with an A rank that
+ * isn't family. UGF FAQ: "If two units of the same gender don't have an S support, they will
+ * instead have an A+", so age/lore-locked pairs (Elise with most of the older cast) and every
+ * first-gen x child pair qualify as well as S-capable ones; siblings (fast type, S locked),
+ * cousins and a child's actual parents (fixed or chosen second parent) never do. Owner rules on
  * top: never the unit's S partner, Corrin neither gives nor takes A+.
  */
 export function aPlusEligible(dataset: Dataset, run: RunPlan, unit: UnitDef, donor: UnitDef | undefined, sPartnerId: string | undefined): donor is UnitDef {
   if (!donor || donor.id === unit.id || unit.isCorrin || donor.isCorrin) return false
   if (donor.gender !== unit.gender || donor.id === sPartnerId) return false
   if (isParentOf(dataset, run, donor, unit) || isParentOf(dataset, run, unit, donor)) return false
-  const crossGeneration = (unit.fixedParent === null) !== (donor.fixedParent === null)
-  return (dataset.edgesByCharacter.get(unit.id) ?? []).some((edge) =>
-    (edge.a === donor.id || edge.b === donor.id) && edge.info.ranks.a !== null && (crossGeneration || edge.info.ranks.s !== null))
+  const edge = edgeBetween(dataset, unit.id, donor.id)
+  return edge !== undefined && edge.info.ranks.a !== null && !isKinEdge(edge) && !areCousins(dataset, unit, donor)
 }
 
 /** Corrin goes by the run's chosen name (default "Corrin"); everyone else drops the (M)/(F) tag. */

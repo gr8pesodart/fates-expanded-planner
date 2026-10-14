@@ -122,7 +122,7 @@ describe('Corrin support and child classes', () => {
     expect(choices.every((choice) => choice.unit.gender === corrin.gender)).toBe(true)
   })
 
-  it('offers A+ to same-gender pairs with an open 4th rank, not siblings', () => {
+  it('offers A+ to same-gender S-capable pairs, not siblings', () => {
     const run = makeRun()
     const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
     const names = (name: string) => candidatesFor(dataset, run, byName(name).id, 'a').map((choice) => choice.unit.name)
@@ -160,6 +160,41 @@ describe('Corrin support and child classes', () => {
     expect(children.every((choice) => choice.unit.gender === shiro.gender)).toBe(true)
     expect(firstGen.map((choice) => choice.unit.id)).not.toContain(shiro.id)
     expect(children.map((choice) => choice.unit.id)).not.toContain(ryoma.id)
+  })
+
+  it('offers Elise A+ with age-locked first-gen pairs, but never with siblings', () => {
+    const run = makeRun()
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const elise = byName('Elise')
+    const names = candidatesFor(dataset, run, elise.id, 'a').map((choice) => choice.unit.name)
+    expect(names).toEqual(expect.arrayContaining(['Azura', 'Hinoka', 'Reina', 'Scarlet', 'Effie', 'Sakura', 'Soleil']))
+    expect(names).not.toContain('Camilla')
+    expect(names.length).toBeGreaterThan(25)
+    const s = candidatesFor(dataset, run, elise.id, 's').map((choice) => choice.unit.name)
+    expect(s).toEqual(expect.arrayContaining(['Arthur', 'Hayato', 'Niles']))
+    expect(s).not.toContain('Hinoka')
+  })
+
+  it('keeps cousins and sibling-like kin out of A+', () => {
+    const run = makeRun()
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const ids = (name: string) => candidatesFor(dataset, run, byName(name).id, 'a').map((choice) => choice.unit.name)
+    expect(ids('Shiro')).not.toContain('Kiragi')
+    expect(ids('Siegbert')).not.toContain('Forrest')
+    expect(ids('Felicia')).not.toContain('Flora')
+    expect(ids('Saizo')).not.toContain('Kaze')
+    expect(ids('Gunter')).not.toContain('Jakob')
+  })
+
+  it('never lets a parent and child be S partners or Parent B', () => {
+    const run = makeRun()
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const names = (unit: string, kind: 's' | 'parent') => candidatesFor(dataset, run, byName(unit).id, kind).map((choice) => choice.unit.name)
+    expect(names('Silas', 's')).not.toContain('Sophie')
+    expect(names('Sophie', 's')).not.toContain('Silas')
+    expect(names('Sophie', 'parent')).not.toContain('Sophie')
+    expect(names('Ignatius', 'parent')).not.toContain('Ignatius')
+    expect(names('Midori', 's')).not.toContain('Kaze')
   })
 
   it('lets a child A+ a first-gen unit its parent could have married, until they are the chosen parent', () => {

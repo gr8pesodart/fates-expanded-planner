@@ -69,12 +69,15 @@ async function loadUgfPack(): Promise<Dataset> {
   const classes = (classesModule.default as unknown as { classes: ClassDef[] }).classes
   const skills = (skillsModule.default as unknown as { skills: SkillDef[] }).skills
 
-  const edges: DatasetEdge[] = tuples.map(([a, b, raw]) => ({
-    a: characters[a].id,
-    b: characters[b].id,
-    raw,
-    info: decodeSupportType(raw),
-  }))
+  // UGF leaves the S slot open on four parent/child pairs (Silas x Sophie, Kaze x Midori, Subaki x
+  // Caeldori, Benny x Ignatius); a parent is never a spouse, so lock them like every other child edge.
+  const parentPairs = new Set(units.flatMap((unit) => (unit.fixedParent ? [`${unit.id}|${unit.fixedParent}`, `${unit.fixedParent}|${unit.id}`] : [])))
+  const edges: DatasetEdge[] = tuples.map(([a, b, packed]) => {
+    const left = characters[a].id
+    const right = characters[b].id
+    const raw = parentPairs.has(`${left}|${right}`) ? (packed | 0xff000000) >>> 0 : packed
+    return { a: left, b: right, raw, info: decodeSupportType(raw) }
+  })
 
   return {
     meta,

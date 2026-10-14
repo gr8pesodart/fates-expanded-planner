@@ -61,7 +61,10 @@ describe('skillAccess', () => {
     const run: RunPlan = { ...emptyRun('t'), route: 'revelation' }
     const sakura = dataset.units.find((unit) => unit.name === 'Sakura')!
     const lunge = skillAccess(dataset, run, unitContext(dataset, run, sakura.id)!).byId.get(skillId('Lunge'))
-    expect(lunge?.group).toBe('unavailable')
+    // Only single-donor A+ routes (Camilla, Beruka); no S route and no combination of two seals.
+    expect(lunge?.group).toBe('locked')
+    expect(lunge?.viaA.map((unit) => unit.name).sort()).toEqual(['Beruka', 'Camilla'])
+    expect(lunge?.viaS).toEqual([])
   })
 
   it('lists Corrin’s seal classes from each donor independently', () => {

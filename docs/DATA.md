@@ -14,7 +14,7 @@ and what is still open.
 | Skills (229: names, in-game descriptions, icon index, DLC-only flag) | ✅ `skills.json` |
 | Child rules (fixed parents, growth averaging, cap-mod combination, class inheritance) | ✅ in `src/logic/` |
 | Pair-up bonuses (class bonuses + per-unit C/B/A/S support bonuses) | ✅ in the packs (rule sourced below) |
-| A+ (friendship) exact partner tables | ⚠️ derived (same-gender edges: open 4th rank within a generation, any A-rank edge across generations; never an actual parent or child; one-way choice) |
+| A+ (friendship) exact partner tables | ⚠️ derived (same-gender edges with an A rank, minus kin and actual parents; one-way choice) |
 | Current support rank in the saved plan | ⚠️ final S/A+ decisions only; pair-up assumes C when neither is selected |
 | Assets (class sprites, skill icons, face icons) | ✅ `public/assets/` + `src/data/assets.json` (docs/ASSETS.md) |
 
@@ -231,25 +231,30 @@ The current planner therefore does not include inherited support rows in child p
   the active Corrin / Kana. Schema 4 saves migrate by copying the old single Corrin onto both
   genders (classes re-sexed; bonds the other gender can't hold dropped) — `expandLegacyCorrin`,
   run once the dataset is loaded.
-- **Candidates** — S / Parent B: romantic edges of the subject in the build's graph. A+
-  (`army.ts › aPlusEligible`): **same gender**, edge with an **open 4th rank** (the game reads a
-  pair's 4th rank as A+ for same-gender pairs and S otherwise; a locked 4th rank — siblings — caps
-  at A), **not the unit's S partner** (owner ruling 2026-10-01), never Corrin. **Cross-generation
-  (2026-10-14, owner report + UGF FAQ)**: every first-gen x child edge has its 4th rank locked
-  (0xFF) in the pack, so the open-4th-rank test would hide them all, but the FAQ says "There are
-  WAY more A+ options in UGF than there are in the base game thanks to the addition of cross-gen
-  supports" (https://unofficialgayfatesaddon.tumblr.com/faq) and the original Gay Fates patch notes
-  say it added 100+ supports "to give characters A+ supports again - this time between the first and
-  second generation". So across generations only the A rank is required. A child may A+ a first-gen unit its parent could have
-  married (confirmed in game, owner 2026-10-14: Odin can A+ Effie!Dwyer); the only exclusion is an
-  actual parent (the child's fixed parent or chosen second parent). S-locked same-generation pairs
-  (siblings, age/lore platonics) stay capped at A: UGF makes every same-sex same-generation pair
-  S-capable, so "can't S means A+" is a circumstantial rule, not a general one. In game a unit
-  can't reach any A+ until it has an S rank, unless the A+ donor is already married; the planner
-  flags it instead (v3.4, `Candidate.needsS`): the A+ picker mutes
-  candidates when neither unit has an S partner and shows a "Needs S first" badge, but they stay
-  selectable and grant their class. A stale pick that fails any of these grants no class. Pair-up: anyone
-  on the roster (rank only changes the bonus).
+- **Candidates** — S / Parent B: romantic edges of the subject in the build's graph, except
+  parent/child pairs (the loader locks the four S-open ones, Silas x Sophie, Kaze x Midori, Subaki x
+  Caeldori, Benny x Ignatius, so a parent is never a spouse or Parent B). A+
+  (`army.ts › aPlusEligible`, rewritten 2026-10-14): **same gender**, an edge with an **A rank**,
+  **not kin**, **not the unit's S partner** (owner ruling 2026-10-01), never Corrin. UGF FAQ
+  (https://unofficialgayfatesaddon.tumblr.com/faq): "If two units of the same gender don't have an
+  S support, they will instead have an A+"; Elise, Hayato and Sakura (age-locked from the older cast)
+  "still have mostly A+ options"; and "There are WAY more A+ options in UGF than there are in the
+  base game thanks to the addition of cross-gen supports" (every first-gen x child edge has its S
+  slot locked, yet A+ works there in game). So S-open and S-locked same-gender pairs both qualify,
+  within and across generations. **Kin never qualify**: fast + S-locked edges (siblings, Felicia x
+  Flora, Saizo x Kaze, Gunter x Jakob), cousin children (fixed parents linked by such an edge:
+  Shiro x Kiragi, Siegbert x Forrest) and a child's actual parents (fixed or chosen second parent).
+  A child may A+ a first-gen unit its parent *could* have married (owner, in game: Odin x
+  Effie!Dwyer). Before 2026-10-14 the rule required an open 4th rank, which left Elise, Hayato and
+  Sakura at 14 A+ options against 30-32 for everyone else. In game a unit can't reach any A+ until
+  it has an S rank, unless the A+ donor is already married; the planner flags it instead
+  (`Candidate.needsS`): the A+ picker mutes candidates when neither unit has an S partner and shows a
+  "Needs S first" badge, but they stay selectable and grant their class. A stale pick that fails any
+  of these grants no class. Pair-up: anyone on the roster (rank only changes the bonus).
+- **Support table verified against the game (2026-10-14)** — `tools/extract/verify_supports.py`
+  reads the support table out of the installed `GameData.bin.lz` and diffs it with the pack's
+  Paragon source: 0 differences, symmetric. Elise's 18 S options (16 Sakura, 18 Hayato) are what the
+  game table holds, not an extraction gap.
 - **Pair-up rank** — S between spouses, otherwise the highest non-S rank the edge allows (A+ pairs
   fight at A); no edge → class bonus only.
 - **Lenses** — "Stat Modifiers" = personal cap mods (+ boon/bane, child rule); pair-up lenses and
@@ -502,13 +507,11 @@ Open questions (see also docs/REFERENCES.md):
 2. **Same-sex children.** UGF grants same-sex S supports; the planner allows any romantic partner
    as a second parent. Verify in-game whether same-sex couples recruit children, and narrow the
    candidate list if not.
-3. **A+ partners — resolved (2026-10-01).** Same-sex pairs that can reach S can also reach A+:
-   UGF code-patches the support menu to reveal A+ once an S rank has been chosen (owner, from
-   in-game play); in practice a unit can't A+ anyone until it has an S rank, unless the donor is
-   already married. The planner lists every eligible partner but mutes unmarried pairs with a
-   "Needs S first" badge (2026-10-14); they stay selectable:
-   same-gender edges (open 4th rank within a generation; across generations any A-rank edge), never an
-   actual parent or child, minus the unit's S partner, stored one-way.
+3. **A+ partners — resolved (2026-10-01, rewritten 2026-10-14).** UGF code-patches the support menu
+   so a unit can't A+ anyone until it has an S rank, unless the donor is already married (owner, from
+   in-game play). The planner lists every eligible partner but mutes unmarried pairs with a
+   "Needs S first" badge; they stay selectable. Eligibility: same-gender, A rank, not kin, not the
+   S partner, not an actual parent or child; see Candidates above.
 4. **Child pair-up bonuses — resolved (v3.2).** Children's rows are empty in the table; they take
    the father's C and A rows and the mother's B and S rows (Serenes Forest › Pair-Up Stats: "Any |
    Father's C | Mother's B | Father's A | Mother's S"), except Shigure and male Kana, who take C/A

@@ -114,25 +114,30 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
 
 - **A+ is one-way** ("unlike other supports, they are not mutual" — Fire Emblem Wiki › Support).
   S and pair-up are mutual and exclusive.
-- **A+ eligibility is `army.ts › aPlusEligible`** — used by both the picker (`candidatesFor`) and
-  `unitContext` (a stale pick that fails it grants no class). Rules: **same gender** and an edge
-  whose **4th rank is open** — the game stores one 4th-rank threshold per pair and reads it as A+
-  for same-gender pairs, S otherwise; `0xFF` (siblings, characters UGF caps at A) stops at A.
-  **Do not use "platonic" (S locked) edges for A+** — that was the pre-2026-10-01 bug: in UGF
-  almost every same-generation pair is S-capable and almost every S-locked edge is cross-generation,
-  so combined with the generation rule it left children with no A+ options at all.
-  Owner rulings on top: **never the unit's S partner** (2026-10-01). **Cross-generation A+ is
-  allowed (2026-10-14, confirmed in game)**: UGF's FAQ says cross-gen supports add many A+ options,
-  but the pack locks the 4th rank on every first-gen x child edge, so across generations
-  `aPlusEligible(dataset, run, ...)` needs only an open A rank. A child may A+ a first-gen unit its
-  parent could have married (Odin x Effie!Dwyer works); only an **actual** parent (fixed or chosen
-  second parent, via `isParentOf`) is excluded. Within a generation the open-4th-rank rule still
-  applies; S-locked same-generation pairs stay at A. In game (owner) a unit can't A+ anyone until it
-  has an S rank, unless the donor is already married (a UGF code patch, owner 2026-10-01); the
-  planner lists every eligible partner but flags unmarried pairs (`selectors.ts › Candidate.needsS`: no S
-  partner on either side): muted card + "Needs S first" badge in the A+ picker, still selectable and
-  still granting the class (owner, 2026-10-14). Does not apply to Corrin's A-rank Friendship
-  Seal set (that isn't A+). Pinned in `corrinPlanning.test.ts`.
+- **A+ eligibility is `army.ts › aPlusEligible(dataset, run, ...)`** — used by the picker
+  (`candidatesFor`), `unitContext` (a stale pick that fails it grants no class), `skillAccess` and
+  the audit. Rule (rewritten 2026-10-14): **same gender**, an edge with an **A rank**, **not kin**,
+  **never the unit's S partner** (owner, 2026-10-01), never Corrin. UGF FAQ: same-gender units
+  without an S support get A+ instead (Elise/Hayato/Sakura "still have mostly A+ options"; cross-gen
+  supports add many A+ options), so S-open and S-locked pairs both qualify, within or across
+  generations. **Kin** = fast + S-locked edge (siblings, Felicia x Flora, Saizo x Kaze, Gunter x
+  Jakob), cousin children (`areCousins`: fixed parents linked by a kin edge) and a child's actual
+  parents (`isParentOf`: fixed or chosen second parent). A child may A+ a first-gen unit its parent
+  could have married (owner, in game: Odin x Effie!Dwyer). **Do not go back to "open 4th rank
+  required"**: it left Elise, Hayato and Sakura at 14 A+ options against 30-32 for everyone else.
+  In game (owner) a unit can't A+ anyone until it has an S rank, unless the donor is already married
+  (a UGF code patch); the planner lists every eligible partner but flags unmarried pairs
+  (`selectors.ts › Candidate.needsS`: no S partner on either side): muted card + "Needs S first"
+  badge in the A+ picker, still selectable and still granting the class (owner, 2026-10-14). Does
+  not apply to Corrin's A-rank Friendship Seal set (that isn't A+). Pinned in
+  `corrinPlanning.test.ts`.
+- **Parent and child are never S partners or Parent B.** UGF leaves the S slot open on Silas x
+  Sophie, Kaze x Midori, Subaki x Caeldori and Benny x Ignatius; `data/loader.ts` locks every
+  fixed-parent/child edge. Kana's Parent B list full of children is intended (Corrin can marry
+  them).
+- **The support pack matches the game.** `tools/extract/verify_supports.py` diffs the Paragon-sourced
+  pack against the support table inside the installed GameData (layout in its docstring): 0
+  differences. Elise/Hayato/Sakura's small S lists (18/18/16) are the mod's age lock, not a bug.
 - **Corrin cannot give or take A+.** Corrin can Friendship Seal with **any same-gender A-rank
   partner**; the plan stores the ones the player intends to reach (`UnitPlan.friendshipPartners`,
   toggled via `toggleFriendshipPartner`; UI: Corrin's "A Rank" multi-select). Corrin's S partner is
