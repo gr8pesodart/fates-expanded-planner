@@ -92,6 +92,8 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
             key={item.unit.id}
             type="button"
             className="pick-card"
+            data-muted={item.needsS || undefined}
+            title={item.needsS ? `In game, A+ only opens once ${ownerName} has an S rank, or if ${item.name} is already married.` : undefined}
             aria-pressed={isPicked(item.unit.id)}
             onClick={() => pick(item.unit.id)}
           >
@@ -101,6 +103,7 @@ function CharacterPicker({ unitId, kind, onClose }: { unitId: string; kind: Slot
             <span className="pick-badges">
               {item.rankBadge ? <span className="badge rank-badge">{item.rankBadge} rank</span> : null}
               {item.fast ? <span className="badge">Fast</span> : null}
+              {item.needsS ? <span className="badge warn">Needs S first</span> : null}
               {item.takenBy ? <span className="badge muted">w/ {item.takenBy}</span> : null}
             </span>
           </button>

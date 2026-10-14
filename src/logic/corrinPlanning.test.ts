@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { candidatesFor, recruitIndex } from '../app/selectors'
 import { loadDataset } from '../data/loader'
+import { edgePartner, supportPartners } from '../data/types'
 import type { Dataset } from '../data/types'
 import { emptyRun, withCorrinBuild } from '../state/model'
 import type { RunPlan } from '../state/model'
@@ -146,20 +147,51 @@ describe('Corrin support and child classes', () => {
     expect(unitContext(dataset, run, odin.id)!.aPlusPartner).toBeUndefined()
   })
 
-  it('only shares A+ ranks within a generation (owner rule)', () => {
+  it('offers A+ across generations (UGF cross-gen supports), but never with an actual parent or child', () => {
     const run = makeRun()
-    const ryoma = dataset.units.find((unit) => unit.name === 'Ryoma')!
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const ryoma = byName('Ryoma')
     const shiro = dataset.units.find((unit) => unit.fixedParent === ryoma.id)!
     const firstGen = candidatesFor(dataset, run, ryoma.id, 'a')
     const children = candidatesFor(dataset, run, shiro.id, 'a')
-    expect(firstGen.length).toBeGreaterThan(0)
-    expect(children.length).toBeGreaterThan(0)
-    expect(firstGen.every((choice) => choice.unit.fixedParent === null)).toBe(true)
-    expect(children.every((choice) => choice.unit.fixedParent !== null)).toBe(true)
-    const stale = setBond(run, ryoma.id, 'aPlusPartner', shiro.id)
-    const ctx = unitContext(dataset, stale, ryoma.id)!
-    expect(ctx.aPlusPartner).toBeUndefined()
-    expect(ctx.pool.some((entry) => entry.branch === 'aplus')).toBe(false)
+    expect(firstGen.some((choice) => choice.unit.fixedParent !== null)).toBe(true)
+    expect(children.some((choice) => choice.unit.fixedParent === null)).toBe(true)
+    expect(firstGen.every((choice) => choice.unit.gender === ryoma.gender)).toBe(true)
+    expect(children.every((choice) => choice.unit.gender === shiro.gender)).toBe(true)
+    expect(firstGen.map((choice) => choice.unit.id)).not.toContain(shiro.id)
+    expect(children.map((choice) => choice.unit.id)).not.toContain(ryoma.id)
+  })
+
+  it('lets a child A+ a first-gen unit its parent could have married, until they are the chosen parent', () => {
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const odin = byName('Odin')
+    const dwyer = byName('Dwyer')
+    const jakob = dataset.unitsById.get(dwyer.fixedParent!)!
+    expect(supportPartners(dataset, jakob.id, 'romantic').some((edge) => edgePartner(edge, jakob.id) === odin.id)).toBe(true)
+    const ids = (run: RunPlan, unitId: string) => candidatesFor(dataset, run, unitId, 'a').map((choice) => choice.unit.id)
+    let run = makeRun()
+    expect(ids(run, odin.id)).toContain(dwyer.id)
+    expect(ids(run, dwyer.id)).toContain(odin.id)
+    run = setBond(run, odin.id, 'aPlusPartner', dwyer.id)
+    expect(unitContext(dataset, run, odin.id)!.aPlusPartner?.id).toBe(dwyer.id)
+    run = setBond(run, jakob.id, 'sPartner', odin.id)
+    expect(ids(run, odin.id)).not.toContain(dwyer.id)
+    expect(ids(run, dwyer.id)).not.toContain(odin.id)
+    expect(unitContext(dataset, run, odin.id)!.aPlusPartner).toBeUndefined()
+  })
+
+  it('flags A+ options as needing an S rank first unless the unit or the donor is married', () => {
+    const byName = (name: string) => dataset.units.find((unit) => unit.name === name)!
+    const odin = byName('Odin')
+    const niles = byName('Niles')
+    const flag = (run: RunPlan, donorId: string) => candidatesFor(dataset, run, odin.id, 'a').find((choice) => choice.unit.id === donorId)!.needsS
+    let run = makeRun()
+    expect(flag(run, niles.id)).toBe(true)
+    const marry = (plan: RunPlan, id: string) => setBond(plan, id, 'sPartner', byName('Effie').id)
+    expect(flag(marry(run, niles.id), niles.id)).toBe(false)
+    run = marry(run, odin.id)
+    expect(flag(run, niles.id)).toBe(false)
+    expect(candidatesFor(dataset, run, odin.id, 's').every((choice) => !choice.needsS)).toBe(true)
   })
 
   it('puts current S and A+ partners first in the pair-up picker', () => {

@@ -29,22 +29,27 @@ export function armyUnits(dataset: Dataset, run: RunPlan): UnitDef[] {
   })
 }
 
-/** Both first-generation or both children (owner rule: A+ ranks are only shared within a generation). */
-export function sameGeneration(a: UnitDef, b: UnitDef | undefined): boolean {
-  return b !== undefined && (a.fixedParent === null) === (b.fixedParent === null)
+/** Parent and child, as planned: the child's fixed parent or its chosen second parent. */
+function isParentOf(dataset: Dataset, run: RunPlan, parent: UnitDef, child: UnitDef): boolean {
+  return child.fixedParent === parent.id || variableParentOf(dataset, run, child.id) === parent.id
 }
 
 /**
- * Whether `unit` can take `donor` as its A+ partner. The game stores one 4th-rank threshold per
- * pair and reads it as A+ for same-gender pairs (S otherwise); a locked 4th rank caps the pair at A,
- * which is why siblings never reach A+. Owner rules on top: same generation only, never the unit's
- * S partner, and Corrin neither gives nor takes A+.
+ * Whether `unit` can take `donor` as its A+ partner. Within a generation the game stores one
+ * 4th-rank threshold per pair and reads it as A+ for same-gender pairs (S otherwise); a locked 4th
+ * rank caps the pair at A, which is why siblings never reach A+. Across generations UGF locks that
+ * rank on every edge yet still offers A+ ("WAY more A+ options ... thanks to the addition of
+ * cross-gen supports", UGF FAQ; confirmed in game), so there only the A rank is required. A child
+ * may A+ a first-gen unit its parent could have married, just not an actual parent. Owner rules on
+ * top: never the unit's S partner, Corrin neither gives nor takes A+.
  */
-export function aPlusEligible(dataset: Dataset, unit: UnitDef, donor: UnitDef | undefined, sPartnerId: string | undefined): donor is UnitDef {
+export function aPlusEligible(dataset: Dataset, run: RunPlan, unit: UnitDef, donor: UnitDef | undefined, sPartnerId: string | undefined): donor is UnitDef {
   if (!donor || donor.id === unit.id || unit.isCorrin || donor.isCorrin) return false
-  if (donor.gender !== unit.gender || donor.id === sPartnerId || !sameGeneration(unit, donor)) return false
+  if (donor.gender !== unit.gender || donor.id === sPartnerId) return false
+  if (isParentOf(dataset, run, donor, unit) || isParentOf(dataset, run, unit, donor)) return false
+  const crossGeneration = (unit.fixedParent === null) !== (donor.fixedParent === null)
   return (dataset.edgesByCharacter.get(unit.id) ?? []).some((edge) =>
-    (edge.a === donor.id || edge.b === donor.id) && edge.info.ranks.a !== null && edge.info.ranks.s !== null)
+    (edge.a === donor.id || edge.b === donor.id) && edge.info.ranks.a !== null && (crossGeneration || edge.info.ranks.s !== null))
 }
 
 /** Corrin goes by the run's chosen name (default "Corrin"); everyone else drops the (M)/(F) tag. */
@@ -123,7 +128,7 @@ export function unitContext(dataset: Dataset, run: RunPlan, unitId: string): Uni
   const rosterIds = new Set(armyUnits(dataset, run).map((entry) => entry.id))
   // A stale pick that's no longer eligible (e.g. since married, or off this roster) grants nothing.
   const aPlusCandidate = partner(dataset, plan.aPlusPartner)
-  const aPlusPartner = aPlusCandidate && rosterIds.has(aPlusCandidate.id) && aPlusEligible(dataset, unit, aPlusCandidate, sPartner?.id) ? aPlusCandidate : undefined
+  const aPlusPartner = aPlusCandidate && rosterIds.has(aPlusCandidate.id) && aPlusEligible(dataset, run, unit, aPlusCandidate, sPartner?.id) ? aPlusCandidate : undefined
   const build = corrinBuild(run)
   // Corrin's Friendship Seal partners: the planned ones that are still eligible (same gender, can
   // reach A, on this roster). A gender switch or route change quietly drops the rest.

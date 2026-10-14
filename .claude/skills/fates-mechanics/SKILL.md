@@ -120,10 +120,17 @@ Fandom; GameFAQs/Reddit only as corroboration. Always quote + cite in DATA.md an
   **Do not use "platonic" (S locked) edges for A+** — that was the pre-2026-10-01 bug: in UGF
   almost every same-generation pair is S-capable and almost every S-locked edge is cross-generation,
   so combined with the generation rule it left children with no A+ options at all.
-  Owner rulings on top (2026-10-01): **same generation only** (first-gen with first-gen, children
-  with children), and **never the unit's S partner**. Same-sex S-capable pairs genuinely reach A+
-  in UGF (owner, 2026-10-01: a UGF code patch reveals A+ once an S rank has been chosen); the
-  planner deliberately ignores that ordering and lists every eligible partner as available. Does not apply to Corrin's A-rank Friendship
+  Owner rulings on top: **never the unit's S partner** (2026-10-01). **Cross-generation A+ is
+  allowed (2026-10-14, confirmed in game)**: UGF's FAQ says cross-gen supports add many A+ options,
+  but the pack locks the 4th rank on every first-gen x child edge, so across generations
+  `aPlusEligible(dataset, run, ...)` needs only an open A rank. A child may A+ a first-gen unit its
+  parent could have married (Odin x Effie!Dwyer works); only an **actual** parent (fixed or chosen
+  second parent, via `isParentOf`) is excluded. Within a generation the open-4th-rank rule still
+  applies; S-locked same-generation pairs stay at A. In game (owner) a unit can't A+ anyone until it
+  has an S rank, unless the donor is already married (a UGF code patch, owner 2026-10-01); the
+  planner lists every eligible partner but flags unmarried pairs (`selectors.ts › Candidate.needsS`: no S
+  partner on either side): muted card + "Needs S first" badge in the A+ picker, still selectable and
+  still granting the class (owner, 2026-10-14). Does not apply to Corrin's A-rank Friendship
   Seal set (that isn't A+). Pinned in `corrinPlanning.test.ts`.
 - **Corrin cannot give or take A+.** Corrin can Friendship Seal with **any same-gender A-rank
   partner**; the plan stores the ones the player intends to reach (`UnitPlan.friendshipPartners`,

@@ -217,7 +217,7 @@ function computeSkillAccess(dataset: Dataset, run: RunPlan, ctx: UnitContext, fi
     ...(!filters.a ? [] : ctx.unit.isCorrin
       // Corrin's Friendship Seal: any same-gender A-rank partner who isn't Corrin's spouse.
       ? partners('a-rank').filter((unit) => unit.gender === ctx.unit.gender && unit.id !== ctx.sPartner?.id && !ctx.friendshipPartners.includes(unit))
-      : roster.filter((unit) => unit.id !== ctx.aPlusPartner?.id && aPlusEligible(dataset, ctx.unit, unit, ctx.sPartner?.id))
+      : roster.filter((unit) => unit.id !== ctx.aPlusPartner?.id && aPlusEligible(dataset, run, ctx.unit, unit, ctx.sPartner?.id))
     ).map((unit) => ({ role: 'a' as const, unit })),
   ]
   // With "parent flexible" off, a child whose second parent is chosen only counts that parent.

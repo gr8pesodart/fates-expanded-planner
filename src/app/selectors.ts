@@ -4,6 +4,7 @@ import { edgePartner, supportPartners } from '../data/types'
 import type { UnitContext } from '../logic/army'
 import { aPlusEligible, armyUnits, displayName, recruitmentOf, unitContext } from '../logic/army'
 import { classFamily, classPool } from '../logic/classes'
+import { bondPartner } from '../logic/relationships'
 import type { LensId } from '../logic/lenses'
 import { lensRow } from '../logic/lenses'
 import { expectedFinal } from '../logic/progression'
@@ -74,6 +75,8 @@ export interface Candidate {
   /** Class the Partner/Friendship Seal grants the chooser (S / A+ only). */
   gains: string | null
   rankBadge: 'S' | 'A+' | 'A' | null
+  /** A+ only: in game neither unit has an S rank yet, so the A+ stays closed (still pickable for planning). */
+  needsS: boolean
 }
 
 function sealBranchName(dataset: Dataset, run: RunPlan, owner: UnitDef, donor: UnitDef, kind: 'seal' | 'aplus'): string | null {
@@ -107,7 +110,7 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
       .filter((edge) => {
         if (kind !== 'a') return true
         const id = edgePartner(edge, subjectId)
-        if (!subject.isCorrin) return aPlusEligible(dataset, subject, dataset.unitsById.get(id), run.units[subjectId]?.sPartner)
+        if (!subject.isCorrin) return aPlusEligible(dataset, run, subject, dataset.unitsById.get(id), run.units[subjectId]?.sPartner)
         // Corrin's S partner can't double as an A-rank Friendship Seal partner.
         return dataset.unitsById.get(id)?.gender === subject.gender && run.units[subjectId]?.sPartner !== id
       })
@@ -126,7 +129,9 @@ export function candidatesFor(dataset: Dataset, run: RunPlan, ownerId: string, k
         : kind === 'pair' && run.units[subjectId]?.aPlusPartner === id ? 'A+'
           : kind === 'pair' && run.units[subjectId]?.friendshipPartners?.includes(id) ? 'A'
             : null
-      return [{ unit, name: displayName(unit, run), takenBy: kind === 'a' ? null : takenBy, fast, gains, rankBadge }]
+      // A+ opens once the unit has an S rank, or when the donor is already married.
+      const needsS = kind === 'a' && !subject.isCorrin && !bondPartner(run, subjectId, 'sPartner') && !bondPartner(run, id, 'sPartner')
+      return [{ unit, name: displayName(unit, run), takenBy: kind === 'a' ? null : takenBy, fast, gains, rankBadge, needsS }]
     })
     .sort((a, b) => {
       const rankOrder = (item: Candidate) => item.rankBadge === 'S' ? 0 : item.rankBadge ? 1 : 2

@@ -63,6 +63,12 @@
   color: var(--ink-2);
 }
 
+.badge.warn {
+  white-space: nowrap;
+  background: var(--warn-tint);
+  color: var(--warn-ink);
+}
+
 .chip {
   min-height: 36px;
   padding: 0 14px;
@@ -852,6 +858,12 @@
 .pick-card[aria-pressed="true"] {
   background: var(--accent-soft);
   box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.pick-card[data-muted] .pick-art,
+.pick-card[data-muted] .pick-name,
+.pick-card[data-muted] .pick-gains {
+  opacity: 0.55;
 }
 
 .pick-art {

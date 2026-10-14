@@ -23,11 +23,11 @@ function sexPlan(dataset: Dataset, plan: UnitPlan, gender: Gender): UnitPlan {
 }
 
 /** Keeps only the bonds `unit` could actually hold (the copy may have changed gender). */
-function validBonds(dataset: Dataset, unit: UnitDef, plan: UnitPlan): UnitPlan {
+function validBonds(dataset: Dataset, run: RunPlan, unit: UnitDef, plan: UnitPlan): UnitPlan {
   const next = { ...plan }
   const romantic = new Set(supportPartners(dataset, unit.id, 'romantic').map((edge) => edgePartner(edge, unit.id)))
   if (next.sPartner && !romantic.has(next.sPartner)) delete next.sPartner
-  if (next.aPlusPartner && !aPlusEligible(dataset, unit, dataset.unitsById.get(next.aPlusPartner), next.sPartner)) delete next.aPlusPartner
+  if (next.aPlusPartner && !aPlusEligible(dataset, run, unit, dataset.unitsById.get(next.aPlusPartner), next.sPartner)) delete next.aPlusPartner
   if (next.friendshipPartners) {
     const kept = next.friendshipPartners.filter((id) => dataset.unitsById.get(id)?.gender === unit.gender && id !== next.sPartner)
     if (kept.length) next.friendshipPartners = kept
@@ -58,7 +58,7 @@ export function expandLegacyCorrin(dataset: Dataset, run: RunPlan): RunPlan {
   for (const [source, target] of [[from.corrin, to.corrin], [from.kana, to.kana]] as const) {
     const plan = source ? run.units[source.id] : undefined
     if (!plan || !target || units[target.id]) continue
-    units[target.id] = validBonds(dataset, target, sexPlan(dataset, plan, target.gender))
+    units[target.id] = validBonds(dataset, run, target, sexPlan(dataset, plan, target.gender))
   }
   return { ...run, corrin: { ...corrin, builds }, units }
 }

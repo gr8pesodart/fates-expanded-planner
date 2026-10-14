@@ -37,7 +37,7 @@ function reachableSkills(dataset: Dataset, run: RunPlan, unit: UnitDef, roster: 
       for (const other of donors.slice(index + 1)) donorSets.push([donor, other])
     })
   } else {
-    for (const donor of roster) if (aPlusEligible(dataset, unit, donor, undefined)) donorSets.push([donor])
+    for (const donor of roster) if (aPlusEligible(dataset, run, unit, donor, undefined)) donorSets.push([donor])
   }
 
   const talent = run.corrin.builds[run.corrin.gender].talentClassId
@@ -49,6 +49,7 @@ function reachableSkills(dataset: Dataset, run: RunPlan, unit: UnitDef, roster: 
     for (const spouse of spouses) {
       for (const donors of donorSets) {
         if (spouse && donors.some((donor) => donor.id === spouse.id)) continue
+        if (parent && !unit.isCorrin && donors.some((donor) => donor.id === parent.id)) continue
         const pool = classPool(dataset, unit, {
           variableParent: parent,
           sPartner: spouse,
